@@ -71,6 +71,9 @@ class PortfoyGecmisiTest extends TestCase
         $this->assertEqualsWithDelta(720, $g[self::gun(2)]['deger'], 0.01);
         $this->assertEqualsWithDelta(600, $g[self::gun(2)]['maliyet'], 0.01);
         $this->assertEqualsWithDelta(120, $g[self::gun(2)]['kz'], 0.01);
+        $this->assertEqualsWithDelta(0, $g[self::gun(4)]['gerceklesen'], 0.01);
+        $this->assertEqualsWithDelta(80, $g[self::gun(2)]['gerceklesen'], 0.01); // 4 × (120 − 100)
+        $this->assertEqualsWithDelta(80, $g[self::gun(0)]['gerceklesen'], 0.01);
         $this->assertEqualsWithDelta(750, $g[self::gun(1)]['deger'], 0.01);
         // Bugün güncel fiyatla, özetteki toplamla aynı
         $this->assertEqualsWithDelta(780, $g[self::gun(0)]['deger'], 0.01);

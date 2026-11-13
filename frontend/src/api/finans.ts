@@ -74,11 +74,30 @@ export interface Pozisyon {
   hesap_ad?: string
 }
 
+export interface DagilimDilimi {
+  tur: VarlikTuru
+  etiket: string
+  deger: number
+}
+
+/**
+ * Günlük değer / maliyet (maliyeti bilinen kısım) / gerçekleşmemiş K-Z / birikimli gerçekleşen K-Z.
+ * `eksik`: bazı varlıklar o gün fiyatsız ya da işlem fiyatıyla değerlendi.
+ */
+export interface PerformansNoktasi {
+  tarih: string
+  deger: number
+  maliyet: number
+  kz: number
+  gerceklesen: number
+  eksik: boolean
+}
+
 export interface Ozet {
   usd_kuru: number | null
   toplam: Toplam
   hesaplar: HesapOzeti[]
-  dagilim: { tur: VarlikTuru; etiket: string; deger: number }[]
+  dagilim: DagilimDilimi[]
   varliklar: Pozisyon[]
   pozisyonlar: Pozisyon[]
   son_guncelleme: string | null
@@ -151,6 +170,12 @@ export const finansApi = {
 
   ozet: (hesapId: number | null) =>
     http.get<Ozet>('/ozet', { params: hesapId ? { hesap_id: hesapId } : {} }).then((r) => r.data),
+  performans: (aralik: string, hesapId: number | null) =>
+    http
+      .get<{ gecmis: PerformansNoktasi[] }>('/ozet/gecmis', {
+        params: hesapId ? { aralik, hesap_id: hesapId } : { aralik },
+      })
+      .then((r) => r.data.gecmis),
 
   hesaplar: () =>
     http
@@ -158,7 +183,12 @@ export const finansApi = {
       .then((r) => r.data),
   hesap: (id: number) =>
     http
-      .get<{ hesap: HesapOzeti; pozisyonlar: Pozisyon[]; islemler: Islem[] }>(`/hesaplar/${id}`)
+      .get<{
+        hesap: HesapOzeti
+        pozisyonlar: Pozisyon[]
+        dagilim: DagilimDilimi[]
+        islemler: Islem[]
+      }>(`/hesaplar/${id}`)
       .then((r) => r.data),
   hesapEkle: (veri: HesapGirdisi) => http.post('/hesaplar', veri),
   hesapGuncelle: (id: number, veri: HesapGirdisi) => http.put(`/hesaplar/${id}`, veri),

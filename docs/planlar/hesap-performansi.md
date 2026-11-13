@@ -12,7 +12,7 @@ Değerin anlık görüntüsü tutulmuyor; gerek de yok: işlemler (`islemler`) +
 ### 1. `PortfoyHesabi::gecmis()` — `backend/app/Services/Portfoy/PortfoyHesabi.php`
 Portföy hesabı tek yerde kuralı gereği aynı sınıfa eklenir; `Pozisyon::uygula`, `self::sirala` yeniden kullanılır.
 
-`gecmis(User $user, ?int $hesapId, CarbonInterface $baslangic, CarbonInterface $bitis): array` → `list<{tarih, deger, maliyet, kz, eksik}>`
+`gecmis(User $user, ?int $hesapId, CarbonInterface $baslangic, CarbonInterface $bitis): array` → `list<{tarih, deger, maliyet, kz, gerceklesen, eksik}>` (gerceklesen: o güne kadarki satışların birikimli K/Z'si; dönem K/Z = Δ(kz + gerceklesen))
 1. Kullanıcının hesapları (isteğe bağlı tek hesap, `hesapla()` ile aynı sorgu) → işlemler `self::sirala`.
 2. İlgili varlık id'leri (+ USD fiyatlı varlık varsa USD/TRY varlığı). `fiyat_gecmisi`: `[baslangic, bitis]` satırları + her varlık için `baslangic`tan önceki son satır (ileri taşıma için).
 3. `baslangic`tan önceki işlemler uygulanır; sonra gün gün: o günün işlemleri `Pozisyon`lara uygulanır, varlığın gün fiyatı güncellenir.

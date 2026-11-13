@@ -4,16 +4,17 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
+import DagilimKarti from '@/components/DagilimKarti.vue'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import IslemFormu from '@/components/IslemFormu.vue'
+import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
-import VeriGrafigi from '@/components/VeriGrafigi.vue'
-import { finansApi, HESAP_TURLERI, VARLIK_TURLERI, type HesapOzeti, type Ozet } from '@/api/finans'
+import { finansApi, HESAP_TURLERI, type HesapOzeti, type Ozet } from '@/api/finans'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { neZaman, tl } from '@/utils/bicim'
 
 /**
- * Ana sayfa: toplam değer, kâr / zarar, bugünkü değişim; hesap kartları; dağılım; varlıklar.
+ * Ana sayfa: toplam değer, kâr / zarar, bugünkü değişim; performans grafiği; hesap kartları; dağılım; varlıklar.
  * Üstteki süzgeçle tek hesaba bakılır (varlıklar o hesaptakiler olur).
  */
 const ozet = ref<Ozet | null>(null)
@@ -21,6 +22,8 @@ const ozet = ref<Ozet | null>(null)
 const tumHesaplar = ref<HesapOzeti[]>([])
 const secilenHesap = ref<number | null>(null)
 const islemAcik = ref(false)
+/** İşlem kaydedilince performans grafiği yenilenir */
+const yenile = ref(0)
 const sonIstek = useSonIstek()
 
 async function yukle(): Promise<void> {
@@ -41,16 +44,10 @@ const pozisyonlar = computed(
   () => (secilenHesap.value === null ? ozet.value?.varliklar : ozet.value?.pozisyonlar) ?? [],
 )
 
-const dagilimGrafigi = computed(() => {
-  const d = ozet.value?.dagilim ?? []
-
-  return {
-    etiketler: d.map((x) => x.etiket),
-    seriler: [
-      { ad: 'Değer', veri: d.map((x) => x.deger), renk: d.map((x) => VARLIK_TURLERI[x.tur].renk) },
-    ],
-  }
-})
+function islemKaydedildi(): void {
+  yenile.value++
+  void yukle()
+}
 </script>
 
 <template>
@@ -133,6 +130,14 @@ const dagilimGrafigi = computed(() => {
       </div>
     </section>
 
+    <!-- Performans -->
+    <section v-if="ozet && ozet.hesaplar.length > 0" class="kart p-4 sm:p-5">
+      <h2 class="bolum-etiketi mb-2">
+        {{ secilenHesap === null ? 'Performans (bütün hesaplar)' : 'Performans' }}
+      </h2>
+      <PerformansGrafigi :hesap-id="secilenHesap" :yenile="yenile" />
+    </section>
+
     <!-- Hesaplar -->
     <section v-if="ozet && secilenHesap === null && ozet.hesaplar.length > 0">
       <div class="mb-2 flex items-center justify-between">
@@ -200,47 +205,18 @@ const dagilimGrafigi = computed(() => {
       </section>
 
       <!-- Dağılım -->
-      <section v-if="ozet && ozet.dagilim.length > 0" class="kart p-4 sm:p-5 lg:col-span-2">
-        <h2 class="bolum-etiketi mb-2">Dağılım</h2>
-        <VeriGrafigi
-          tur="doughnut"
-          :etiketler="dagilimGrafigi.etiketler"
-          :seriler="dagilimGrafigi.seriler"
-          aciklama="Varlık türlerine göre dağılım"
-          yukseklik="15rem"
-        />
-        <ul class="mt-3 flex flex-col gap-1.5 text-sm">
-          <li
-            v-for="d in ozet.dagilim"
-            :key="d.tur"
-            class="flex items-center justify-between gap-2"
-          >
-            <span class="flex items-center gap-2 text-surface-600">
-              <span
-                class="h-2.5 w-2.5 rounded-full"
-                :style="{ background: `var(${VARLIK_TURLERI[d.tur].renk})` }"
-              />
-              {{ d.etiket }}
-            </span>
-            <span class="font-semibold text-surface-900 tabular-nums">
-              {{ tl(d.deger) }}
-              <span class="ml-1 text-xs font-medium text-surface-400">
-                %{{
-                  ((d.deger / (ozet.toplam.deger || 1)) * 100).toLocaleString('tr-TR', {
-                    maximumFractionDigits: 1,
-                  })
-                }}
-              </span>
-            </span>
-          </li>
-        </ul>
-      </section>
+      <DagilimKarti
+        v-if="ozet && ozet.dagilim.length > 0"
+        :dagilim="ozet.dagilim"
+        :toplam-deger="ozet.toplam.deger"
+        class="lg:col-span-2"
+      />
     </div>
 
     <IslemFormu
       v-model:visible="islemAcik"
       :varsayilan="secilenHesap ? { hesap_id: secilenHesap } : undefined"
-      @kaydedildi="yukle"
+      @kaydedildi="islemKaydedildi"
     />
   </div>
 </template>

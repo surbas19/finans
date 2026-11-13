@@ -12,12 +12,21 @@ import Tabs from 'primevue/tabs'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import BosDurum from '@/components/BosDurum.vue'
+import DagilimKarti from '@/components/DagilimKarti.vue'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import HesapFormu from '@/components/HesapFormu.vue'
 import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
+import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
-import { finansApi, HESAP_TURLERI, type HesapOzeti, type Islem, type Pozisyon } from '@/api/finans'
+import {
+  finansApi,
+  HESAP_TURLERI,
+  type DagilimDilimi,
+  type HesapOzeti,
+  type Islem,
+  type Pozisyon,
+} from '@/api/finans'
 import { hataMesaji } from '@/api/http'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { tl } from '@/utils/bicim'
@@ -29,7 +38,10 @@ const toast = useToast()
 
 const hesap = ref<HesapOzeti | null>(null)
 const pozisyonlar = ref<Pozisyon[]>([])
+const dagilim = ref<DagilimDilimi[]>([])
 const islemler = ref<Islem[]>([])
+/** İşlem eklenince / silinince performans grafiği yenilenir */
+const yenile = ref(0)
 const bulunamadi = ref(false)
 const sekme = ref('varliklar')
 const hesapFormuAcik = ref(false)
@@ -43,6 +55,7 @@ async function yukle(): Promise<void> {
     if (veri === undefined) return
     hesap.value = veri.hesap
     pozisyonlar.value = veri.pozisyonlar
+    dagilim.value = veri.dagilim
     islemler.value = veri.islemler
   } catch {
     bulunamadi.value = true
@@ -50,6 +63,11 @@ async function yukle(): Promise<void> {
 }
 
 onMounted(yukle)
+
+function islemDegisti(): void {
+  yenile.value++
+  void yukle()
+}
 
 function islemEkle(): void {
   duzenlenen.value = null
@@ -137,34 +155,55 @@ function hesabiSil(): void {
         <p v-if="hesap?.not" class="mt-3 text-sm text-surface-500">{{ hesap.not }}</p>
       </section>
 
-      <section class="kart p-2 sm:p-4">
-        <Tabs v-model:value="sekme">
-          <TabList>
-            <Tab value="varliklar">Varlıklar ({{ pozisyonlar.length }})</Tab>
-            <Tab value="islemler">İşlemler ({{ islemler.length }})</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel value="varliklar">
-              <BosDurum
-                v-if="hesap && pozisyonlar.length === 0"
-                kucuk
-                baslik="Bu hesapta varlık yok"
-                aciklama="Alış ya da elde olan varlığınızı girin."
-                ikon="pi pi-wallet"
-              >
-                <Button label="İşlem ekle" icon="pi pi-plus" size="small" @click="islemEkle" />
-              </BosDurum>
-              <PozisyonListesi v-else :pozisyonlar="pozisyonlar" />
-            </TabPanel>
-            <TabPanel value="islemler">
-              <p v-if="islemler.length === 0" class="py-6 text-center text-sm text-surface-500">
-                Henüz işlem yok.
-              </p>
-              <IslemListesi v-else :islemler="islemler" @duzenle="islemDuzenle" @silindi="yukle" />
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+      <section v-if="hesap && islemler.length > 0" class="kart p-4 sm:p-5">
+        <h2 class="bolum-etiketi mb-2">Performans</h2>
+        <PerformansGrafigi :hesap-id="id" :yenile="yenile" />
       </section>
+
+      <div class="grid items-start gap-4 lg:grid-cols-5">
+        <section
+          class="kart p-2 sm:p-4"
+          :class="dagilim.length > 0 ? 'lg:col-span-3' : 'lg:col-span-5'"
+        >
+          <Tabs v-model:value="sekme">
+            <TabList>
+              <Tab value="varliklar">Varlıklar ({{ pozisyonlar.length }})</Tab>
+              <Tab value="islemler">İşlemler ({{ islemler.length }})</Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel value="varliklar">
+                <BosDurum
+                  v-if="hesap && pozisyonlar.length === 0"
+                  kucuk
+                  baslik="Bu hesapta varlık yok"
+                  aciklama="Alış ya da elde olan varlığınızı girin."
+                  ikon="pi pi-wallet"
+                >
+                  <Button label="İşlem ekle" icon="pi pi-plus" size="small" @click="islemEkle" />
+                </BosDurum>
+                <PozisyonListesi v-else :pozisyonlar="pozisyonlar" />
+              </TabPanel>
+              <TabPanel value="islemler">
+                <p v-if="islemler.length === 0" class="py-6 text-center text-sm text-surface-500">
+                  Henüz işlem yok.
+                </p>
+                <IslemListesi
+                  v-else
+                  :islemler="islemler"
+                  @duzenle="islemDuzenle"
+                  @silindi="islemDegisti"
+                />
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </section>
+        <DagilimKarti
+          v-if="hesap && dagilim.length > 0"
+          :dagilim="dagilim"
+          :toplam-deger="hesap.deger"
+          class="lg:col-span-2"
+        />
+      </div>
     </template>
 
     <HesapFormu v-model:visible="hesapFormuAcik" :hesap="hesap" @kaydedildi="yukle" />
@@ -172,7 +211,7 @@ function hesabiSil(): void {
       v-model:visible="islemFormuAcik"
       :islem="duzenlenen"
       :varsayilan="{ hesap_id: id }"
-      @kaydedildi="yukle"
+      @kaydedildi="islemDegisti"
     />
   </div>
 </template>

@@ -70,9 +70,10 @@ class PortfoyHesabi
      * Kapanışı olmayan gün (hafta sonu, tatil) önceki kapanışı kullanır. Hiç kapanış yoksa o güne kadarki son işlem
      * fiyatı (TL) kullanılır; o da yoksa pozisyon değere katılmaz. İkisinde de nokta `eksik` işaretlenir.
      * Bugünün noktası güncel fiyatlarla hesaplanır (özetteki toplamla aynı). Maliyet ve K/Z yalnızca maliyeti
-     * bilinen kısımdandır. 400 günden uzun aralık haftalık (pazar + son gün) örneklenir.
+     * bilinen kısımdandır (kz gerçekleşmemiş; gerceklesen o güne kadarki satışların birikimli K/Z'si).
+     * 400 günden uzun aralık haftalık (pazar + son gün) örneklenir.
      *
-     * @return list<array{tarih: string, deger: float, maliyet: float, kz: float, eksik: bool}>
+     * @return list<array{tarih: string, deger: float, maliyet: float, kz: float, gerceklesen: float, eksik: bool}>
      */
     public function gecmis(User $user, ?int $hesapId, CarbonInterface $baslangic, CarbonInterface $bitis): array
     {
@@ -139,9 +140,10 @@ class PortfoyHesabi
             $usd = ($bugunMu ? $guncelUsd : null)
                 ?? ($usdVarlik ? ($sonKapanis[$usdVarlik->id] ?? null) : null)
                 ?? $guncelUsd;
-            $deger = $maliyet = $kz = 0.0;
+            $deger = $maliyet = $kz = $gerceklesen = 0.0;
             $eksik = false;
             foreach ($pozisyonlar as $p) {
+                $gerceklesen += $p->gerceklesen;
                 $miktar = $p->miktar();
                 if ($miktar <= Pozisyon::EPS) {
                     continue;
@@ -168,6 +170,7 @@ class PortfoyHesabi
                 'deger' => round($deger, 2),
                 'maliyet' => round($maliyet, 2),
                 'kz' => round($kz, 2),
+                'gerceklesen' => round($gerceklesen, 2),
                 'eksik' => $eksik,
             ];
         }
