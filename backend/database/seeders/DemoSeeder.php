@@ -89,6 +89,9 @@ class DemoSeeder extends Seeder
         foreach (['GRAM', 'CEYREK', 'USD', 'EUR', 'ONS', 'THYAO', 'BTC'] as $sira => $kod) {
             IzlemeKaydi::create(['user_id' => $ben->id, 'varlik_id' => $v[$kod], 'sira' => $sira + 1]);
         }
+
+        // Aile finansı: iki kullanıcı aynı hanede; gelirler, kartlar, ekstre, faturalar
+        $this->call(AileDemoSeeder::class);
     }
 
     /**

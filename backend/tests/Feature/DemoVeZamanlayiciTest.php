@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Fatura;
 use App\Models\Fiyat;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -28,8 +29,14 @@ class DemoVeZamanlayiciTest extends TestCase
         $this->assertContains('bes', $turler);
         $this->assertSame(0, Fiyat::whereHas('varlik', fn ($q) => $q->where('kaynak', 'sabit'))->count());
         $this->assertTrue($ozet->json('toplam.maliyeti_eksik'));
-        // İkinci demo kullanıcısının hiçbir şeyi yok
-        $this->actingAs(User::where('email', 'es@finans.test')->first())->getJson('/api/v1/ozet')->assertJsonCount(0, 'hesaplar');
+        // İkinci demo kullanıcısı (eş) aynı hanede: aynı hesapları ve aile kayıtlarını görür
+        $es = User::where('email', 'es@finans.test')->firstOrFail();
+        $this->actingAs($es)->getJson('/api/v1/ozet')->assertJsonCount(5, 'hesaplar');
+        $aile = $this->actingAs($es)->getJson('/api/v1/aile/ozet')->assertOk();
+        $this->assertGreaterThan(0, $aile->json('gelir.toplam'));
+        $this->assertNotEmpty($aile->json('gelir.beklenenler'));
+        $this->assertNotEmpty($aile->json('uyarilar.bekleyen_faturalar'));
+        $this->assertSame(3, Fatura::whereNotNull('kart_islemi_id')->count());
     }
 
     public function test_zamanlanmis_komutlar_ayri_surec_acmaz(): void
