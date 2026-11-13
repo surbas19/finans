@@ -111,6 +111,11 @@ class IslemVeHesapTest extends TestCase
             ->assertJsonCount(1, 'dagilim')
             ->assertJsonPath('dagilim.0.tur', 'hisse')
             ->assertJsonPath('dagilim.0.deger', 500);
+
+        // Özette her hesap kendi dağılımını taşır (kaydırıcıdaki hesap slaytı tek istekten çizilir)
+        $hesaplar = collect($this->actingAs($user)->getJson('/api/v1/ozet')->assertOk()->json('hesaplar'))->keyBy('id');
+        $this->assertSame([['tur' => 'hisse', 'etiket' => 'Hisse senedi', 'deger' => 500]], $hesaplar[$a->id]['dagilim']);
+        $this->assertSame([['tur' => 'altin', 'etiket' => 'Altın / gümüş', 'deger' => 6000]], $hesaplar[$b->id]['dagilim']);
     }
 
     public function test_giris_yapmayan_erisemez(): void

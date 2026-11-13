@@ -57,6 +57,7 @@ class PortfoyHesabi
                 ...$h->ozet(),
                 ...self::topla($satirlar->where('hesap_id', $h->id)),
                 'varlik_sayisi' => $acik->where('hesap_id', $h->id)->count(),
+                'dagilim' => $this->dagilim($acik->where('hesap_id', $h->id)),
             ])->values(),
             'dagilim' => $this->dagilim($acik),
             'varliklar' => $this->varlikBazinda($pozisyonlar, $varliklar, $usd),
