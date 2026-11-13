@@ -20,16 +20,19 @@ use Illuminate\Validation\ValidationException;
 class HaneYonetimi
 {
     /** `hane_id` taşıyan aile tabloları (üyeler hariç); yeni tablo eklenince buraya da yazılır */
-    public const AILE_TABLOLARI = ['gelir_kaynaklari', 'gelirler'];
+    public const AILE_TABLOLARI = ['gelir_kaynaklari', 'gelirler', 'bankalar', 'kartlar', 'ekstreler', 'kart_islemleri'];
 
     /** Üyeye bağlı kayıtlar (tablo => sütun); kaydı olan üye silinmez, pasif olur */
-    public const UYE_BAGLARI = ['gelir_kaynaklari' => 'uye_id', 'gelirler' => 'uye_id'];
+    public const UYE_BAGLARI = ['gelir_kaynaklari' => 'uye_id', 'gelirler' => 'uye_id', 'kartlar' => 'sahip_uye_id'];
 
     public function __construct(private VarsayilanAileKayitlari $varsayilanlar) {}
 
     public function hazirla(User $user): Hane
     {
         if ($user->hane_id !== null && $user->hane) {
+            // Bu özellikten önce kurulmuş hanede eksik başlangıç kayıtları (kategoriler) bir kez yazılır
+            $this->varsayilanlar->yaz($user->hane);
+
             return $user->hane;
         }
 

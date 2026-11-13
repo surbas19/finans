@@ -9,12 +9,12 @@
 
 - [x] 1. Hane + mevcut hesapların hanede paylaşımı (erişim tek yerde) + Yönetim'de hane + testler
 - [x] 2. Gelirler (kaynaklar, kayıtlar, beklenen) — arka uç + testler
-- [ ] 3. Bankalar, kartlar, kategoriler, kart işlemleri, rapor kuralları (ButceRaporu) — arka uç + testler
+- [x] 3. Bankalar, kartlar, kategoriler, kart işlemleri, rapor kuralları (ButceRaporu) — arka uç + testler
 - [ ] 4. PDF ekstre (smalot): yükleme, ayrıştırma, inceleme, onay, tekrar, dosya erişimi — arka uç + testler
 - [ ] 5. Faturalar: türler, sağlayıcılar, desenler, eşleştirme, otomatik kayıt, bağla / çöz — arka uç + testler
 - [ ] 6. Arayüz: Bütçe bölümü (özet, gelirler, kartlar, ekstre inceleme, işlemler, faturalar, ayarlar), Hesaplar'da sahip, Yönetim'de hane
 - [ ] 7. Demo verisi, belgeler (CLAUDE.md, CANLI.md), uçtan uca (360 / 320 / 1280), son gözden geçirme
 
-**Sıradaki adım:** 3. Bankalar, kartlar, kategoriler, kart işlemleri ve rapor kuralları (ButceRaporu gider kısmı). Arayüz 6. adımda.
+**Sıradaki adım:** 4. PDF ekstre: `composer require smalot/pdfparser`, PdfMetinOkuyucu, EkstreAyristirici, EkstreIceAktarici (yükle / incele / onayla / sil), dosya ucu, testler (OrnekPdf).
 
 Komutlar: `cd backend && php artisan migrate && php artisan test`; `cd frontend && npm run type-check && npm run lint && npx vitest run && npm run build`.

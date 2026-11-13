@@ -1,8 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Aile\BankaController;
 use App\Http\Controllers\Api\V1\Aile\GelirController;
 use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
 use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
+use App\Http\Controllers\Api\V1\Aile\KartController;
+use App\Http\Controllers\Api\V1\Aile\KartIslemiController;
+use App\Http\Controllers\Api\V1\Aile\KategoriController;
+use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
 use App\Http\Controllers\Api\V1\IslemController;
@@ -58,6 +63,14 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
 
             Route::apiResource('gelir-kaynaklari', GelirKaynagiController::class)->except('show')->parameters(['gelir-kaynaklari' => 'kaynak']);
             Route::apiResource('gelirler', GelirController::class)->except('show')->parameters(['gelirler' => 'gelir']);
+
+            Route::apiResource('bankalar', BankaController::class)->except('show')->parameters(['bankalar' => 'banka']);
+            Route::apiResource('kartlar', KartController::class)->parameters(['kartlar' => 'kart']);
+            Route::apiResource('kategoriler', KategoriController::class)->except('show')->parameters(['kategoriler' => 'kategori']);
+            Route::post('kategoriler/{kategori}/kurallar', [KategoriController::class, 'kuralEkle'])->name('kategoriler.kurallar.store');
+            Route::delete('kategori-kurallari/{kural}', [KategoriController::class, 'kuralSil'])->name('kategori-kurallari.destroy');
+            Route::apiResource('kart-islemleri', KartIslemiController::class)->except('show')->parameters(['kart-islemleri' => 'islem']);
+            Route::get('ozet', AileOzetController::class)->name('ozet');
         });
 
         Route::prefix('yonetim')->name('yonetim.')->group(function (): void {
