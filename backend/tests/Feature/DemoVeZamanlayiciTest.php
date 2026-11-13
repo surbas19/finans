@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Fiyat;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,9 +19,14 @@ class DemoVeZamanlayiciTest extends TestCase
         $ben = User::where('email', 'ben@finans.test')->firstOrFail();
 
         $ozet = $this->actingAs($ben)->getJson('/api/v1/ozet')->assertOk();
-        $this->assertCount(4, $ozet->json('hesaplar'));
+        $this->assertCount(5, $ozet->json('hesaplar'));
         $this->assertGreaterThan(0, $ozet->json('toplam.deger'));
         $this->assertSame(0, $ozet->json('toplam.fiyatsiz'));
+        // Nakit ve bireysel emeklilik dağılımda; fiyat satırları yok (birimi 1 TL)
+        $turler = array_column($ozet->json('dagilim'), 'tur');
+        $this->assertContains('nakit', $turler);
+        $this->assertContains('bes', $turler);
+        $this->assertSame(0, Fiyat::whereHas('varlik', fn ($q) => $q->where('kaynak', 'sabit'))->count());
         $this->assertTrue($ozet->json('toplam.maliyeti_eksik'));
         // İkinci demo kullanıcısının hiçbir şeyi yok
         $this->actingAs(User::where('email', 'es@finans.test')->first())->getJson('/api/v1/ozet')->assertJsonCount(0, 'hesaplar');

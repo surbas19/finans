@@ -55,6 +55,9 @@ class Islem extends Model
      */
     public function ozet(): array
     {
+        // Bireysel emeklilikte miktar toplam tutardır; birim fiyat maliyet / tutar oranı (kâr yüzdesinden)
+        $deger = $this->tur === IslemTuru::Deger;
+
         return [
             'id' => $this->id,
             'hesap_id' => $this->hesap_id,
@@ -63,7 +66,10 @@ class Islem extends Model
             'miktar' => $this->miktar,
             'birim_fiyat' => $this->birim_fiyat,
             'komisyon' => $this->komisyon,
-            'tutar' => $this->birim_fiyat !== null ? round($this->miktar * $this->birim_fiyat, 2) : null,
+            'tutar' => $deger
+                ? round($this->miktar, 2)
+                : ($this->birim_fiyat !== null ? round($this->miktar * $this->birim_fiyat, 2) : null),
+            'kar_yuzde' => $deger && $this->birim_fiyat ? round((1 / $this->birim_fiyat - 1) * 100, 2) : null,
             'tarih' => $this->tarih->toDateString(),
             'not' => $this->not,
         ];

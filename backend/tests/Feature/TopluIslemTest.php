@@ -35,6 +35,30 @@ class TopluIslemTest extends TestCase
         $this->actingAs($user)->getJson("/api/v1/hesaplar/{$hesap->id}")->assertOk()->assertJsonCount(2, 'pozisyonlar');
     }
 
+    public function test_nakit_toplu_eklenir_bes_eklenmez(): void
+    {
+        $user = User::factory()->create();
+        $hesap = Hesap::factory()->create(['user_id' => $user->id]);
+        $nakit = $this->varlik('TL', 'nakit', null, kaynak: 'sabit');
+        $bes = $this->varlik('BES', 'bes', null, kaynak: 'sabit');
+        $bugun = now()->toDateString();
+
+        $this->actingAs($user)->postJson('/api/v1/islemler/toplu', [
+            'hesap_id' => $hesap->id,
+            'satirlar' => [
+                ['varlik_id' => $nakit->id, 'miktar' => 2500, 'tarih' => $bugun],
+                ['varlik_id' => $bes->id, 'miktar' => 100000, 'tarih' => $bugun],
+            ],
+        ])->assertJsonValidationErrors('satirlar.1.varlik_id');
+        $this->assertDatabaseCount('islemler', 0);
+
+        $this->actingAs($user)->postJson('/api/v1/islemler/toplu', [
+            'hesap_id' => $hesap->id,
+            'satirlar' => [['varlik_id' => $nakit->id, 'miktar' => 2500, 'birim_fiyat' => 3, 'tarih' => $bugun]],
+        ])->assertCreated();
+        $this->assertDatabaseHas('islemler', ['varlik_id' => $nakit->id, 'tur' => 'mevcut', 'miktar' => 2500, 'birim_fiyat' => 1]);
+    }
+
     public function test_baska_kullanicinin_hesabina_toplu_eklenemez(): void
     {
         $sahip = User::factory()->create();

@@ -62,5 +62,9 @@ class YonetimVeIzlemeTest extends TestCase
 
         $this->actingAs($ben)->deleteJson("/api/v1/izleme/{$usd->id}")->assertOk();
         $this->actingAs($ben)->getJson('/api/v1/izleme')->assertJsonCount(1, 'varliklar');
+
+        // Nakit ve bireysel emeklilik izlenmez
+        $nakit = $this->varlik('TL', 'nakit', null, kaynak: 'sabit');
+        $this->actingAs($ben)->postJson('/api/v1/izleme', ['varlik_id' => $nakit->id])->assertJsonValidationErrors('varlik_id');
     }
 }

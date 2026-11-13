@@ -57,6 +57,7 @@ class DemoSeeder extends Seeder
         $es = $hesap('Eşimin hesabı', HesapTuru::AraciKurum, 'violet', 2);
         $kasa = $hesap('Banka kasası', HesapTuru::Kasa, 'amber', 3);
         $ev = $hesap('Evde', HesapTuru::Ev, 'rose', 4);
+        $bes = $hesap('Bireysel emeklilik', HesapTuru::Bes, 'indigo', 5);
 
         $islem = function (Hesap $h, string $kod, IslemTuru $tur, float $miktar, ?float $fiyat, int $gunOnce, float $komisyon = 0) use ($ben, $v): void {
             Islem::create([
@@ -76,6 +77,14 @@ class DemoSeeder extends Seeder
         $islem($kasa, 'GRAM', IslemTuru::Alis, 50, 3800, 330);
         $islem($ev, 'AYAR22', IslemTuru::Mevcut, 60, null, 365);
         $islem($ev, 'USD', IslemTuru::Mevcut, 500, 35, 365);
+        // Nakit: birim 1 TL (yatırma = alış, çekme = satış)
+        $islem($yatirim, 'TL', IslemTuru::Mevcut, 15000, 1, 240);
+        $islem($yatirim, 'TL', IslemTuru::Alis, 20000, 1, 60);
+        $islem($yatirim, 'TL', IslemTuru::Satis, 5000, 1, 20);
+        // Bireysel emeklilik: toplam tutar ve kâr yüzdesi (birim fiyat = 1 / (1 + kâr))
+        $islem($bes, 'BES', IslemTuru::Deger, 120000, round(1 / 1.18, 8), 300);
+        $islem($bes, 'BES', IslemTuru::Deger, 150000, round(1 / 1.22, 8), 150);
+        $islem($bes, 'BES', IslemTuru::Deger, 185000, round(1 / 1.27, 8), 10);
 
         foreach (['GRAM', 'CEYREK', 'USD', 'EUR', 'ONS', 'THYAO', 'BTC'] as $sira => $kod) {
             IzlemeKaydi::create(['user_id' => $ben->id, 'varlik_id' => $v[$kod], 'sira' => $sira + 1]);
@@ -88,7 +97,8 @@ class DemoSeeder extends Seeder
     private function fiyatlar(): void
     {
         $oynaklik = ['altin' => 0.008, 'doviz' => 0.004, 'hisse' => 0.02, 'kripto' => 0.035, 'fon' => 0.012];
-        foreach (Varlik::all() as $varlik) {
+        // Nakit ve bireysel emekliliğin fiyatı yok (birimi 1 TL)
+        foreach (Varlik::where('kaynak', '!=', 'sabit')->get() as $varlik) {
             [$fiyat, $alis, $satis] = self::FIYATLAR[$varlik->kod] ?? [100, null, null];
             $gunluk = fake()->randomFloat(4, -1.5, 1.5);
             Fiyat::create([

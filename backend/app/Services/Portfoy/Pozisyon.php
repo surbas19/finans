@@ -42,6 +42,17 @@ final class Pozisyon
         $miktar = (float) $islem->miktar;
         $komisyon = (float) $islem->komisyon;
 
+        // Bireysel emeklilik: o tarihteki toplam tutar öncekinin yerine geçer. Birim fiyat maliyet / tutar oranıdır
+        // (kâr yüzdesinden); boşsa maliyet bilinmiyor.
+        if ($islem->tur === IslemTuru::Deger) {
+            $bilinen = $islem->birim_fiyat !== null;
+            $this->miktarBilinen = $bilinen ? $miktar : 0.0;
+            $this->maliyetBilinen = $bilinen ? $miktar * (float) $islem->birim_fiyat : 0.0;
+            $this->miktarBilinmeyen = $bilinen ? 0.0 : $miktar;
+
+            return;
+        }
+
         if ($islem->tur !== IslemTuru::Satis) {
             if ($islem->birim_fiyat !== null) {
                 $this->miktarBilinen += $miktar;

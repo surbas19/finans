@@ -74,6 +74,58 @@ class PortfoyHesabiTest extends TestCase
         $this->assertTrue($p['toplam']['maliyeti_eksik']);
     }
 
+    public function test_nakit_birimi_bir_tl_kar_zarari_yok(): void
+    {
+        $hesap = Hesap::factory()->create();
+        $nakit = $this->varlik('TL', 'nakit', null, kaynak: 'sabit'); // fiyat satırı yok
+        $this->islem($hesap, $nakit->id, IslemTuru::Mevcut, 10000, 1, 30);
+        $this->islem($hesap, $nakit->id, IslemTuru::Alis, 5000, 1, 20);
+        $this->islem($hesap, $nakit->id, IslemTuru::Satis, 3000, 1, 10);
+
+        $p = app(PortfoyHesabi::class)->hesapla($hesap->user);
+        $poz = $p['pozisyonlar'][0];
+        $this->assertEqualsWithDelta(12000, $poz['deger'], 0.01);
+        $this->assertEqualsWithDelta(1, $poz['fiyat_tl'], 1e-9);
+        $this->assertEqualsWithDelta(0, $poz['kz'], 0.01);
+        $this->assertNull($poz['gunluk_degisim']);
+        $this->assertSame(0, $p['toplam']['fiyatsiz']);
+        $this->assertFalse($p['toplam']['maliyeti_eksik']);
+        $this->assertSame([['tur' => 'nakit', 'etiket' => 'Nakit', 'deger' => 12000.0]], $p['dagilim']);
+    }
+
+    public function test_bes_guncel_tutari_oncekinin_yerine_gecer_kar_yuzdesinden_maliyet(): void
+    {
+        $hesap = Hesap::factory()->create();
+        $bes = $this->varlik('BES', 'bes', null, kaynak: 'sabit');
+        $this->islem($hesap, $bes->id, IslemTuru::Deger, 120000, 1 / 1.2, 300);
+        $this->islem($hesap, $bes->id, IslemTuru::Deger, 150000, 0.8, 10); // %25 kâr
+
+        $p = app(PortfoyHesabi::class)->hesapla($hesap->user);
+        $poz = $p['pozisyonlar'][0];
+        $this->assertEqualsWithDelta(150000, $poz['miktar'], 1e-6);
+        $this->assertEqualsWithDelta(150000, $poz['deger'], 0.01);
+        $this->assertEqualsWithDelta(120000, $poz['maliyet'], 0.01);
+        $this->assertEqualsWithDelta(30000, $poz['kz'], 0.01);
+        $this->assertEqualsWithDelta(25, $poz['kz_yuzde'], 0.01);
+        $this->assertSame('Bireysel emeklilik', $p['dagilim'][0]['etiket']);
+
+        // Zarar (eksi yüzde)
+        $this->islem($hesap, $bes->id, IslemTuru::Deger, 90000, 1 / 0.9, 0);
+        $poz = app(PortfoyHesabi::class)->hesapla($hesap->user)['pozisyonlar'][0];
+        $this->assertEqualsWithDelta(100000, $poz['maliyet'], 0.01);
+        $this->assertEqualsWithDelta(-10000, $poz['kz'], 0.01);
+
+        // Kâr yüzdesi yoksa maliyet bilinmiyor: K/Z yok, sıfır maliyet sayılmaz
+        $baska = Hesap::factory()->create(['user_id' => $hesap->user_id]);
+        $this->islem($baska, $bes->id, IslemTuru::Deger, 50000, null, 0);
+        $p = app(PortfoyHesabi::class)->hesapla($hesap->user, $baska->id);
+        $poz = $p['pozisyonlar'][0];
+        $this->assertEqualsWithDelta(50000, $poz['deger'], 0.01);
+        $this->assertNull($poz['kz']);
+        $this->assertNull($poz['maliyet']);
+        $this->assertTrue($p['toplam']['maliyeti_eksik']);
+    }
+
     public function test_usd_fiyatli_varlik_kurla_tl_ye_cevrilir(): void
     {
         $hesap = Hesap::factory()->create();

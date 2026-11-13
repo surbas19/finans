@@ -180,6 +180,9 @@ class VarlikController extends Controller
     public function elleFiyat(Request $request, Varlik $varlik, FiyatGuncelleyici $guncelleyici): JsonResponse
     {
         Gate::authorize('yonetici');
+        if ($varlik->tur->sabitFiyatli()) {
+            throw ValidationException::withMessages(['fiyat' => $varlik->tur->etiket().' için fiyat girilmez (birimi 1 TL).']);
+        }
         $veri = $request->validate([
             'fiyat' => ['required', 'numeric', 'gt:0', 'max:1000000000000'],
         ], [], ['fiyat' => 'fiyat']);

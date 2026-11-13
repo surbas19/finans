@@ -9,6 +9,7 @@ enum HesapTuru: string
     case Kasa = 'kasa';
     case Ev = 'ev';
     case Kripto = 'kripto';
+    case Bes = 'bes';
     case Diger = 'diger';
 
     public function etiket(): string
@@ -19,6 +20,7 @@ enum HesapTuru: string
             self::Kasa => 'Banka kasası',
             self::Ev => 'Evde',
             self::Kripto => 'Kripto borsası / cüzdan',
+            self::Bes => 'Bireysel emeklilik',
             self::Diger => 'Diğer',
         };
     }

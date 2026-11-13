@@ -65,6 +65,12 @@ class VarlikTest extends TestCase
             ->assertJsonPath('varlik.fiyat.elle', true)
             ->assertJsonPath('varlik.fiyat.degisim_yuzde', 10);
         $this->assertDatabaseHas('fiyat_gecmisi', ['varlik_id' => $fon->id, 'tarih' => now()->toDateString()]);
+
+        // Nakit ve bireysel emekliliğin fiyatı girilmez (birimi 1 TL)
+        $nakit = $this->varlik('TL', 'nakit', null, kaynak: 'sabit');
+        $this->actingAs(User::factory()->yonetici()->create())->putJson("/api/v1/varliklar/{$nakit->id}/fiyat", ['fiyat' => 2])
+            ->assertJsonValidationErrors('fiyat');
+        $this->assertDatabaseMissing('fiyatlar', ['varlik_id' => $nakit->id]);
     }
 
     public function test_katalog_arama_ve_gecmis_araligi(): void

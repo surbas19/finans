@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
 /**
  * Portföy hesabının TEK yeri: miktar, ağırlıklı ortalama maliyet, gerçekleşen / gerçekleşmemiş kâr-zarar,
  * TL değerleme (USD fiyatlılar USD/TRY alışıyla). Maliyeti bilinmeyen kalem sıfır maliyet sayılmaz.
+ * Nakit ve bireysel emeklilikte birim 1 TL'dir; BES'in "güncel tutar" kaydı pozisyonu baştan kurar (Pozisyon).
  */
 class PortfoyHesabi
 {
@@ -209,6 +210,9 @@ class PortfoyHesabi
 
     private static function kapanisTl(Varlik $varlik, ?float $kapanis, ?float $usd): ?float
     {
+        if ($varlik->tur->sabitFiyatli()) {
+            return 1.0;
+        }
         if ($kapanis === null) {
             return null;
         }
@@ -261,6 +265,9 @@ class PortfoyHesabi
      */
     public static function tlFiyat(Varlik $varlik, ?float $usd): ?float
     {
+        if ($varlik->tur->sabitFiyatli()) {
+            return 1.0; // nakit, bireysel emeklilik: miktar = TL tutarı
+        }
         $fiyat = $varlik->fiyat?->fiyat;
         if ($fiyat === null) {
             return null;

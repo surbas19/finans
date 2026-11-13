@@ -11,7 +11,7 @@ use App\Models\Varlik;
 class Katalog
 {
     /**
-     * @return list<array{tur: string, kod: string, ad: string, birim: string, para_birimi?: string, kaynak: string, kaynak_kodu: string, gecikmeli?: bool}>
+     * @return list<array{tur: string, kod: string, ad: string, birim: string, para_birimi?: string, kaynak: string, kaynak_kodu: ?string, gecikmeli?: bool}>
      */
     public static function hazir(): array
     {
@@ -41,6 +41,9 @@ class Katalog
             $kripto('BTC', 'Bitcoin'),
             $kripto('ETH', 'Ethereum'),
             $kripto('USDT', 'Tether'),
+            // Fiyatı çekilmez, birimi 1 TL (PortfoyHesabi)
+            ['tur' => 'nakit', 'kod' => 'TL', 'ad' => 'Nakit', 'birim' => 'TL', 'kaynak' => 'sabit', 'kaynak_kodu' => null],
+            ['tur' => 'bes', 'kod' => 'BES', 'ad' => 'Bireysel emeklilik', 'birim' => 'TL', 'kaynak' => 'sabit', 'kaynak_kodu' => null],
         ];
     }
 

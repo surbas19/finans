@@ -83,6 +83,58 @@ class IslemVeHesapTest extends TestCase
         $this->assertDatabaseCount('islemler', 0);
     }
 
+    public function test_nakit_fiyatsiz_girilir_eldekinden_fazla_cekilemez(): void
+    {
+        $user = User::factory()->create();
+        $hesap = Hesap::factory()->create(['user_id' => $user->id]);
+        $nakit = $this->varlik('TL', 'nakit', null, kaynak: 'sabit');
+        $temel = ['hesap_id' => $hesap->id, 'varlik_id' => $nakit->id, 'tarih' => now()->subDay()->toDateString()];
+
+        // Yatırma: birim fiyat ve komisyon gönderilse de 1 / 0 saklanır
+        $this->actingAs($user)->postJson('/api/v1/islemler', [...$temel, 'tur' => 'alis', 'miktar' => 5000, 'birim_fiyat' => 7, 'komisyon' => 10])
+            ->assertCreated()->assertJsonPath('islem.tutar', 5000);
+        $this->assertDatabaseHas('islemler', ['varlik_id' => $nakit->id, 'tur' => 'alis', 'birim_fiyat' => 1, 'komisyon' => 0]);
+        $this->actingAs($user)->postJson('/api/v1/islemler', [...$temel, 'tur' => 'satis', 'miktar' => 6000])->assertJsonValidationErrors('miktar');
+        $this->actingAs($user)->postJson('/api/v1/islemler', [...$temel, 'tur' => 'satis', 'miktar' => 2000])->assertCreated();
+        // Güncel tutar yalnızca BES'te
+        $this->actingAs($user)->postJson('/api/v1/islemler', [...$temel, 'tur' => 'deger', 'miktar' => 100])->assertJsonValidationErrors('tur');
+
+        $this->actingAs($user)->getJson("/api/v1/hesaplar/{$hesap->id}")->assertJsonPath('hesap.deger', 3000);
+    }
+
+    public function test_bes_toplam_tutar_ve_kar_yuzdesiyle_girilir(): void
+    {
+        $user = User::factory()->create();
+        $hesap = Hesap::factory()->create(['user_id' => $user->id, 'tur' => 'bes']);
+        $bes = $this->varlik('BES', 'bes', null, kaynak: 'sabit');
+        $temel = ['hesap_id' => $hesap->id, 'varlik_id' => $bes->id, 'tarih' => now()->toDateString()];
+
+        // BES'te yalnızca güncel tutar; kâr yüzdesi -100'den büyük
+        $this->actingAs($user)->postJson('/api/v1/islemler', [...$temel, 'tur' => 'alis', 'miktar' => 1000, 'birim_fiyat' => 1])->assertJsonValidationErrors('tur');
+        $this->actingAs($user)->postJson('/api/v1/islemler', [...$temel, 'tur' => 'deger', 'miktar' => 1000, 'kar_yuzde' => -100])->assertJsonValidationErrors('kar_yuzde');
+
+        $id = $this->actingAs($user)->postJson('/api/v1/islemler', [...$temel, 'tur' => 'deger', 'miktar' => 150000, 'kar_yuzde' => 25])
+            ->assertCreated()
+            ->assertJsonPath('islem.tutar', 150000)
+            ->assertJsonPath('islem.kar_yuzde', 25)
+            ->json('islem.id');
+        $this->assertDatabaseHas('islemler', ['id' => $id, 'birim_fiyat' => 0.8, 'komisyon' => 0]);
+        $this->actingAs($user)->getJson("/api/v1/hesaplar/{$hesap->id}")
+            ->assertJsonPath('hesap.deger', 150000)
+            ->assertJsonPath('hesap.kz', 30000)
+            ->assertJsonPath('hesap.kz_yuzde', 25);
+
+        // Düzeltme: kâr yüzdesi silinirse maliyet bilinmiyor
+        $this->actingAs($user)->putJson("/api/v1/islemler/{$id}", [...$temel, 'tur' => 'deger', 'miktar' => 150000, 'kar_yuzde' => null])
+            ->assertOk()->assertJsonPath('islem.kar_yuzde', null);
+        $this->actingAs($user)->getJson("/api/v1/hesaplar/{$hesap->id}")->assertJsonPath('pozisyonlar.0.kz', null);
+
+        // Başka kullanıcının BES hesabına giriş yok
+        $this->actingAs(User::factory()->create())->postJson('/api/v1/islemler', [...$temel, 'tur' => 'deger', 'miktar' => 1, 'kar_yuzde' => 1])
+            ->assertJsonValidationErrors('hesap_id');
+        $this->assertDatabaseCount('islemler', 1);
+    }
+
     public function test_islemi_baska_hesaba_tasimak_eski_hesabi_da_denetler(): void
     {
         $user = User::factory()->create();

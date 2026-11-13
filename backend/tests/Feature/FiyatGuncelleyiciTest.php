@@ -110,5 +110,12 @@ class FiyatGuncelleyiciTest extends TestCase
         Katalog::esitle();
         $this->assertSame($sayi, Varlik::count());
         $this->assertSame('Gram altın (kuyumcu)', Varlik::where('kod', 'GRAM')->value('ad'));
+
+        // Nakit ve bireysel emeklilik katalogda; fiyatları hiçbir kaynaktan istenmez
+        $this->assertSame(['bes', 'nakit'], Varlik::where('kaynak', 'sabit')->orderBy('tur')->pluck('tur')->map->value->all());
+        Http::fake();
+        $rapor = app(FiyatGuncelleyici::class)->guncelle();
+        $this->assertArrayNotHasKey('sabit', $rapor);
+        $this->assertSame(0, Fiyat::whereIn('varlik_id', Varlik::where('kaynak', 'sabit')->pluck('id'))->count());
     }
 }

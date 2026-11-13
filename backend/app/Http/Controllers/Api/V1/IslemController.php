@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\IslemTuru;
+use App\Enums\VarlikTuru;
 use App\Http\Controllers\Controller;
 use App\Models\Islem;
+use App\Models\Varlik;
 use App\Services\Portfoy\PortfoyHesabi;
 use App\Services\Portfoy\YetersizMiktar;
 use App\Support\Bicim;
@@ -81,7 +83,16 @@ class IslemController extends Controller
             'satirlar.*.not' => 'not',
         ]);
 
-        DB::transaction(function () use ($veri, $request): void {
+        $varliklar = Varlik::whereIn('id', array_column($veri['satirlar'], 'varlik_id'))->get()->keyBy('id');
+        foreach ($veri['satirlar'] as $i => $satir) {
+            if ($varliklar[(int) $satir['varlik_id']]->tur === VarlikTuru::Bes) {
+                throw ValidationException::withMessages([
+                    "satirlar.{$i}.varlik_id" => 'Bireysel emekliliği "İşlem ekle" ile girin (toplam tutar ve kâr yüzdesi).',
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($veri, $request, $varliklar): void {
             foreach ($veri['satirlar'] as $satir) {
                 Islem::create([
                     'user_id' => $request->user()->id,
@@ -89,7 +100,8 @@ class IslemController extends Controller
                     'varlik_id' => (int) $satir['varlik_id'],
                     'tur' => IslemTuru::Mevcut,
                     'miktar' => $satir['miktar'],
-                    'birim_fiyat' => $satir['birim_fiyat'] ?? null,
+                    // Nakitte birim 1 TL
+                    'birim_fiyat' => $varliklar[(int) $satir['varlik_id']]->tur->sabitFiyatli() ? 1.0 : ($satir['birim_fiyat'] ?? null),
                     'komisyon' => 0,
                     'tarih' => $satir['tarih'],
                     'not' => $satir['not'] ?? null,
@@ -131,26 +143,48 @@ class IslemController extends Controller
     }
 
     /**
+     * Nakitte birim fiyat 1 TL, komisyon yok. Bireysel emeklilikte yalnızca "güncel tutar" girilir: miktar toplam
+     * tutar, birim fiyat kâr yüzdesinden maliyet / tutar oranı (yüzde boşsa maliyet bilinmiyor).
+     *
      * @return array<string, mixed>
      */
     private function dogrula(Request $request): array
     {
+        $varlikId = $request->input('varlik_id');
+        $varlikTuru = is_numeric($varlikId) ? Varlik::whereKey((int) $varlikId)->first()?->tur : null;
+        $sabit = $varlikTuru?->sabitFiyatli() ?? false;
+        $bes = $varlikTuru === VarlikTuru::Bes;
+
         $veri = $request->validate([
             'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->where('user_id', $request->user()->id)],
             'varlik_id' => ['required', 'integer', Rule::exists('varliklar', 'id')],
-            'tur' => ['required', Rule::enum(IslemTuru::class)],
+            'tur' => [
+                'required', Rule::enum(IslemTuru::class),
+                $bes ? Rule::in([IslemTuru::Deger->value]) : Rule::notIn([IslemTuru::Deger->value]),
+            ],
             'miktar' => ['required', 'numeric', 'gt:0', 'max:1000000000000'],
-            'birim_fiyat' => [Rule::requiredIf($request->input('tur') === IslemTuru::Alis->value), 'nullable', 'numeric', 'gt:0', 'max:1000000000000'],
+            'birim_fiyat' => [Rule::requiredIf(! $sabit && $request->input('tur') === IslemTuru::Alis->value), 'nullable', 'numeric', 'gt:0', 'max:1000000000000'],
+            'kar_yuzde' => ['nullable', 'numeric', 'gt:-100', 'max:100000'],
             'komisyon' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'tarih' => ['required', 'date', 'before_or_equal:today'],
             'not' => ['nullable', 'string', 'max:255'],
         ], [
             'birim_fiyat.required' => 'Alışta birim fiyat gerekir. Fiyatını bilmediğiniz varlık için "Elde olan"ı seçin.',
+            'tur.in' => 'Bireysel emeklilikte toplam tutarı ve kâr yüzdesini girin.',
+            'tur.not_in' => 'Güncel tutar yalnızca bireysel emeklilikte girilir.',
+            'kar_yuzde.gt' => 'Kâr yüzdesi -100\'den büyük olmalı.',
             'tarih.before_or_equal' => 'İleri tarihli işlem girilemez.',
-        ], ['miktar' => 'miktar', 'birim_fiyat' => 'birim fiyat', 'hesap_id' => 'hesap', 'varlik_id' => 'varlık']);
-        $veri['komisyon'] = (float) ($veri['komisyon'] ?? 0);
+        ], ['miktar' => 'miktar', 'birim_fiyat' => 'birim fiyat', 'kar_yuzde' => 'kâr yüzdesi', 'hesap_id' => 'hesap', 'varlik_id' => 'varlık']);
+        $karYuzde = isset($veri['kar_yuzde']) ? (float) $veri['kar_yuzde'] : null;
+        unset($veri['kar_yuzde']);
+        $veri['komisyon'] = $sabit ? 0.0 : (float) ($veri['komisyon'] ?? 0);
         $veri['hesap_id'] = (int) $veri['hesap_id'];
         $veri['varlik_id'] = (int) $veri['varlik_id'];
+        if ($bes) {
+            $veri['birim_fiyat'] = $karYuzde !== null ? round(1 / (1 + $karYuzde / 100), 8) : null;
+        } elseif ($sabit) {
+            $veri['birim_fiyat'] = 1.0;
+        }
 
         return $veri;
     }

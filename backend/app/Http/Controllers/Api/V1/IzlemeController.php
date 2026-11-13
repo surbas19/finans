@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\VarlikTuru;
 use App\Http\Controllers\Controller;
 use App\Models\IzlemeKaydi;
 use App\Models\Varlik;
@@ -26,7 +27,11 @@ class IzlemeController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $veri = $request->validate(['varlik_id' => ['required', 'integer', Rule::exists('varliklar', 'id')->where('aktif', true)]]);
+        // Nakit ve bireysel emekliliğin piyasa fiyatı yok; izlenmez.
+        $veri = $request->validate(['varlik_id' => [
+            'required', 'integer',
+            Rule::exists('varliklar', 'id')->where('aktif', true)->whereNotIn('tur', [VarlikTuru::Nakit->value, VarlikTuru::Bes->value]),
+        ]], ['varlik_id.exists' => 'Bu varlık izleme listesine eklenemez.']);
         $kullanici = $request->user()->id;
         IzlemeKaydi::firstOrCreate(
             ['user_id' => $kullanici, 'varlik_id' => (int) $veri['varlik_id']],

@@ -114,6 +114,27 @@ class PortfoyGecmisiTest extends TestCase
         $this->assertEqualsWithDelta(20000, $g[self::gun(0)]['kz'], 0.01);
     }
 
+    public function test_nakit_ve_bes_kapanissiz_eksik_sayilmaz_bes_basamakli(): void
+    {
+        $hesap = Hesap::factory()->create();
+        $nakit = $this->varlik('TL', 'nakit', null, kaynak: 'sabit');
+        $bes = $this->varlik('BES', 'bes', null, kaynak: 'sabit');
+        $this->islem($hesap, $nakit, IslemTuru::Mevcut, 1000, 1, 4);
+        $this->islem($hesap, $bes, IslemTuru::Deger, 10000, 0.8, 4); // %25 kâr
+        $this->islem($hesap, $bes, IslemTuru::Deger, 12000, 0.75, 2); // %33,3 kâr
+
+        $g = $this->gecmis($hesap->user);
+
+        $this->assertEqualsWithDelta(11000, $g[self::gun(4)]['deger'], 0.01);
+        $this->assertEqualsWithDelta(9000, $g[self::gun(4)]['maliyet'], 0.01);
+        $this->assertEqualsWithDelta(2000, $g[self::gun(4)]['kz'], 0.01);
+        $this->assertEqualsWithDelta(11000, $g[self::gun(3)]['deger'], 0.01);
+        $this->assertEqualsWithDelta(13000, $g[self::gun(2)]['deger'], 0.01);
+        $this->assertEqualsWithDelta(3000, $g[self::gun(0)]['kz'], 0.01);
+        $this->assertEqualsWithDelta(app(PortfoyHesabi::class)->hesapla($hesap->user)['toplam']['deger'], $g[self::gun(0)]['deger'], 0.001);
+        $this->assertFalse(collect($g)->contains('eksik', true));
+    }
+
     public function test_uzun_aralik_haftalik_orneklenir(): void
     {
         $hesap = Hesap::factory()->create();
