@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import SelectButton from 'primevue/selectbutton'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import { finansApi, type Varlik, type VarlikTuru } from '@/api/finans'
 import { useFormGonder } from '@/composables/useFormGonder'
@@ -17,9 +17,9 @@ const gorunur = defineModel<boolean>('visible', { default: false })
 const emit = defineEmits<{ eklendi: [varlik: Varlik] }>()
 
 const TURLER: { deger: VarlikTuru; etiket: string }[] = [
-  { deger: 'hisse', etiket: 'BIST hissesi' },
+  { deger: 'hisse', etiket: 'Hisse' },
   { deger: 'kripto', etiket: 'Kripto' },
-  { deger: 'fon', etiket: 'Yatırım fonu' },
+  { deger: 'fon', etiket: 'Fon' },
 ]
 const tur = ref<VarlikTuru>('hisse')
 const kod = ref('')
@@ -63,12 +63,7 @@ async function ekle(): Promise<void> {
 </script>
 
 <template>
-  <Dialog
-    v-model:visible="gorunur"
-    modal
-    header="Kodla varlık ekle"
-    class="w-[min(28rem,calc(100vw-2rem))]"
-  >
+  <UygulamaPenceresi v-model:visible="gorunur" baslik="Kodla varlık ekle" :genislik="28">
     <form class="flex flex-col gap-4" @submit.prevent="ekle">
       <SelectButton
         v-model="tur"
@@ -77,6 +72,7 @@ async function ekle(): Promise<void> {
         option-value="deger"
         :allow-empty="false"
         aria-label="Varlık türü"
+        class="w-full sm:w-auto [&>.p-togglebutton]:flex-1"
       />
       <FormAlani etiket="Kod" for="varlik-kod" :hata="hatalar.kod" :ipucu="ipucu" zorunlu>
         <InputText
@@ -104,5 +100,5 @@ async function ekle(): Promise<void> {
         />
       </div>
     </form>
-  </Dialog>
+  </UygulamaPenceresi>
 </template>

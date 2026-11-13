@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import {
   finansApi,
@@ -54,11 +54,10 @@ async function kaydet(): Promise<void> {
 </script>
 
 <template>
-  <Dialog
+  <UygulamaPenceresi
     v-model:visible="gorunur"
-    modal
-    :header="hesap ? 'Hesabı düzenle' : 'Hesap ekle'"
-    class="w-[min(30rem,calc(100vw-2rem))]"
+    :baslik="hesap ? 'Hesabı düzenle' : 'Hesap ekle'"
+    :genislik="30"
   >
     <form class="flex flex-col gap-4" @submit.prevent="kaydet">
       <FormAlani
@@ -107,5 +106,5 @@ async function kaydet(): Promise<void> {
         <Button type="submit" label="Kaydet" icon="pi pi-check" :loading="gonderiliyor" />
       </div>
     </form>
-  </Dialog>
+  </UygulamaPenceresi>
 </template>

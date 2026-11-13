@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
-import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Tab from 'primevue/tab'
@@ -13,6 +12,7 @@ import Tabs from 'primevue/tabs'
 import Tag from 'primevue/tag'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useToast } from 'primevue/usetoast'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
 import { finansApi, type KaynakDurumu, type YonetimKullanicisi } from '@/api/finans'
@@ -193,12 +193,7 @@ async function sifreKaydet(): Promise<void> {
       </Tabs>
     </section>
 
-    <Dialog
-      v-model:visible="ekleAcik"
-      modal
-      header="Kullanıcı ekle"
-      class="w-[min(28rem,calc(100vw-2rem))]"
-    >
+    <UygulamaPenceresi v-model:visible="ekleAcik" baslik="Kullanıcı ekle" :genislik="28">
       <form class="flex flex-col gap-4" @submit.prevent="ekle">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormAlani etiket="Ad" for="y-ad" :hata="ekleme.hatalar.value.ad" zorunlu
@@ -241,13 +236,12 @@ async function sifreKaydet(): Promise<void> {
           />
         </div>
       </form>
-    </Dialog>
+    </UygulamaPenceresi>
 
-    <Dialog
+    <UygulamaPenceresi
       v-model:visible="sifreAcik"
-      modal
-      :header="`Şifre: ${sifreKisi?.ad_soyad ?? ''}`"
-      class="w-[min(24rem,calc(100vw-2rem))]"
+      :baslik="`Şifre: ${sifreKisi?.ad_soyad ?? ''}`"
+      :genislik="24"
     >
       <form class="flex flex-col gap-4" @submit.prevent="sifreKaydet">
         <FormAlani
@@ -275,6 +269,6 @@ async function sifreKaydet(): Promise<void> {
           />
         </div>
       </form>
-    </Dialog>
+    </UygulamaPenceresi>
   </div>
 </template>

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import BosDurum from '@/components/BosDurum.vue'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
@@ -136,12 +136,7 @@ async function kodlaEklendi(v: Varlik): Promise<void> {
       </li>
     </ul>
 
-    <Dialog
-      v-model:visible="ekleAcik"
-      modal
-      header="İzleme listesi"
-      class="w-[min(32rem,calc(100vw-1rem))]"
-    >
+    <UygulamaPenceresi v-model:visible="ekleAcik" baslik="İzleme listesi" :genislik="32">
       <div class="flex flex-col gap-3">
         <div class="flex gap-2">
           <IconField class="flex-1">
@@ -191,7 +186,7 @@ async function kodlaEklendi(v: Varlik): Promise<void> {
           </p>
         </div>
       </div>
-    </Dialog>
+    </UygulamaPenceresi>
     <VarlikEkleDialog v-model:visible="kodlaEkleAcik" @eklendi="kodlaEklendi" />
   </div>
 </template>

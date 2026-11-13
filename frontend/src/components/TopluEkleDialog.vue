@@ -2,10 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
-import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import { useToast } from 'primevue/usetoast'
 import { finansApi, type HesapOzeti } from '@/api/finans'
@@ -116,12 +116,7 @@ async function kaydet(): Promise<void> {
 </script>
 
 <template>
-  <Dialog
-    v-model:visible="gorunur"
-    modal
-    header="Elde olanları toplu ekle"
-    class="w-[min(40rem,calc(100vw-1rem))]"
-  >
+  <UygulamaPenceresi v-model:visible="gorunur" baslik="Elde olanları toplu ekle" :genislik="40">
     <Message v-if="gorunur && !yukleniyor && hesaplar.length === 0" severity="warn" class="mb-3">
       Önce bir hesap ekleyin (Hesaplar → Hesap ekle).
     </Message>
@@ -249,5 +244,5 @@ async function kaydet(): Promise<void> {
         />
       </div>
     </form>
-  </Dialog>
+  </UygulamaPenceresi>
 </template>

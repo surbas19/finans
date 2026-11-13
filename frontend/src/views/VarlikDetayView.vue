@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import FiyatGrafigi from '@/components/FiyatGrafigi.vue'
 import FormAlani from '@/components/FormAlani.vue'
@@ -235,12 +235,7 @@ async function elleKaydet(): Promise<void> {
       @kaydedildi="yukle"
     />
 
-    <Dialog
-      v-model:visible="elleAcik"
-      modal
-      header="Elle fiyat"
-      class="w-[min(24rem,calc(100vw-2rem))]"
-    >
+    <UygulamaPenceresi v-model:visible="elleAcik" baslik="Elle fiyat" :genislik="24">
       <form class="flex flex-col gap-4" @submit.prevent="elleKaydet">
         <p class="text-sm text-surface-500">
           Fonlar ya da kaynak bozulduğunda kullanılır. Otomatik kaynaklı varlıkta bir sonraki
@@ -272,6 +267,6 @@ async function elleKaydet(): Promise<void> {
           />
         </div>
       </form>
-    </Dialog>
+    </UygulamaPenceresi>
   </div>
 </template>

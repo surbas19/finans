@@ -47,6 +47,16 @@
     transform: translateY(4px) scale(0.985);
   }
 }
+@keyframes hareket-alttan-giris {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes hareket-alttan-cikis {
+  to {
+    transform: translateY(100%);
+  }
+}
 @keyframes hareket-panel-giris {
   from {
     opacity: 0;
@@ -280,6 +290,34 @@
     .p-toast {
       width: calc(100vw - 16px);
       max-width: 25rem;
+    }
+
+    /* Pencere (components/UygulamaPenceresi.vue) telefonda alttan açılan sayfa: tam genişlik, yalnız üst köşeler yuvarlak,
+       üstte tutamak, alt çentik payı; alttan kayarak açılır, aşağı kayarak kapanır */
+    .pencere {
+      margin: 0;
+      max-height: 90dvh;
+      border-radius: 1.5rem 1.5rem 0 0;
+      border-bottom-width: 0;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .pencere::before {
+      content: '';
+      flex-shrink: 0;
+      width: 2.5rem;
+      height: 4px;
+      margin: 0.5rem auto 0;
+      border-radius: 9999px;
+      background: var(--p-surface-300);
+    }
+    .pencere .p-dialog-header {
+      padding-top: 0.75rem;
+    }
+    .p-dialog-bottom .pencere.p-dialog-enter-active {
+      animation: hareket-alttan-giris var(--hareket-yavas) var(--egri-cikis);
+    }
+    .p-dialog-bottom .pencere.p-dialog-leave-active {
+      animation: hareket-alttan-cikis var(--hareket-normal) var(--egri-giris) forwards;
     }
   }
 }

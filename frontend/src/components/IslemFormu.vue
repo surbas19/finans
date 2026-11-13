@@ -2,12 +2,12 @@
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
-import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import Textarea from 'primevue/textarea'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import VarlikEkleDialog from '@/components/VarlikEkleDialog.vue'
 import {
@@ -22,6 +22,7 @@ import {
   type VarlikTuru,
 } from '@/api/finans'
 import { useFormGonder } from '@/composables/useFormGonder'
+import { useIslemSil } from '@/composables/useIslemSil'
 import { useKatalogStore } from '@/stores/katalog'
 import { tarihMetni, tl } from '@/utils/bicim'
 
@@ -129,6 +130,16 @@ function varlikEklendi(v: Varlik): void {
   form.value.varlik_id = v.id
 }
 
+const { sil } = useIslemSil()
+
+/** Silinince pencere kapanır; üst sayfa `kaydedildi` ile listeyi yeniler */
+function silVeKapat(islem: Islem): void {
+  sil(islem, () => {
+    gorunur.value = false
+    emit('kaydedildi')
+  })
+}
+
 async function kaydet(): Promise<void> {
   form.value.tarih = tarihMetni(tarihSecimi.value)
   const sonuc = await gonder(
@@ -146,11 +157,10 @@ async function kaydet(): Promise<void> {
 </script>
 
 <template>
-  <Dialog
+  <UygulamaPenceresi
     v-model:visible="gorunur"
-    modal
-    :header="islem ? 'İşlemi düzenle' : 'İşlem ekle'"
-    class="w-[min(34rem,calc(100vw-1rem))]"
+    :baslik="islem ? 'İşlemi düzenle' : 'İşlem ekle'"
+    :genislik="34"
   >
     <Message v-if="gorunur && hesaplar.length === 0" severity="warn" class="mb-3">
       Önce bir hesap ekleyin (Hesaplar → Hesap ekle).
@@ -163,6 +173,7 @@ async function kaydet(): Promise<void> {
         option-value="deger"
         :allow-empty="false"
         aria-label="İşlem türü"
+        class="w-full sm:w-auto [&>.p-togglebutton]:flex-1"
       />
       <p v-if="form.tur === 'mevcut'" class="-mt-2 text-xs text-surface-500">
         Elinizde zaten olan varlık (ör. kasadaki altın). Alış fiyatını bilmiyorsanız boş bırakın; o
@@ -280,10 +291,20 @@ async function kaydet(): Promise<void> {
       </FormAlani>
 
       <div class="flex justify-end gap-2">
+        <!-- Düzenlerken silme (telefonda işlem satırında çöp düğmesi yok) -->
+        <Button
+          v-if="islem"
+          label="Sil"
+          icon="pi pi-trash"
+          severity="danger"
+          text
+          class="mr-auto"
+          @click="silVeKapat(islem)"
+        />
         <Button label="Vazgeç" severity="secondary" text @click="gorunur = false" />
         <Button type="submit" label="Kaydet" icon="pi pi-check" :loading="gonderiliyor" />
       </div>
     </form>
     <VarlikEkleDialog v-model:visible="varlikEkleAcik" @eklendi="varlikEklendi" />
-  </Dialog>
+  </UygulamaPenceresi>
 </template>

@@ -6,5 +6,6 @@ import ConfirmDialog from 'primevue/confirmdialog'
 <template>
   <RouterView />
   <Toast position="top-center" />
-  <ConfirmDialog />
+  <!-- Genişlik verilmezse telefonda ekranın iki kenarına yapışır -->
+  <ConfirmDialog class="w-[min(26rem,calc(100vw-2rem))]" />
 </template>
