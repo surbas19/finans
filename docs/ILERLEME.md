@@ -4,10 +4,12 @@
 
 ## Kullanıcının yapacakları
 - [ ] Canlıda: geçici şifreyle girip şifreyi değiştir, `finans-app/deploy/kurulum.log`'u sil; boş kalan `~/finans`, `~/finans-app.yoklm.com`, `~/finans.yoklm.com` ve `~/finans-yukleme/home` klasörlerini temizle.
+- [ ] **Aile finansı (`aile-finansi` dalı):** inceleyip onaylayın; onayınızla ana dala birleştirilip yayınlanır. Yayından önce cPanel → *MultiPHP INI Editor*: `upload_max_filesize` ≥ 12M, `post_max_size` ≥ 16M. Yayından sonra Yönetim → Kullanıcılar'da eşinizi kendi hanenize bağlayın.
 
 ## Sıradaki
 - [ ] Fiyat alarmı ve bildirim (Web Push)
-- [ ] Hesabı başka kullanıcıyla paylaşma (eşin kendi girişiyle görmesi)
+- [ ] Ekstre ayrıştırıcıya bankaya özel ayarlar (gerçek ekstrelerle; şimdilik genel ayrıştırıcı)
+- [ ] Banka hesabı ekstresi (kartsız giderler: kira, havale) ve kişiye göre gider
 - [ ] Hesaplar arası aktarma (kasadan yatırım hesabına)
 - [ ] Temettü / faiz / kira geliri
 - [ ] Excel'e aktarma
@@ -15,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-14) Aile finansı ([planlar/aile-finansi.md](planlar/aile-finansi.md), dal `aile-finansi`, ana dala birleştirilmedi): hane (eşler ayrı girişle aynı veriyi görür; mevcut yatırım hesapları da hanede ortak; Yönetim'de hane), gelirler (kişi / tür / kaynak; düzenli, düzensiz, tek seferlik; beklenen gelir toplama katılmaz; geçmiş aya kayıt; döviz), bankalar ve kartlar (numara tutulmaz), PDF ekstre (smalot/pdfparser, genel ayrıştırıcı; taslak → inceleme → hepsi ya da hiçbiri onay; aynı dosya / aynı işlem iki kez girmez; PDF özel diskte), kart işlemleri (kart borcu ödemesi / transfer / nakit avans gider değil, iade düşer, taksit ekstrenin ayına), faturalar (elektrik / su / doğalgaz + eklenebilir tür; sağlayıcı yazımları; kanıt, güven, gerekçe; otomatik kayıt ayarı; hizmet dönemi uydurulmaz; bağla / çöz), aylık özet ve uyarılar. Testler: arka uç 88, ön yüz 60; uçtan uca 320 / 360 / 390 / 1280.
 - (2026-11-13) Hesaplarda nakit ve bireysel emeklilik ([planlar/nakit-bes.md](planlar/nakit-bes.md)): katalogda "Nakit" (TL) ve "Bireysel emeklilik" (BES), fiyatı çekilmez, birimi 1 TL; migration yok. Nakit elle girilir (yatırma / çekme / elde olan, eldekinden fazla çekilemez; alım-satım nakde dokunmaz), K/Z'si yok. BES'te toplam tutar + kâr yüzdesi ("Güncel tutar", yeni işlem türü `deger`); her giriş öncekinin yerine geçer, ödenen tutar yüzdeden hesaplanır, yüzde boşsa K/Z "—". Hesap detayında "Nakit" kısayolu, yeni hesap türü "Bireysel emeklilik" ve "Tutarı güncelle"; nakit / BES izlenmez, elle fiyat girilmez, toplu eklemede BES kabul edilmez. 360 / 1280 px uçtan uca denendi.
 - (2026-11-13) Özet kaydırıcısı ([planlar/ozet-kaydirici.md](planlar/ozet-kaydirici.md)): Özet açılınca "Tüm hesaplar" halkası (hesapların payı, hesap renkleriyle), yana kaydırınca her hesabın halkası (en büyük 6 varlık renkli + gri Diğer); seçilen slaytın özeti, performansı, varlıkları (halkadaki renkte şerit) ve dağılımı altta, "Hesabı aç" bağlantısı. Telefonda parmakla kaydırma ve noktalar, masaüstünde 3 slayt + oklar. Hepsi tek özet isteğinden (özette her hesabın `dagilim`'ı); seçim adreste (`?hesap=`), varlıktan geri dönünce aynı slayt. Sorgu değişince sayfa artık yeniden kurulmuyor (`RouterView` anahtarı `path`).
 - (2026-11-13) Toplu eklemede yeni hisse / kripto kodları ([planlar/toplu-yeni-kod.md](planlar/toplu-yeni-kod.md)): katalogda olmayan kod (ör. `TUPRS;100`) artık hata değil, önizlemede "yeni kod"; "Ekle"de `POST /api/v1/varliklar/toplu` ile önce Borsa İstanbul'da, yoksa kriptoda (TRY paritesi) aranıp kataloğa eklenir, sonra kayıt yapılır. Bulunamayan kodun satırı hatalı olur ve kayıt yapılmaz; kaynağa ulaşılamazsa "bulunamadı" denmez. Kaynaklarda `dogrulaHepsi` (Http::pool); fon yine "Kodla ekle" ile.

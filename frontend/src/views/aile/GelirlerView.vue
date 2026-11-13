@@ -54,7 +54,9 @@ onMounted(async () => {
   await yukle()
 })
 watch(donem, () => {
+  // Önceki ayın toplamı yeni ayın adıyla görünmesin
   gelirler.value = null
+  ozet.value = null
   void yukle()
 })
 
