@@ -36,5 +36,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(120)->by($request->user()?->id ?: $request->ip()));
         // Kaynağa giden istekler (kod ekleme, elle güncelleme) kaynağı yormasın
         RateLimiter::for('kaynak', fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()));
+        // Ekstre PDF yükleme: ayrıştırma sunucuyu yorar
+        RateLimiter::for('ekstre', fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()));
     }
 }

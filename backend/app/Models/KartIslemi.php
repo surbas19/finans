@@ -21,7 +21,7 @@ class KartIslemi extends Model
     protected $fillable = [
         'hane_id', 'kart_id', 'ekstre_id', 'sira', 'durum', 'islem_tarihi', 'aciklama', 'tutar', 'tur', 'taksit_no',
         'taksit_sayisi', 'taksit_toplam', 'iade_islem_id', 'kategori_id', 'rapor_donemi', 'parmak_izi', 'tekrar_islem_id',
-        'ham_metin', 'sayfa', 'okunamayan', 'fatura_onerisi', 'olusturan_id',
+        'ham_metin', 'sayfa', 'okuma', 'fatura_onerisi', 'olusturan_id',
     ];
 
     /**
@@ -35,7 +35,7 @@ class KartIslemi extends Model
             'islem_tarihi' => 'date',
             'tutar' => 'decimal:2',
             'taksit_toplam' => 'decimal:2',
-            'okunamayan' => 'array',
+            'okuma' => 'array',
             'fatura_onerisi' => 'array',
         ];
     }
@@ -96,7 +96,7 @@ class KartIslemi extends Model
             'tekrar_islem_id' => $this->tekrar_islem_id,
             'ham_metin' => $this->ham_metin,
             'sayfa' => $this->sayfa,
-            'okunamayan' => $this->okunamayan ?? [],
+            'okuma' => $this->okuma ?? ['alanlar' => [], 'uyarilar' => [], 'tutar_adaylari' => []],
             'fatura_onerisi' => $this->fatura_onerisi,
         ];
     }

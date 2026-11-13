@@ -107,7 +107,7 @@ return new class extends Migration
             $table->foreignId('tekrar_islem_id')->nullable()->constrained('kart_islemleri')->nullOnDelete(); // taslakta: aynısı onaylı mı
             $table->text('ham_metin')->nullable(); // PDF'deki satır (karşılaştırma için)
             $table->unsignedSmallInteger('sayfa')->nullable();
-            $table->json('okunamayan')->nullable();
+            $table->json('okuma')->nullable(); // ayrıştırma notları: okunamayan alanlar, uyarılar, tutar adayları
             $table->json('fatura_onerisi')->nullable();
             $table->foreignId('olusturan_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Aile\BankaController;
+use App\Http\Controllers\Api\V1\Aile\EkstreController;
 use App\Http\Controllers\Api\V1\Aile\GelirController;
 use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
 use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
@@ -70,6 +71,14 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::post('kategoriler/{kategori}/kurallar', [KategoriController::class, 'kuralEkle'])->name('kategoriler.kurallar.store');
             Route::delete('kategori-kurallari/{kural}', [KategoriController::class, 'kuralSil'])->name('kategori-kurallari.destroy');
             Route::apiResource('kart-islemleri', KartIslemiController::class)->except('show')->parameters(['kart-islemleri' => 'islem']);
+            Route::get('ekstreler', [EkstreController::class, 'index'])->name('ekstreler.index');
+            Route::post('ekstreler', [EkstreController::class, 'store'])->middleware('throttle:ekstre')->name('ekstreler.store');
+            Route::get('ekstreler/{ekstre}', [EkstreController::class, 'show'])->name('ekstreler.show');
+            Route::put('ekstreler/{ekstre}', [EkstreController::class, 'update'])->name('ekstreler.update');
+            Route::delete('ekstreler/{ekstre}', [EkstreController::class, 'destroy'])->name('ekstreler.destroy');
+            Route::get('ekstreler/{ekstre}/dosya', [EkstreController::class, 'dosya'])->name('ekstreler.dosya');
+            Route::put('ekstreler/{ekstre}/satirlar/{islem}', [EkstreController::class, 'satirGuncelle'])->name('ekstreler.satirlar.update');
+            Route::post('ekstreler/{ekstre}/onayla', [EkstreController::class, 'onayla'])->name('ekstreler.onayla');
             Route::get('ozet', AileOzetController::class)->name('ozet');
         });
 
