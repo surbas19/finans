@@ -175,7 +175,7 @@ async function elleYenile(): Promise<void> {
           >Tümü</RouterLink
         >
       </div>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <RouterLink
           v-for="h in ozet.hesaplar"
           :key="h.id"
@@ -199,7 +199,7 @@ async function elleYenile(): Promise<void> {
       </div>
     </section>
 
-    <div class="grid gap-4 lg:grid-cols-5">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
       <!-- Varlıklar -->
       <section class="kart p-4 sm:p-5 lg:col-span-3">
         <h2 class="bolum-etiketi mb-2">

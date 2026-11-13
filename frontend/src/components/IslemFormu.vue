@@ -169,7 +169,7 @@ async function kaydet(): Promise<void> {
         zaman kâr / zarar hesaplanmaz, yalnızca bugünkü değeri görünür.
       </p>
 
-      <div class="grid gap-4 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormAlani etiket="Hesap" for="islem-hesap" :hata="hatalar.hesap_id" zorunlu>
           <Select
             id="islem-hesap"
@@ -218,7 +218,7 @@ async function kaydet(): Promise<void> {
         </div>
       </FormAlani>
 
-      <div class="grid gap-4 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormAlani
           :etiket="`Miktar${secilenVarlik ? ` (${secilenVarlik.birim})` : ''}`"
           for="islem-miktar"
@@ -255,7 +255,7 @@ async function kaydet(): Promise<void> {
         </FormAlani>
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormAlani etiket="Komisyon / masraf (TL)" for="islem-komisyon" :hata="hatalar.komisyon">
           <InputNumber
             v-model="form.komisyon"

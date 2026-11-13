@@ -33,7 +33,7 @@ onMounted(yukle)
       </template>
     </SayfaBasligi>
 
-    <div v-if="hesaplar === null" class="grid gap-3 sm:grid-cols-2">
+    <div v-if="hesaplar === null" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <Skeleton v-for="n in 4" :key="n" height="6rem" border-radius="1.5rem" />
     </div>
     <BosDurum
@@ -44,7 +44,7 @@ onMounted(yukle)
     >
       <Button label="Hesap ekle" icon="pi pi-plus" @click="formAcik = true" />
     </BosDurum>
-    <div v-else class="grid gap-3 sm:grid-cols-2">
+    <div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <RouterLink
         v-for="h in hesaplar"
         :key="h.id"

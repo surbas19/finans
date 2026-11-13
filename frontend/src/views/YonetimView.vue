@@ -200,7 +200,7 @@ async function sifreKaydet(): Promise<void> {
       class="w-[min(28rem,calc(100vw-2rem))]"
     >
       <form class="flex flex-col gap-4" @submit.prevent="ekle">
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormAlani etiket="Ad" for="y-ad" :hata="ekleme.hatalar.value.ad" zorunlu
             ><InputText id="y-ad" v-model="yeni.ad"
           /></FormAlani>

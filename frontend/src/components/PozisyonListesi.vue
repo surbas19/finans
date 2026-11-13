@@ -29,7 +29,8 @@ defineProps<{
         >
           <i :class="VARLIK_TURLERI[p.varlik.tur].ikon" />
         </span>
-        <span class="min-w-0 flex-1">
+        <!-- Dar ekranda ad en az bu kadar yer alır; sağdaki K/Z sığmazsa yüzde alt satıra iner -->
+        <span class="min-w-[5.5rem] flex-1">
           <span class="flex items-center gap-2">
             <span class="truncate font-semibold text-surface-900">{{ p.varlik.ad }}</span>
             <span class="shrink-0 text-xs text-surface-400">{{ p.varlik.kod }}</span>
@@ -46,12 +47,21 @@ defineProps<{
             {{ miktar(p.maliyeti_bilinmeyen_miktar) }} {{ p.varlik.birim }} maliyeti bilinmiyor
           </span>
         </span>
-        <span class="flex shrink-0 flex-col items-end gap-0.5 text-right">
-          <span v-if="p.deger !== null" class="font-semibold text-surface-900 tabular-nums">
+        <span class="flex flex-col items-end gap-0.5 text-right">
+          <span
+            v-if="p.deger !== null"
+            class="font-semibold whitespace-nowrap text-surface-900 tabular-nums"
+          >
             {{ tl(p.deger) }}
           </span>
           <Tag v-else value="Fiyat yok" severity="warn" />
-          <DegisimEtiketi v-if="p.kz !== null" :tutar="p.kz" :yuzde="p.kz_yuzde" kucuk />
+          <DegisimEtiketi
+            v-if="p.kz !== null"
+            :tutar="p.kz"
+            :yuzde="p.kz_yuzde"
+            kucuk
+            class="justify-end"
+          />
           <span v-else class="text-xs text-surface-400">K/Z —</span>
         </span>
       </RouterLink>

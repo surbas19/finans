@@ -89,7 +89,13 @@ async function cikis(): Promise<void> {
       </div>
     </header>
 
-    <main class="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-24 md:pb-10">
+    <!--
+      overflow-x-clip: içerik ekrandan genişse telefon tarayıcısı sayfayı genişletir, sabit alt çubuk ekranın altından
+      kayar. Clip kaydırma kutusu oluşturmaz (sticky başlık bozulmaz). Alt boşluk çentik payını da sayar.
+    -->
+    <main
+      class="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-10"
+    >
       <RouterView v-slot="{ Component, route: r }">
         <component :is="Component" :key="r.fullPath" class="sayfa-giris" />
       </RouterView>

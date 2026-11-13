@@ -171,7 +171,7 @@ function hesabiSil(): void {
         <PerformansGrafigi :hesap-id="id" :yenile="yenile" />
       </section>
 
-      <div class="grid items-start gap-4 lg:grid-cols-5">
+      <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-5">
         <section
           class="kart p-2 sm:p-4"
           :class="dagilim.length > 0 ? 'lg:col-span-3' : 'lg:col-span-5'"
