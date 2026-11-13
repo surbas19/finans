@@ -19,6 +19,7 @@ import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
 import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
+import TopluEkleDialog from '@/components/TopluEkleDialog.vue'
 import {
   finansApi,
   HESAP_TURLERI,
@@ -46,6 +47,7 @@ const bulunamadi = ref(false)
 const sekme = ref('varliklar')
 const hesapFormuAcik = ref(false)
 const islemFormuAcik = ref(false)
+const topluAcik = ref(false)
 const duzenlenen = ref<Islem | null>(null)
 const sonIstek = useSonIstek()
 
@@ -150,7 +152,16 @@ function hesabiSil(): void {
               <span>Bugün <DegisimEtiketi :tutar="hesap.gunluk_degisim" /></span>
             </p>
           </div>
-          <Button label="İşlem ekle" icon="pi pi-plus" @click="islemEkle" />
+          <div class="flex flex-wrap gap-2">
+            <Button
+              label="Toplu ekle"
+              icon="pi pi-file-import"
+              severity="secondary"
+              outlined
+              @click="topluAcik = true"
+            />
+            <Button label="İşlem ekle" icon="pi pi-plus" @click="islemEkle" />
+          </div>
         </div>
         <p v-if="hesap?.not" class="mt-3 text-sm text-surface-500">{{ hesap.not }}</p>
       </section>
@@ -180,6 +191,14 @@ function hesabiSil(): void {
                   ikon="pi pi-wallet"
                 >
                   <Button label="İşlem ekle" icon="pi pi-plus" size="small" @click="islemEkle" />
+                  <Button
+                    label="Elde olanları toplu ekle"
+                    icon="pi pi-file-import"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    @click="topluAcik = true"
+                  />
                 </BosDurum>
                 <PozisyonListesi v-else :pozisyonlar="pozisyonlar" />
               </TabPanel>
@@ -213,5 +232,6 @@ function hesabiSil(): void {
       :varsayilan="{ hesap_id: id }"
       @kaydedildi="islemDegisti"
     />
+    <TopluEkleDialog v-model:visible="topluAcik" :hesap-id="id" @kaydedildi="islemDegisti" />
   </div>
 </template>

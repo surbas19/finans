@@ -7,6 +7,7 @@ import BosDurum from '@/components/BosDurum.vue'
 import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
+import TopluEkleDialog from '@/components/TopluEkleDialog.vue'
 import { finansApi, type HesapOzeti, type Islem } from '@/api/finans'
 import { useSonIstek } from '@/composables/useSonIstek'
 
@@ -17,6 +18,7 @@ const islemler = ref<Islem[] | null>(null)
 const hesaplar = ref<HesapOzeti[]>([])
 const hesapId = ref<number | null>(null)
 const formAcik = ref(false)
+const topluAcik = ref(false)
 const duzenlenen = ref<Islem | null>(null)
 const sonIstek = useSonIstek()
 
@@ -47,6 +49,13 @@ function duzenle(i: Islem): void {
   <div>
     <SayfaBasligi baslik="İşlemler" aciklama="Alış, satış ve elde olan kayıtları">
       <template #eylemler>
+        <Button
+          label="Toplu ekle"
+          icon="pi pi-file-import"
+          severity="secondary"
+          outlined
+          @click="topluAcik = true"
+        />
         <Button label="İşlem ekle" icon="pi pi-plus" @click="ekle" />
       </template>
       <template v-if="hesaplar.length > 1" #filtreler>
@@ -68,6 +77,13 @@ function duzenle(i: Islem): void {
     </div>
     <BosDurum v-else-if="islemler.length === 0" baslik="Henüz işlem yok" ikon="pi pi-list">
       <Button label="İşlem ekle" icon="pi pi-plus" @click="ekle" />
+      <Button
+        label="Elde olanları toplu ekle"
+        icon="pi pi-file-import"
+        severity="secondary"
+        outlined
+        @click="topluAcik = true"
+      />
     </BosDurum>
     <section v-else class="kart px-3 sm:px-5">
       <IslemListesi :islemler="islemler" hesap-goster @duzenle="duzenle" @silindi="yukle" />
@@ -79,5 +95,6 @@ function duzenle(i: Islem): void {
       :varsayilan="hesapId ? { hesap_id: hesapId } : undefined"
       @kaydedildi="yukle"
     />
+    <TopluEkleDialog v-model:visible="topluAcik" :hesap-id="hesapId" @kaydedildi="yukle" />
   </div>
 </template>

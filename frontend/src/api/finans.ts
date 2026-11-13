@@ -129,6 +129,15 @@ export interface IslemGirdisi {
   not: string | null
 }
 
+/** Toplu "elde olan" eklemede bir satır (tür sunucuda `mevcut`) */
+export interface TopluSatir {
+  varlik_id: number
+  miktar: number
+  birim_fiyat: number | null
+  tarih: string
+  not: string | null
+}
+
 export interface HesapGirdisi {
   ad: string
   tur: HesapTuru
@@ -200,6 +209,8 @@ export const finansApi = {
   islemEkle: (veri: IslemGirdisi) => http.post('/islemler', veri),
   islemGuncelle: (id: number, veri: IslemGirdisi) => http.put(`/islemler/${id}`, veri),
   islemSil: (id: number) => http.delete(`/islemler/${id}`),
+  topluMevcutEkle: (veri: { hesap_id: number; satirlar: TopluSatir[] }) =>
+    http.post<{ eklenen: number; message: string }>('/islemler/toplu', veri).then((r) => r.data),
 
   varliklar: (filtre: { tur?: VarlikTuru; q?: string } = {}) =>
     http
