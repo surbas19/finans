@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
@@ -26,7 +26,9 @@ import {
   type DagilimDilimi,
   type HesapOzeti,
   type Islem,
+  type IslemTuru,
   type Pozisyon,
+  type VarlikTuru,
 } from '@/api/finans'
 import { hataMesaji } from '@/api/http'
 import { useSonIstek } from '@/composables/useSonIstek'
@@ -71,7 +73,20 @@ function islemDegisti(): void {
   void yukle()
 }
 
-function islemEkle(): void {
+/** İşlem formunun ön değerleri: kısayola göre nakit ya da bireysel emeklilik seçili açılır */
+const formVarsayilan = ref<{ hesap_id: number; varlik_tur?: VarlikTuru; tur?: IslemTuru }>({
+  hesap_id: props.id,
+})
+const besHesabi = computed(() => hesap.value?.tur === 'bes')
+
+function islemEkle(varlikTur?: VarlikTuru): void {
+  let tur: IslemTuru | undefined
+  if (varlikTur === 'bes') tur = 'deger'
+  // Hesapta nakit yoksa ilk giriş "elde olan", varsa "yatırma"
+  if (varlikTur === 'nakit') {
+    tur = pozisyonlar.value.some((p) => p.varlik.tur === 'nakit') ? 'alis' : 'mevcut'
+  }
+  formVarsayilan.value = { hesap_id: props.id, varlik_tur: varlikTur, tur }
   duzenlenen.value = null
   islemFormuAcik.value = true
 }
@@ -154,7 +169,10 @@ function hesabiSil(): void {
               <span>Bugün <DegisimEtiketi :tutar="hesap.gunluk_degisim" /></span>
             </p>
           </div>
-          <div class="flex flex-wrap gap-2">
+          <div v-if="besHesabi" class="flex flex-wrap gap-2">
+            <Button label="Tutarı güncelle" icon="pi pi-refresh" @click="islemEkle('bes')" />
+          </div>
+          <div v-else class="flex flex-wrap gap-2">
             <Button
               label="Toplu ekle"
               icon="pi pi-file-import"
@@ -162,7 +180,14 @@ function hesabiSil(): void {
               outlined
               @click="topluAcik = true"
             />
-            <Button label="İşlem ekle" icon="pi pi-plus" @click="islemEkle" />
+            <Button
+              label="Nakit"
+              icon="pi pi-money-bill"
+              severity="secondary"
+              outlined
+              @click="islemEkle('nakit')"
+            />
+            <Button label="İşlem ekle" icon="pi pi-plus" @click="islemEkle()" />
           </div>
         </div>
         <p v-if="hesap?.not" class="mt-3 text-sm text-surface-500">{{ hesap.not }}</p>
@@ -186,13 +211,35 @@ function hesabiSil(): void {
             <TabPanels>
               <TabPanel value="varliklar">
                 <BosDurum
-                  v-if="hesap && pozisyonlar.length === 0"
+                  v-if="hesap && pozisyonlar.length === 0 && besHesabi"
+                  kucuk
+                  baslik="Henüz tutar girilmedi"
+                  aciklama="Toplam birikimi ve kâr yüzdesini girin."
+                  ikon="pi pi-shield"
+                >
+                  <Button
+                    label="Tutarı gir"
+                    icon="pi pi-plus"
+                    size="small"
+                    @click="islemEkle('bes')"
+                  />
+                </BosDurum>
+                <BosDurum
+                  v-else-if="hesap && pozisyonlar.length === 0"
                   kucuk
                   baslik="Bu hesapta varlık yok"
                   aciklama="Alış ya da elde olan varlığınızı girin."
                   ikon="pi pi-wallet"
                 >
-                  <Button label="İşlem ekle" icon="pi pi-plus" size="small" @click="islemEkle" />
+                  <Button label="İşlem ekle" icon="pi pi-plus" size="small" @click="islemEkle()" />
+                  <Button
+                    label="Nakit gir"
+                    icon="pi pi-money-bill"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    @click="islemEkle('nakit')"
+                  />
                   <Button
                     label="Elde olanları toplu ekle"
                     icon="pi pi-file-import"
@@ -231,7 +278,7 @@ function hesabiSil(): void {
     <IslemFormu
       v-model:visible="islemFormuAcik"
       :islem="duzenlenen"
-      :varsayilan="{ hesap_id: id }"
+      :varsayilan="formVarsayilan"
       @kaydedildi="islemDegisti"
     />
     <TopluEkleDialog v-model:visible="topluAcik" :hesap-id="id" @kaydedildi="islemDegisti" />

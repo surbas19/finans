@@ -1,8 +1,9 @@
 import { http } from './http'
 
-export type VarlikTuru = 'altin' | 'doviz' | 'hisse' | 'fon' | 'kripto'
-export type IslemTuru = 'alis' | 'satis' | 'mevcut'
-export type HesapTuru = 'araci_kurum' | 'banka' | 'kasa' | 'ev' | 'kripto' | 'diger'
+export type VarlikTuru = 'nakit' | 'altin' | 'doviz' | 'hisse' | 'fon' | 'kripto' | 'bes'
+/** `deger`: bireysel emeklilikte o tarihteki toplam tutar (+ kâr yüzdesi) */
+export type IslemTuru = 'alis' | 'satis' | 'mevcut' | 'deger'
+export type HesapTuru = 'araci_kurum' | 'banka' | 'kasa' | 'ev' | 'kripto' | 'bes' | 'diger'
 
 export interface Kullanici {
   id: number
@@ -113,7 +114,10 @@ export interface Islem {
   miktar: number
   birim_fiyat: number | null
   komisyon: number
+  /** Bireysel emeklilikte toplam tutar (miktar) */
   tutar: number | null
+  /** Yalnızca bireysel emeklilik (`deger`); boşsa maliyet bilinmiyor */
+  kar_yuzde?: number | null
   tarih: string
   not: string | null
   varlik?: Varlik
@@ -127,6 +131,8 @@ export interface IslemGirdisi {
   miktar: number | null
   birim_fiyat: number | null
   komisyon: number | null
+  /** Bireysel emeklilik: kâr yüzdesi (birim fiyatı sunucu bundan hesaplar) */
+  kar_yuzde?: number | null
   tarih: string
   not: string | null
 }
@@ -283,11 +289,13 @@ export const finansApi = {
 }
 
 export const VARLIK_TURLERI: Record<VarlikTuru, { etiket: string; ikon: string; renk: string }> = {
+  nakit: { etiket: 'Nakit', ikon: 'pi pi-money-bill', renk: '--p-teal-500' },
   altin: { etiket: 'Altın / gümüş', ikon: 'pi pi-star', renk: '--p-amber-500' },
   doviz: { etiket: 'Döviz', ikon: 'pi pi-dollar', renk: '--p-emerald-500' },
   hisse: { etiket: 'Hisse senedi', ikon: 'pi pi-chart-line', renk: '--p-sky-500' },
   fon: { etiket: 'Yatırım fonu', ikon: 'pi pi-briefcase', renk: '--p-violet-500' },
   kripto: { etiket: 'Kripto', ikon: 'pi pi-bitcoin', renk: '--p-orange-500' },
+  bes: { etiket: 'Bireysel emeklilik', ikon: 'pi pi-shield', renk: '--p-rose-500' },
 }
 
 export const HESAP_TURLERI: Record<HesapTuru, { etiket: string; ikon: string }> = {
@@ -296,6 +304,7 @@ export const HESAP_TURLERI: Record<HesapTuru, { etiket: string; ikon: string }> 
   kasa: { etiket: 'Banka kasası', ikon: 'pi pi-lock' },
   ev: { etiket: 'Evde', ikon: 'pi pi-home' },
   kripto: { etiket: 'Kripto borsası / cüzdan', ikon: 'pi pi-wallet' },
+  bes: { etiket: 'Bireysel emeklilik', ikon: 'pi pi-shield' },
   diger: { etiket: 'Diğer', ikon: 'pi pi-box' },
 }
 
@@ -303,6 +312,29 @@ export const ISLEM_TURLERI: Record<IslemTuru, string> = {
   alis: 'Alış',
   satis: 'Satış',
   mevcut: 'Elde olan',
+  deger: 'Güncel tutar',
+}
+
+/** Nakit ve bireysel emeklilik: fiyatı yok, birimi 1 TL (miktar = TL tutarı) */
+export function sabitFiyatli(tur: VarlikTuru | undefined): boolean {
+  return tur === 'nakit' || tur === 'bes'
+}
+
+/** Varlığa uyan işlem türleri: nakitte yatırma / çekme, bireysel emeklilikte yalnızca güncel tutar */
+export function islemTurleri(varlikTuru?: VarlikTuru): IslemTuru[] {
+  if (varlikTuru === 'bes') return ['deger']
+
+  return ['alis', 'satis', 'mevcut']
+}
+
+/** İşlem türünün varlığa göre adı (nakitte alış "Yatırma", satış "Çekme") */
+export function islemEtiketi(tur: IslemTuru, varlikTuru?: VarlikTuru): string {
+  if (varlikTuru === 'nakit') {
+    if (tur === 'alis') return 'Yatırma'
+    if (tur === 'satis') return 'Çekme'
+  }
+
+  return ISLEM_TURLERI[tur]
 }
 
 /** Hesap kartı renkleri (Tailwind / PrimeVue paleti) */

@@ -199,7 +199,13 @@ export function satirlariCoz(
       kayit.varlik = bulunan.varlik
       kayit.yeniKod = bulunan.yeniKod
       if (bulunan.hata) hatalar.push(bulunan.hata)
+      // Bireysel emekliliğin kâr yüzdesi bu biçimde yazılamaz; sunucu da reddeder
+      if (bulunan.varlik?.tur === 'bes') {
+        hatalar.push('Bireysel emekliliği "İşlem ekle" ile girin (toplam tutar ve kâr yüzdesi)')
+      }
     }
+    // Nakitte birim fiyat yok (1 TL); yazılmışsa yok sayılır
+    const fiyatYok = kayit.varlik?.tur === 'nakit'
 
     if (miktarAlani !== '') {
       const { deger, belirsiz } = sayiCoz(miktarAlani)
@@ -213,7 +219,7 @@ export function satirlariCoz(
       }
     }
 
-    if (fiyatAlani !== '') {
+    if (fiyatAlani !== '' && !fiyatYok) {
       const { deger, belirsiz } = sayiCoz(fiyatAlani)
       if (deger === null) hatalar.push(`Birim fiyat sayı değil: ${fiyatAlani}`)
       else if (deger <= 0) hatalar.push('Birim fiyat sıfırdan büyük olmalı')

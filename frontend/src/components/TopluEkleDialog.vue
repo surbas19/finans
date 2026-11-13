@@ -294,11 +294,13 @@ async function kaydet(): Promise<void> {
               >
                 {{ miktar(s.miktar) }} {{ s.varlik?.birim }} ·
                 {{
-                  s.birimFiyat === null
-                    ? 'maliyet bilinmiyor'
-                    : s.varlik
-                      ? `${fiyat(s.birimFiyat)} / ${s.varlik.birim}`
-                      : `birim fiyat ${fiyat(s.birimFiyat)}`
+                  s.varlik?.tur === 'nakit'
+                    ? 'nakit'
+                    : s.birimFiyat === null
+                      ? 'maliyet bilinmiyor'
+                      : s.varlik
+                        ? `${fiyat(s.birimFiyat)} / ${s.varlik.birim}`
+                        : `birim fiyat ${fiyat(s.birimFiyat)}`
                 }}
                 · {{ tarih(s.tarih) }}<template v-if="s.not"> · {{ s.not }}</template>
               </p>

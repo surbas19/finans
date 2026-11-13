@@ -1,6 +1,6 @@
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
-import { finansApi, ISLEM_TURLERI, type Islem } from '@/api/finans'
+import { finansApi, islemEtiketi, type Islem } from '@/api/finans'
 import { dogrulamaHatalari, hataMesaji } from '@/api/http'
 import { tarih } from '@/utils/bicim'
 
@@ -15,7 +15,7 @@ export function useIslemSil() {
   function sil(islem: Islem, silindi: () => void): void {
     confirm.require({
       header: 'İşlemi sil',
-      message: `${tarih(islem.tarih)} tarihli ${ISLEM_TURLERI[islem.tur].toLocaleLowerCase('tr-TR')} kaydı silinsin mi?`,
+      message: `${tarih(islem.tarih)} tarihli ${islemEtiketi(islem.tur, islem.varlik?.tur).toLocaleLowerCase('tr-TR')} kaydı silinsin mi?`,
       acceptProps: { label: 'Sil', severity: 'danger' },
       rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
       accept: async () => {

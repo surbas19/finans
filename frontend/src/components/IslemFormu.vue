@@ -12,7 +12,9 @@ import FormAlani from '@/components/FormAlani.vue'
 import VarlikEkleDialog from '@/components/VarlikEkleDialog.vue'
 import {
   finansApi,
-  ISLEM_TURLERI,
+  islemEtiketi,
+  islemTurleri,
+  sabitFiyatli,
   VARLIK_TURLERI,
   type HesapOzeti,
   type Islem,
@@ -24,15 +26,18 @@ import {
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useIslemSil } from '@/composables/useIslemSil'
 import { useKatalogStore } from '@/stores/katalog'
-import { tarihMetni, tl } from '@/utils/bicim'
+import { isaretliTl, tarihMetni, tl } from '@/utils/bicim'
 
 /**
  * Alış / satış / elde olan. Tutarlar TL. Alışta fiyat zorunlu; fiyatını bilmediğiniz eski varlık için "Elde olan"
  * (maliyet bilinmiyor, kâr / zarar hesaplanmaz). Satış o tarihte hesaptakinden fazla olamaz (sunucu denetler).
+ * Nakitte yalnızca tutar (yatırma / çekme / elde olan). Bireysel emeklilikte toplam tutar ve kâr yüzdesi
+ * ("Güncel tutar"; her giriş öncekinin yerine geçer).
  */
 const props = defineProps<{
   islem?: Islem | null
-  varsayilan?: { hesap_id?: number; varlik_id?: number; tur?: IslemTuru }
+  /** `varlik_tur`: katalog yüklenince o türün ilk varlığı seçilir (ör. "Nakit" kısayolu) */
+  varsayilan?: { hesap_id?: number; varlik_id?: number; varlik_tur?: VarlikTuru; tur?: IslemTuru }
 }>()
 const gorunur = defineModel<boolean>('visible', { default: false })
 const emit = defineEmits<{ kaydedildi: [] }>()
@@ -44,11 +49,6 @@ const form = ref<IslemGirdisi>(bosForm())
 const varlikEkleAcik = ref(false)
 const { hatalar, gonderiliyor, gonder } = useFormGonder()
 
-const TURLER = (Object.keys(ISLEM_TURLERI) as IslemTuru[]).map((t) => ({
-  deger: t,
-  etiket: ISLEM_TURLERI[t],
-}))
-
 function bosForm(): IslemGirdisi {
   return {
     hesap_id: null,
@@ -57,6 +57,7 @@ function bosForm(): IslemGirdisi {
     miktar: null,
     birim_fiyat: null,
     komisyon: null,
+    kar_yuzde: null,
     tarih: tarihMetni(new Date()),
     not: null,
   }
@@ -77,15 +78,26 @@ watch(gorunur, async (acik) => {
         miktar: i.miktar,
         birim_fiyat: i.birim_fiyat,
         komisyon: i.komisyon || null,
+        kar_yuzde: i.kar_yuzde ?? null,
         tarih: i.tarih,
         not: i.not,
       }
-    : { ...bosForm(), ...props.varsayilan }
+    : {
+        ...bosForm(),
+        hesap_id: props.varsayilan?.hesap_id ?? null,
+        varlik_id: props.varsayilan?.varlik_id ?? null,
+        tur: props.varsayilan?.tur ?? 'alis',
+      }
   tarihSecimi.value = new Date(`${form.value.tarih}T00:00:00`)
   yukleniyor.value = true
   try {
     await Promise.all([
-      katalog.yukle(),
+      katalog.yukle().then(() => {
+        const tur = props.varsayilan?.varlik_tur
+        if (!props.islem && !form.value.varlik_id && tur) {
+          form.value.varlik_id = katalog.varliklar.find((v) => v.tur === tur)?.id ?? null
+        }
+      }),
       finansApi.hesaplar().then((v) => {
         hesaplar.value = v.hesaplar
         if (!form.value.hesap_id && v.hesaplar.length === 1) form.value.hesap_id = v.hesaplar[0]!.id
@@ -110,12 +122,41 @@ const varlikGruplari = computed(() =>
 const secilenVarlik = computed<Varlik | undefined>(() =>
   katalog.varliklar.find((v) => v.id === form.value.varlik_id),
 )
+/** Nakit / bireysel emeklilik: fiyat ve komisyon yok, miktar TL tutarı */
+const sabit = computed(() => sabitFiyatli(secilenVarlik.value?.tur))
+const bes = computed(() => secilenVarlik.value?.tur === 'bes')
+
+/** Varlığa uyan türler (nakitte Yatırma / Çekme, BES'te yalnızca Güncel tutar) */
+const turler = computed(() =>
+  islemTurleri(secilenVarlik.value?.tur).map((t) => ({
+    deger: t,
+    etiket: islemEtiketi(t, secilenVarlik.value?.tur),
+  })),
+)
+watch(
+  () => secilenVarlik.value?.tur,
+  (tur) => {
+    const uygun = islemTurleri(tur)
+    if (!uygun.includes(form.value.tur)) form.value.tur = uygun[0]!
+  },
+)
+
+/** BES: kâr yüzdesinden ödenen tutar ve K/Z (sunucu da aynı oranı saklar) */
+const besOzeti = computed(() => {
+  const { miktar, kar_yuzde } = form.value
+  if (!bes.value || !miktar || kar_yuzde === null || kar_yuzde === undefined || kar_yuzde <= -100)
+    return null
+  const odenen = miktar / (1 + kar_yuzde / 100)
+
+  return { odenen, kz: miktar - odenen }
+})
 
 /** Alışta piyasanın satış, satışta alış fiyatı önerilir (yalnızca TL fiyatlı varlıkta). */
 function fiyatOner(): void {
   const v = secilenVarlik.value
   if (
     !v?.fiyat ||
+    sabit.value ||
     v.para_birimi !== 'TRY' ||
     form.value.tur === 'mevcut' ||
     form.value.birim_fiyat !== null
@@ -150,11 +191,15 @@ function silVeKapat(islem: Islem): void {
 
 async function kaydet(): Promise<void> {
   form.value.tarih = tarihMetni(tarihSecimi.value)
+  // Nakit / BES: birim fiyatı sunucu belirler; kâr yüzdesi yalnızca BES'te
+  const veri: IslemGirdisi = {
+    ...form.value,
+    birim_fiyat: sabit.value ? null : form.value.birim_fiyat,
+    komisyon: sabit.value ? null : form.value.komisyon,
+    kar_yuzde: bes.value ? (form.value.kar_yuzde ?? null) : null,
+  }
   const sonuc = await gonder(
-    () =>
-      props.islem
-        ? finansApi.islemGuncelle(props.islem.id, form.value)
-        : finansApi.islemEkle(form.value),
+    () => (props.islem ? finansApi.islemGuncelle(props.islem.id, veri) : finansApi.islemEkle(veri)),
     props.islem ? 'İşlem güncellendi' : 'İşlem kaydedildi',
   )
   if (sonuc) {
@@ -175,15 +220,24 @@ async function kaydet(): Promise<void> {
     </Message>
     <form class="flex flex-col gap-4" @submit.prevent="kaydet">
       <SelectButton
+        v-if="!bes"
         v-model="form.tur"
-        :options="TURLER"
+        :options="turler"
         option-label="etiket"
         option-value="deger"
         :allow-empty="false"
         aria-label="İşlem türü"
         class="w-full sm:w-auto [&>.p-togglebutton]:flex-1"
       />
-      <p v-if="form.tur === 'mevcut'" class="-mt-2 text-xs text-surface-500">
+      <p v-if="bes" class="text-xs text-surface-500" data-test="bes-aciklama">
+        Şirket uygulamasında ya da e-Devlet'te görünen toplam birikimi ve kâr yüzdesini girin. Her
+        giriş öncekinin yerine geçer.
+      </p>
+      <p v-else-if="sabit" class="-mt-2 text-xs text-surface-500">
+        Hesaptaki TL nakit. Hisse ya da altın alıp satmak nakde dokunmaz; nakdi buradan
+        güncellersiniz.
+      </p>
+      <p v-else-if="form.tur === 'mevcut'" class="-mt-2 text-xs text-surface-500">
         Elinizde zaten olan varlık (ör. kasadaki altın). Alış fiyatını bilmiyorsanız boş bırakın; o
         zaman kâr / zarar hesaplanmaz, yalnızca bugünkü değeri görünür.
       </p>
@@ -239,7 +293,13 @@ async function kaydet(): Promise<void> {
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormAlani
-          :etiket="`Miktar${secilenVarlik ? ` (${secilenVarlik.birim})` : ''}`"
+          :etiket="
+            bes
+              ? 'Toplam tutar (TL)'
+              : sabit
+                ? 'Tutar (TL)'
+                : `Miktar${secilenVarlik ? ` (${secilenVarlik.birim})` : ''}`
+          "
           for="islem-miktar"
           :hata="hatalar.miktar"
           zorunlu
@@ -249,12 +309,32 @@ async function kaydet(): Promise<void> {
             input-id="islem-miktar"
             locale="tr-TR"
             :min-fraction-digits="0"
-            :max-fraction-digits="8"
+            :max-fraction-digits="sabit ? 2 : 8"
             :min="0"
+            :prefix="sabit ? '₺' : undefined"
             inputmode="decimal"
           />
         </FormAlani>
         <FormAlani
+          v-if="bes"
+          etiket="Kâr (%)"
+          for="islem-kar"
+          :hata="hatalar.kar_yuzde"
+          ipucu="Uygulamadaki getiri yüzdesi; bilmiyorsanız boş bırakın"
+        >
+          <!-- Eksi yazılabilsin diye ondalık klavye değil -->
+          <InputNumber
+            v-model="form.kar_yuzde"
+            input-id="islem-kar"
+            locale="tr-TR"
+            :min-fraction-digits="0"
+            :max-fraction-digits="2"
+            :min="-99.99"
+            prefix="%"
+          />
+        </FormAlani>
+        <FormAlani
+          v-if="!sabit"
           etiket="Birim fiyat (TL)"
           for="islem-fiyat"
           :hata="hatalar.birim_fiyat"
@@ -274,7 +354,26 @@ async function kaydet(): Promise<void> {
         </FormAlani>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div
+        v-if="besOzeti"
+        class="flex flex-wrap gap-x-4 rounded-2xl bg-surface-50 px-4 py-2.5 text-sm"
+        data-test="bes-ozeti"
+      >
+        <span class="text-surface-500"
+          >Ödenen ≈
+          <span class="font-semibold text-surface-900 tabular-nums">{{
+            tl(besOzeti.odenen)
+          }}</span></span
+        >
+        <span class="text-surface-500"
+          >K/Z
+          <span class="font-semibold text-surface-900 tabular-nums">{{
+            isaretliTl(besOzeti.kz)
+          }}</span></span
+        >
+      </div>
+
+      <div v-if="!sabit" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormAlani etiket="Komisyon / masraf (TL)" for="islem-komisyon" :hata="hatalar.komisyon">
           <InputNumber
             v-model="form.komisyon"

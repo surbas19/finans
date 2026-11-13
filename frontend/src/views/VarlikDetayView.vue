@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
@@ -13,7 +13,14 @@ import FormAlani from '@/components/FormAlani.vue'
 import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
-import { finansApi, VARLIK_TURLERI, type Islem, type Pozisyon, type Varlik } from '@/api/finans'
+import {
+  finansApi,
+  sabitFiyatli,
+  VARLIK_TURLERI,
+  type Islem,
+  type Pozisyon,
+  type Varlik,
+} from '@/api/finans'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useSonIstek } from '@/composables/useSonIstek'
@@ -30,6 +37,8 @@ type Ayrinti = Varlik & {
   izleniyor: boolean
 }
 const varlik = ref<Ayrinti | null>(null)
+/** Nakit ve bireysel emeklilik: fiyatı, grafiği, izlemesi yok */
+const sabit = computed(() => sabitFiyatli(varlik.value?.tur))
 const toplam = ref<Pozisyon | null>(null)
 const pozisyonlar = ref<Pozisyon[]>([])
 const islemler = ref<Islem[]>([])
@@ -127,7 +136,7 @@ async function elleKaydet(): Promise<void> {
             </div>
           </div>
           <Button
-            v-if="varlik"
+            v-if="varlik && !sabit"
             :icon="varlik.izleniyor ? 'pi pi-eye-slash' : 'pi pi-eye'"
             :label="varlik.izleniyor ? 'İzlemeden çıkar' : 'İzle'"
             severity="secondary"
@@ -137,7 +146,14 @@ async function elleKaydet(): Promise<void> {
           />
         </div>
 
-        <div v-if="varlik" class="mt-4 flex flex-wrap items-end justify-between gap-3">
+        <p v-if="varlik && sabit" class="mt-3 text-sm text-surface-500">
+          {{
+            varlik.tur === 'bes'
+              ? 'Toplam tutarı ve kâr yüzdesini "Güncel tutar" ile girersiniz; her giriş öncekinin yerine geçer.'
+              : 'Hesaptaki TL nakit: yatırma, çekme ya da elde olan tutar olarak girilir.'
+          }}
+        </p>
+        <div v-else-if="varlik" class="mt-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p
               class="text-2xl font-bold tracking-tight text-surface-900 tabular-nums min-[375px]:text-3xl"
@@ -178,7 +194,7 @@ async function elleKaydet(): Promise<void> {
         </div>
       </section>
 
-      <section v-if="varlik" class="kart p-4 sm:p-5">
+      <section v-if="varlik && !sabit" class="kart p-4 sm:p-5">
         <FiyatGrafigi :key="grafikAnahtari" :varlik-id="id" :para-birimi="varlik.para_birimi" />
       </section>
 
@@ -192,7 +208,7 @@ async function elleKaydet(): Promise<void> {
         </p>
         <template v-else>
           <div class="mb-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl bg-surface-50 p-3">
+            <div v-if="!sabit" class="rounded-2xl bg-surface-50 p-3">
               <p class="text-xs text-surface-500">Miktar</p>
               <p class="font-semibold tabular-nums">
                 {{ miktar(toplam.miktar) }} {{ toplam.varlik.birim }}
@@ -202,13 +218,17 @@ async function elleKaydet(): Promise<void> {
               <p class="text-xs text-surface-500">Değer</p>
               <p class="font-semibold tabular-nums">{{ tl(toplam.deger) }}</p>
             </div>
-            <div class="rounded-2xl bg-surface-50 p-3">
+            <div v-if="!sabit" class="rounded-2xl bg-surface-50 p-3">
               <p class="text-xs text-surface-500">Ort. maliyet</p>
               <p class="font-semibold tabular-nums">
                 {{ toplam.ortalama_maliyet !== null ? fiyat(toplam.ortalama_maliyet) : '—' }}
               </p>
             </div>
-            <div class="rounded-2xl bg-surface-50 p-3">
+            <div v-if="toplam.varlik.tur === 'bes'" class="rounded-2xl bg-surface-50 p-3">
+              <p class="text-xs text-surface-500">Ödenen</p>
+              <p class="font-semibold tabular-nums">{{ tl(toplam.maliyet) }}</p>
+            </div>
+            <div v-if="toplam.varlik.tur !== 'nakit'" class="rounded-2xl bg-surface-50 p-3">
               <p class="text-xs text-surface-500">Kâr / zarar</p>
               <DegisimEtiketi :tutar="toplam.kz" :yuzde="toplam.kz_yuzde" />
             </div>

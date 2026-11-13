@@ -41,9 +41,7 @@ const ipucu = computed(
       hisse: 'Borsa İstanbul kodu: THYAO, ASELS, BIMAS… Fiyat ~15 dakika gecikmeli gelir.',
       kripto: 'Binance TRY paritesi olan kod: BTC, ETH, SOL, AVAX…',
       fon: 'TEFAS fon kodu (ör. AFT). Fon fiyatı otomatik gelmez; yönetici elle girer.',
-      altin: '',
-      doviz: '',
-    })[tur.value],
+    })[tur.value as 'hisse' | 'kripto' | 'fon'] ?? '',
 )
 
 async function ekle(): Promise<void> {

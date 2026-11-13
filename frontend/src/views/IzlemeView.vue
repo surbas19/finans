@@ -12,7 +12,7 @@ import BosDurum from '@/components/BosDurum.vue'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
 import VarlikEkleDialog from '@/components/VarlikEkleDialog.vue'
-import { finansApi, VARLIK_TURLERI, type Varlik, type VarlikTuru } from '@/api/finans'
+import { finansApi, sabitFiyatli, VARLIK_TURLERI, type Varlik, type VarlikTuru } from '@/api/finans'
 import { hataMesaji } from '@/api/http'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useKatalogStore } from '@/stores/katalog'
@@ -41,7 +41,9 @@ const izlenenler = computed(() => new Set((liste.value ?? []).map((v) => v.id)))
 
 const gruplar = computed(() => {
   const q = arama.value.trim().toLocaleLowerCase('tr-TR')
+  // Nakit ve bireysel emekliliğin piyasa fiyatı yok; izlenmez
   return (Object.keys(VARLIK_TURLERI) as VarlikTuru[])
+    .filter((tur) => !sabitFiyatli(tur))
     .map((tur) => ({
       tur,
       ogeler: katalog.varliklar.filter(

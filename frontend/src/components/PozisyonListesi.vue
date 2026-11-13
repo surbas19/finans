@@ -9,13 +9,26 @@ import { fiyat, miktar, tl } from '@/utils/bicim'
  * Varlıklar (pozisyonlar): ad, miktar, değer, kâr / zarar, bugünkü değişim. Satıra dokununca varlık sayfası açılır.
  * Maliyeti bilinmeyen kısım ve fiyatı olmayan varlık açıkça yazılır (sıfır sayılmaz).
  */
-defineProps<{
+const props = defineProps<{
   pozisyonlar: Pozisyon[]
   /** Satırda hesap adı (varlığın hangi hesapta olduğu) */
   hesapAdi?: (p: Pozisyon) => string | undefined
   /** Varlık kimliği → soldaki şeridin rengi (Özet'teki halka dilimiyle aynı; `--p-...` değişkeni) */
   renkler?: Map<number, string>
 }>()
+
+/** Miktar × fiyat · hesap. Nakitte miktar yazılmaz (değer yeterli); bireysel emeklilikte ödenen tutar. */
+function altSatir(p: Pozisyon): string {
+  const tur = p.varlik.tur
+  let ilk: string | null = `${miktar(p.miktar)} ${p.varlik.birim}`
+  if (p.fiyat_tl !== null) ilk += ` × ${fiyat(p.fiyat_tl)}`
+  if (tur === 'nakit') ilk = null
+  if (tur === 'bes') ilk = p.maliyet !== null ? `Ödenen ${tl(p.maliyet)}` : null
+  const hesap =
+    props.hesapAdi?.(p) || ((p.hesap_sayisi ?? 0) > 1 ? `${p.hesap_sayisi} hesapta` : null)
+
+  return [ilk, hesap].filter(Boolean).join(' · ')
+}
 </script>
 
 <template>
@@ -44,16 +57,12 @@ defineProps<{
             <span class="truncate font-semibold text-surface-900">{{ p.varlik.ad }}</span>
             <span class="shrink-0 text-xs text-surface-400">{{ p.varlik.kod }}</span>
           </span>
-          <span class="block truncate text-xs text-surface-500">
-            {{ miktar(p.miktar) }} {{ p.varlik.birim }}
-            <template v-if="p.fiyat_tl !== null"> × {{ fiyat(p.fiyat_tl) }}</template>
-            <template v-if="hesapAdi?.(p)"> · {{ hesapAdi(p) }}</template>
-            <template v-else-if="(p.hesap_sayisi ?? 0) > 1">
-              · {{ p.hesap_sayisi }} hesapta</template
-            >
-          </span>
+          <span class="block truncate text-xs text-surface-500">{{ altSatir(p) }}</span>
           <span v-if="p.maliyeti_bilinmeyen_miktar > 0" class="block text-xs text-amber-700">
-            {{ miktar(p.maliyeti_bilinmeyen_miktar) }} {{ p.varlik.birim }} maliyeti bilinmiyor
+            <template v-if="p.varlik.tur === 'bes'">Kâr yüzdesi girilmedi</template>
+            <template v-else>
+              {{ miktar(p.maliyeti_bilinmeyen_miktar) }} {{ p.varlik.birim }} maliyeti bilinmiyor
+            </template>
           </span>
         </span>
         <span class="flex flex-col items-end gap-0.5 text-right">
@@ -64,14 +73,17 @@ defineProps<{
             {{ tl(p.deger) }}
           </span>
           <Tag v-else value="Fiyat yok" severity="warn" />
-          <DegisimEtiketi
-            v-if="p.kz !== null"
-            :tutar="p.kz"
-            :yuzde="p.kz_yuzde"
-            kucuk
-            class="justify-end"
-          />
-          <span v-else class="text-xs text-surface-400">K/Z —</span>
+          <!-- Nakdin kârı / zararı olmaz -->
+          <template v-if="p.varlik.tur !== 'nakit'">
+            <DegisimEtiketi
+              v-if="p.kz !== null"
+              :tutar="p.kz"
+              :yuzde="p.kz_yuzde"
+              kucuk
+              class="justify-end"
+            />
+            <span v-else class="text-xs text-surface-400">K/Z —</span>
+          </template>
         </span>
       </RouterLink>
     </li>
