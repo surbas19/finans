@@ -10,6 +10,7 @@ use App\Services\Portfoy\YetersizMiktar;
 use App\Support\Bicim;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -51,6 +52,53 @@ class IslemController extends Controller
         $islem->save();
 
         return response()->json(['islem' => $islem->ozet(), 'message' => 'İşlem kaydedildi.'], 201);
+    }
+
+    /**
+     * Elde olan varlıkları tek seferde ekler (arayüzde `;` ile ayrılmış satırlar). Hepsi ya eklenir ya hiçbiri.
+     * Satış denetimi gerekmez: "elde olan" miktarı yalnızca artırır, sonraki bir satışı geçersiz kılamaz.
+     */
+    public function toplu(Request $request): JsonResponse
+    {
+        $veri = $request->validate([
+            'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->where('user_id', $request->user()->id)],
+            'satirlar' => ['required', 'array', 'min:1', 'max:200'],
+            'satirlar.*.varlik_id' => ['required', 'integer', Rule::exists('varliklar', 'id')],
+            'satirlar.*.miktar' => ['required', 'numeric', 'gt:0', 'max:1000000000000'],
+            'satirlar.*.birim_fiyat' => ['nullable', 'numeric', 'gt:0', 'max:1000000000000'],
+            'satirlar.*.tarih' => ['required', 'date', 'before_or_equal:today'],
+            'satirlar.*.not' => ['nullable', 'string', 'max:255'],
+        ], [
+            'satirlar.max' => 'Tek seferde en çok :max satır eklenebilir.',
+            'satirlar.*.tarih.before_or_equal' => 'İleri tarihli işlem girilemez.',
+        ], [
+            'hesap_id' => 'hesap',
+            'satirlar' => 'satırlar',
+            'satirlar.*.varlik_id' => 'varlık',
+            'satirlar.*.miktar' => 'miktar',
+            'satirlar.*.birim_fiyat' => 'birim fiyat',
+            'satirlar.*.tarih' => 'tarih',
+            'satirlar.*.not' => 'not',
+        ]);
+
+        DB::transaction(function () use ($veri, $request): void {
+            foreach ($veri['satirlar'] as $satir) {
+                Islem::create([
+                    'user_id' => $request->user()->id,
+                    'hesap_id' => (int) $veri['hesap_id'],
+                    'varlik_id' => (int) $satir['varlik_id'],
+                    'tur' => IslemTuru::Mevcut,
+                    'miktar' => $satir['miktar'],
+                    'birim_fiyat' => $satir['birim_fiyat'] ?? null,
+                    'komisyon' => 0,
+                    'tarih' => $satir['tarih'],
+                    'not' => $satir['not'] ?? null,
+                ]);
+            }
+        });
+        $sayi = count($veri['satirlar']);
+
+        return response()->json(['eklenen' => $sayi, 'message' => "{$sayi} varlık eklendi."], 201);
     }
 
     public function update(Request $request, Islem $islem): JsonResponse

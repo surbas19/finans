@@ -25,6 +25,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::put('hesaplar/sira', [HesapController::class, 'sirala'])->name('hesaplar.sira');
         Route::apiResource('hesaplar', HesapController::class)->parameters(['hesaplar' => 'hesap']);
 
+        Route::post('islemler/toplu', [IslemController::class, 'toplu'])->name('islemler.toplu');
         Route::apiResource('islemler', IslemController::class)->except('show')->parameters(['islemler' => 'islem']);
 
         Route::get('varliklar', [VarlikController::class, 'index'])->name('varliklar.index');
