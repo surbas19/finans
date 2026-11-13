@@ -7,7 +7,9 @@ import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
 import FormAlani from '@/components/FormAlani.vue'
+import { useToast } from 'primevue/usetoast'
 import { finansApi, type HesapOzeti } from '@/api/finans'
+import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useKatalogStore } from '@/stores/katalog'
 import { bugun, fiyat, miktar, tarih, tarihMetni } from '@/utils/bicim'
@@ -22,6 +24,7 @@ const gorunur = defineModel<boolean>('visible', { default: false })
 const emit = defineEmits<{ kaydedildi: [] }>()
 
 const katalog = useKatalogStore()
+const toast = useToast()
 const hesaplar = ref<HesapOzeti[]>([])
 const secilenHesap = ref<number | null>(null)
 const tarihSecimi = ref<Date>(new Date())
@@ -31,26 +34,43 @@ const { hatalar, gonderiliyor, gonder } = useFormGonder()
 
 const ORNEK = 'GRAM;25\nCEYREK;4;3850\nUSD;1500;32,40;01.03.2025\nTHYAO;100;245,5'
 
+/** Hesaplar ve katalog gelene kadar: "hesap yok" uyarısı ve "katalogda yok" hataları gösterilmez */
+const yukleniyor = ref(false)
+
 watch(gorunur, async (acik) => {
   if (!acik) return
   hatalar.value = {}
   secilenHesap.value = props.hesapId ?? null
-  await Promise.all([
-    katalog.yukle(),
-    finansApi.hesaplar().then((v) => {
-      hesaplar.value = v.hesaplar
-      if (!secilenHesap.value && v.hesaplar.length === 1) secilenHesap.value = v.hesaplar[0]!.id
-    }),
-  ])
+  yukleniyor.value = true
+  try {
+    await Promise.all([
+      katalog.yukle(),
+      finansApi.hesaplar().then((v) => {
+        hesaplar.value = v.hesaplar
+        if (!secilenHesap.value && v.hesaplar.length === 1) secilenHesap.value = v.hesaplar[0]!.id
+      }),
+    ])
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Yüklenemedi', detail: hataMesaji(e), life: 5000 })
+  } finally {
+    yukleniyor.value = false
+  }
 })
 
 const satirlar = computed(() =>
   satirlariCoz(metin.value, katalog.varliklar, tarihMetni(tarihSecimi.value), bugun()),
 )
+/** Önizleme yalnızca kataloğu bekler (ikinci açılışta katalog hazırdır, hesaplar yeniden gelirken de gösterilir) */
+const katalogBekleniyor = computed(() => yukleniyor.value && katalog.varliklar.length === 0)
 const hatali = computed(() => satirlar.value.filter((s) => s.hata).length)
 const fazla = computed(() => satirlar.value.length > EN_COK_SATIR)
 const kaydedilebilir = computed(
-  () => !!secilenHesap.value && satirlar.value.length > 0 && hatali.value === 0 && !fazla.value,
+  () =>
+    !yukleniyor.value &&
+    !!secilenHesap.value &&
+    satirlar.value.length > 0 &&
+    hatali.value === 0 &&
+    !fazla.value,
 )
 
 // Metin değişince sunucunun satır hataları eskir
@@ -73,17 +93,19 @@ function ornekYaz(): void {
 
 async function kaydet(): Promise<void> {
   if (!kaydedilebilir.value || !secilenHesap.value) return
-  const sonuc = await gonder(() =>
-    finansApi.topluMevcutEkle({
-      hesap_id: secilenHesap.value!,
-      satirlar: satirlar.value.map((s) => ({
-        varlik_id: s.varlik!.id,
-        miktar: s.miktar!,
-        birim_fiyat: s.birimFiyat,
-        tarih: s.tarih,
-        not: s.not,
-      })),
-    }),
+  const sonuc = await gonder(
+    () =>
+      finansApi.topluMevcutEkle({
+        hesap_id: secilenHesap.value!,
+        satirlar: satirlar.value.map((s) => ({
+          varlik_id: s.varlik!.id,
+          miktar: s.miktar!,
+          birim_fiyat: s.birimFiyat,
+          tarih: s.tarih,
+          not: s.not,
+        })),
+      }),
+    `${satirlar.value.length} varlık eklendi`,
   )
   if (sonuc) {
     gorunur.value = false
@@ -100,7 +122,7 @@ async function kaydet(): Promise<void> {
     header="Elde olanları toplu ekle"
     class="w-[min(40rem,calc(100vw-1rem))]"
   >
-    <Message v-if="gorunur && hesaplar.length === 0" severity="warn" class="mb-3">
+    <Message v-if="gorunur && !yukleniyor && hesaplar.length === 0" severity="warn" class="mb-3">
       Önce bir hesap ekleyin (Hesaplar → Hesap ekle).
     </Message>
     <form class="flex flex-col gap-4" @submit.prevent="kaydet">
@@ -157,7 +179,13 @@ async function kaydet(): Promise<void> {
         />
       </FormAlani>
 
-      <section v-if="satirlar.length > 0" aria-label="Önizleme" class="flex flex-col gap-2">
+      <p
+        v-if="katalogBekleniyor && satirlar.length > 0"
+        class="flex items-center gap-2 text-sm text-surface-500"
+      >
+        <i class="pi pi-spin pi-spinner" /> Varlık listesi yükleniyor…
+      </p>
+      <section v-else-if="satirlar.length > 0" aria-label="Önizleme" class="flex flex-col gap-2">
         <p class="flex flex-wrap items-center gap-x-3 text-sm">
           <span class="font-semibold text-surface-900">Önizleme</span>
           <span class="text-emerald-700">{{ satirlar.length - hatali }} hazır</span>
