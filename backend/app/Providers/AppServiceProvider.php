@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -23,6 +24,9 @@ class AppServiceProvider extends ServiceProvider
         Password::defaults(fn (): Password => Password::min(8)->max(100)->letters()->numbers());
 
         Gate::define('yonetici', fn (User $user): bool => $user->yonetici && $user->aktif);
+        // Aile kayıtları (gelir, kart, ekstre, fatura…): yalnızca aynı hanenin kullanıcıları görür ve değiştirir
+        Gate::define('hane-kaydi', fn (User $user, Model $kayit): bool => $user->hane_id !== null
+            && (int) $kayit->getAttribute('hane_id') === $user->hane_id);
 
         // Aynı IP + e-posta dakikada 5; IP değiştirerek tek hesaba deneme saatte 20.
         RateLimiter::for('giris', fn (Request $request): array => [

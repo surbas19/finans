@@ -9,6 +9,7 @@ use App\Models\Islem;
 use App\Models\User;
 use App\Models\Varlik;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -20,14 +21,24 @@ use Illuminate\Support\Collection;
 class PortfoyHesabi
 {
     /**
+     * Kullanıcının görebildiği hesaplar (kendisi + hanesi), istenirse tek hesap.
+     *
+     * @return Builder<Hesap>
+     */
+    private function hesaplar(User $user, ?int $hesapId): Builder
+    {
+        return Hesap::erisilebilir($user)->when($hesapId, fn ($q) => $q->whereKey($hesapId))->orderBy('sira')->orderBy('id');
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function hesapla(User $user, ?int $hesapId = null): array
     {
-        $hesaplar = $user->hesaplar()->when($hesapId, fn ($q) => $q->whereKey($hesapId))->get();
+        $hesaplar = $this->hesaplar($user, $hesapId)->get();
+        // Hesaptaki bütün işlemler: hanede eşin girdiği işlem de sayılır
         $islemler = self::sirala(
-            Islem::where('user_id', $user->id)
-                ->whereIn('hesap_id', $hesaplar->modelKeys())
+            Islem::whereIn('hesap_id', $hesaplar->modelKeys())
                 ->with('varlik.fiyat')
                 ->get()
         );
@@ -79,9 +90,9 @@ class PortfoyHesabi
      */
     public function gecmis(User $user, ?int $hesapId, CarbonInterface $baslangic, CarbonInterface $bitis): array
     {
-        $hesapIdleri = $user->hesaplar()->when($hesapId, fn ($q) => $q->whereKey($hesapId))->pluck('id');
+        $hesapIdleri = $this->hesaplar($user, $hesapId)->pluck('id');
         $islemler = self::sirala(
-            Islem::where('user_id', $user->id)->whereIn('hesap_id', $hesapIdleri)->with('varlik.fiyat')->get()
+            Islem::whereIn('hesap_id', $hesapIdleri)->with('varlik.fiyat')->get()
         );
         if ($islemler->isEmpty()) {
             return [];

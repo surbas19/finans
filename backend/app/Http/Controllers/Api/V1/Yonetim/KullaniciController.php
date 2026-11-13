@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Yonetim;
 
 use App\Http\Controllers\Controller;
+use App\Models\Hane;
 use App\Models\User;
+use App\Services\Aile\HaneYonetimi;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,10 +25,11 @@ class KullaniciController extends Controller
         Gate::authorize('yonetici');
 
         return response()->json([
-            'kullanicilar' => User::orderBy('ad')->orderBy('soyad')->get()->map(fn (User $u): array => [
+            'kullanicilar' => User::with('hane')->orderBy('ad')->orderBy('soyad')->get()->map(fn (User $u): array => [
                 ...$u->oturumBilgisi(),
                 'aktif' => $u->aktif,
                 'son_giris' => $u->son_giris?->toIso8601String(),
+                'hane' => $u->hane ? ['id' => $u->hane->id, 'ad' => $u->hane->ad] : null,
             ]),
         ]);
     }
@@ -53,7 +57,10 @@ class KullaniciController extends Controller
         return response()->json(['kullanici' => $user->oturumBilgisi(), 'message' => 'Kullanıcı eklendi.'], 201);
     }
 
-    public function update(Request $request, User $kullanici): JsonResponse
+    /**
+     * `hane`: kullanıcıyı bağlanacak hanenin kimliği ya da "yeni" (kendi başına yeni hane). Kurallar HaneYonetimi'nde.
+     */
+    public function update(Request $request, User $kullanici, HaneYonetimi $haneler): JsonResponse
     {
         Gate::authorize('yonetici');
         $veri = $request->validate([
@@ -62,7 +69,17 @@ class KullaniciController extends Controller
             'aktif' => ['sometimes', 'boolean'],
             'yonetici' => ['sometimes', 'boolean'],
             'sifre' => ['sometimes', 'nullable', Password::defaults()],
-        ], [], ['sifre' => 'şifre']);
+            'hane' => ['sometimes', 'required', function (string $alan, mixed $deger, Closure $hata): void {
+                if ($deger !== 'yeni' && ! (is_numeric($deger) && Hane::whereKey((int) $deger)->exists())) {
+                    $hata('Hane bulunamadı.');
+                }
+            }],
+        ], [], ['sifre' => 'şifre', 'hane' => 'hane']);
+
+        if (array_key_exists('hane', $veri)) {
+            $haneler->tasi($kullanici, $veri['hane'] === 'yeni' ? null : Hane::findOrFail((int) $veri['hane']));
+            $kullanici->refresh();
+        }
 
         $kendisi = $kullanici->is($request->user());
         if ($kendisi && ((isset($veri['aktif']) && ! $veri['aktif']) || (isset($veri['yonetici']) && ! $veri['yonetici']))) {

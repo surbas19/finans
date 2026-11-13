@@ -17,7 +17,7 @@ class OzetController extends Controller
     public function __invoke(Request $request, PortfoyHesabi $portfoy): JsonResponse
     {
         $veri = $request->validate([
-            'hesap_id' => ['nullable', 'integer', Rule::exists('hesaplar', 'id')->where('user_id', $request->user()->id)],
+            'hesap_id' => ['nullable', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
         ]);
 
         return response()->json([

@@ -27,9 +27,10 @@ class HesapController extends Controller
     public function store(Request $request): JsonResponse
     {
         $veri = $this->dogrula($request, null);
+        // Hanedeki hesaplar birlikte dizilir: yeni hesap hepsinin sonuna
         $hesap = $request->user()->hesaplar()->create([
             ...$veri,
-            'sira' => (int) $request->user()->hesaplar()->max('sira') + 1,
+            'sira' => (int) Hesap::erisilebilir($request->user())->max('sira') + 1,
         ]);
 
         return response()->json(['hesap' => $hesap->ozet(), 'message' => 'Hesap eklendi.'], 201);
@@ -76,10 +77,10 @@ class HesapController extends Controller
     {
         $veri = $request->validate([
             'ids' => ['required', 'array', 'max:200'],
-            'ids.*' => ['integer', 'distinct', Rule::exists('hesaplar', 'id')->where('user_id', $request->user()->id)],
+            'ids.*' => ['integer', 'distinct', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
         ]);
         foreach ($veri['ids'] as $sira => $id) {
-            Hesap::whereKey($id)->where('user_id', $request->user()->id)->update(['sira' => $sira + 1]);
+            Hesap::whereKey($id)->erisilebilir($request->user())->update(['sira' => $sira + 1]);
         }
 
         return response()->json(['message' => 'Sıra kaydedildi.']);

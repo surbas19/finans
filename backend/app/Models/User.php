@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
@@ -26,15 +27,55 @@ class User extends Authenticatable
             'yonetici' => 'boolean',
             'aktif' => 'boolean',
             'son_giris' => 'datetime',
+            'hane_id' => 'integer',
         ];
     }
 
+    /** @var list<int>|null İstek boyunca bir kez okunur */
+    private ?array $haneKullanicilari = null;
+
     /**
+     * Kullanıcının kendi açtığı hesaplar (hesap adı kişi başına tekildir). Görebildiği hesaplar: `Hesap::erisilebilir`.
+     *
      * @return HasMany<Hesap, $this>
      */
     public function hesaplar(): HasMany
     {
         return $this->hasMany(Hesap::class)->orderBy('sira')->orderBy('id');
+    }
+
+    /**
+     * @return BelongsTo<Hane, $this>
+     */
+    public function hane(): BelongsTo
+    {
+        return $this->belongsTo(Hane::class);
+    }
+
+    /**
+     * Kayıtlarını görebildiği kullanıcılar: hanesi varsa hanedeki herkes, yoksa yalnızca kendisi. Hesap / işlem
+     * erişiminin tek kaynağı (Policy'ler, sorgular ve doğrulama kuralları bunu kullanır).
+     *
+     * @return list<int>
+     */
+    public function haneKullaniciIdleri(): array
+    {
+        if ($this->hane_id === null) {
+            return [$this->id];
+        }
+
+        return $this->haneKullanicilari ??= User::where('hane_id', $this->hane_id)->pluck('id')->map(fn ($id): int => (int) $id)->all();
+    }
+
+    public function ayniHanede(int $kullaniciId): bool
+    {
+        return in_array($kullaniciId, $this->haneKullaniciIdleri(), true);
+    }
+
+    /** Hane değişince önbellek bırakılır */
+    public function haneOnbeleginiBirak(): void
+    {
+        $this->haneKullanicilari = null;
     }
 
     /**

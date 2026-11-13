@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\IslemTuru;
 use App\Enums\VarlikTuru;
 use App\Http\Controllers\Controller;
+use App\Models\Hesap;
 use App\Models\Islem;
 use App\Models\Varlik;
 use App\Services\Portfoy\PortfoyHesabi;
@@ -31,7 +32,8 @@ class IslemController extends Controller
             'hesap_id' => ['nullable', 'integer'],
             'varlik_id' => ['nullable', 'integer'],
         ]);
-        $islemler = Islem::where('user_id', $request->user()->id)
+        // Hanedeki hesaplardaki bütün işlemler (kimin girdiğine bakılmaz)
+        $islemler = Islem::whereIn('hesap_id', Hesap::erisilebilir($request->user())->select('id'))
             ->when($veri['hesap_id'] ?? null, fn ($q, $id) => $q->where('hesap_id', $id))
             ->when($veri['varlik_id'] ?? null, fn ($q, $id) => $q->where('varlik_id', $id))
             ->with(['varlik', 'hesap'])
@@ -63,7 +65,7 @@ class IslemController extends Controller
     public function toplu(Request $request): JsonResponse
     {
         $veri = $request->validate([
-            'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->where('user_id', $request->user()->id)],
+            'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
             'satirlar' => ['required', 'array', 'min:1', 'max:200'],
             'satirlar.*.varlik_id' => ['required', 'integer', Rule::exists('varliklar', 'id')],
             'satirlar.*.miktar' => ['required', 'numeric', 'gt:0', 'max:1000000000000'],
@@ -156,7 +158,7 @@ class IslemController extends Controller
         $bes = $varlikTuru === VarlikTuru::Bes;
 
         $veri = $request->validate([
-            'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->where('user_id', $request->user()->id)],
+            'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
             'varlik_id' => ['required', 'integer', Rule::exists('varliklar', 'id')],
             'tur' => [
                 'required', Rule::enum(IslemTuru::class),

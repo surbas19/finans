@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
 use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
 use App\Http\Controllers\Api\V1\IslemController;
@@ -8,8 +9,10 @@ use App\Http\Controllers\Api\V1\OzetController;
 use App\Http\Controllers\Api\V1\PerformansController;
 use App\Http\Controllers\Api\V1\SurumController;
 use App\Http\Controllers\Api\V1\VarlikController;
+use App\Http\Controllers\Api\V1\Yonetim\HaneController as YonetimHaneController;
 use App\Http\Controllers\Api\V1\Yonetim\KaynakController;
 use App\Http\Controllers\Api\V1\Yonetim\KullaniciController;
+use App\Http\Middleware\HaneyiHazirla;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function (): void {
@@ -43,7 +46,17 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::put('izleme/sira', [IzlemeController::class, 'sirala'])->name('izleme.sira');
         Route::delete('izleme/{varlik}', [IzlemeController::class, 'destroy'])->name('izleme.destroy');
 
+        // Aile finansı: hanenin ortak kayıtları (hanesi olmayana ilk girişte tek kişilik hane kurulur)
+        Route::prefix('aile')->name('aile.')->middleware(HaneyiHazirla::class)->group(function (): void {
+            Route::get('hane', [AileHaneController::class, 'goster'])->name('hane');
+            Route::put('hane', [AileHaneController::class, 'guncelle'])->name('hane.guncelle');
+            Route::post('uyeler', [AileHaneController::class, 'uyeEkle'])->name('uyeler.store');
+            Route::put('uyeler/{uye}', [AileHaneController::class, 'uyeGuncelle'])->name('uyeler.update');
+            Route::delete('uyeler/{uye}', [AileHaneController::class, 'uyeSil'])->name('uyeler.destroy');
+        });
+
         Route::prefix('yonetim')->name('yonetim.')->group(function (): void {
+            Route::get('haneler', [YonetimHaneController::class, 'index'])->name('haneler.index');
             Route::get('kullanicilar', [KullaniciController::class, 'index'])->name('kullanicilar.index');
             Route::post('kullanicilar', [KullaniciController::class, 'store'])->name('kullanicilar.store');
             Route::put('kullanicilar/{kullanici}', [KullaniciController::class, 'update'])->name('kullanicilar.update');

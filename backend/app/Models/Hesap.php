@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\HesapTuru;
 use Database\Factories\HesapFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,12 +47,24 @@ class Hesap extends Model
     }
 
     /**
+     * Kullanıcının görebildiği hesaplar: kendisinin ve hanesindeki kullanıcıların (`User::haneKullaniciIdleri`).
+     *
+     * @param  Builder<Hesap>  $sorgu
+     */
+    public function scopeErisilebilir(Builder $sorgu, User $user): void
+    {
+        $sorgu->whereIn('hesaplar.user_id', $user->haneKullaniciIdleri());
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function ozet(): array
     {
         return [
             'id' => $this->id,
+            // Hanede başkasının hesabıysa arayüz sahibinin adını yazar
+            'sahip_id' => $this->user_id,
             'ad' => $this->ad,
             'tur' => $this->tur->value,
             'renk' => $this->renk,
