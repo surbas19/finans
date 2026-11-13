@@ -4,10 +4,10 @@
 
 ## İlk sürüm
 - **Plan:** [planlar/ilk-surum.md](planlar/ilk-surum.md) (1. adım sonucu planın sonunda)
-- **Durum:** 2. adım (iskelet) sürüyor.
+- **Durum:** 2.–4. adım backend sürüyor (modeller, kaynaklar, portföy servisi yazıldı; uçlar / testler yok).
 - **Yapılanlar:**
   - 1. adım: kaynak denemesi bitti (Truncgil, Yahoo, Binance, TCMB çalışıyor; TEFAS engelli → fon fiyatı elle).
   - Laravel 13 + Sanctum kuruldu, `.env` MySQL `finans` (+ `finans_test`), oturum çerezi `finans_oturum`.
-- **Sıradaki adım:** kullanıcı modeli (ad, soyad, yonetici) + giriş / çıkış / ben uçları, CSRF köken denetimi, SPA sunma rotası; sonra frontend iskeleti (Vue + PrimeVue 4.5, port 5174, proxy).
+- **Sıradaki adım:** giriş / çıkış / ben, hesap, işlem, varlık, izleme, yönetim uçları + Policy; CSRF köken denetimi (bootstrap/app.php); SPA rotası; zamanlanmış komutlar (routes/console.php); testler; sonra frontend.
 - **Dikkat:** GitHub deposu henüz yok (kullanıcı açacak, `gh` kurulu değil); şimdilik yalnızca yerel commit.
 - **Komutlar:** `cd backend && php artisan migrate:fresh --seed`
