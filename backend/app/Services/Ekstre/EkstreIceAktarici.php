@@ -6,9 +6,12 @@ use App\Enums\EkstreDurumu;
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
 use App\Models\Ekstre;
+use App\Models\FaturaSaglayicisi;
+use App\Models\HarcamaKategorisi;
 use App\Models\Kart;
 use App\Models\KartIslemi;
 use App\Models\User;
+use App\Services\Aile\FaturaEslestirici;
 use App\Services\Aile\KartIslemKurallari;
 use App\Services\Aile\KategoriBulucu;
 use App\Support\Kurus;
@@ -37,6 +40,7 @@ class EkstreIceAktarici
         private EkstreAyristirici $ayristirici,
         private KartIslemKurallari $kurallar,
         private KategoriBulucu $kategoriler,
+        private FaturaEslestirici $faturalar,
     ) {}
 
     /** Hanede aynı dosya daha önce yüklendiyse o ekstre */
@@ -99,8 +103,9 @@ class EkstreIceAktarici
             'olusturan_id' => $user->id,
         ]);
 
+        $faturaKategorisi = HarcamaKategorisi::where('hane_id', $user->hane_id)->where('fatura', true)->value('id');
         foreach ($sonuc['satirlar'] as $sira => $satir) {
-            KartIslemi::create([
+            $islem = new KartIslemi([
                 'hane_id' => $user->hane_id,
                 'kart_id' => $kart->id,
                 'ekstre_id' => $ekstre->id,
@@ -119,6 +124,12 @@ class EkstreIceAktarici
                 'okuma' => $satir['okuma'],
                 'olusturan_id' => $user->id,
             ]);
+            // Fatura adayı; kategori kuralı yoksa sağlayıcısı belli fatura Faturalar kategorisine
+            $islem->fatura_onerisi = $this->faturalar->oner($islem);
+            if ($islem->kategori_id === null && ($islem->fatura_onerisi['saglayici_id'] ?? null) !== null) {
+                $islem->kategori_id = $faturaKategorisi;
+            }
+            $islem->save();
         }
         $this->tekrarlariIsaretle($ekstre, disaridaBirak: true);
 
@@ -211,6 +222,10 @@ class EkstreIceAktarici
             $islem->durum = $veri['dahil'] ? KartIslemDurumu::Taslak : KartIslemDurumu::Atlandi;
             unset($veri['dahil']);
         }
+        if (array_key_exists('fatura', $veri)) {
+            $islem->fatura_onerisi = $this->faturaSecimi($islem, $veri['fatura']);
+            unset($veri['fatura']);
+        }
         foreach (['tutar', 'taksit_toplam'] as $alan) {
             if (array_key_exists($alan, $veri) && $veri[$alan] !== null) {
                 $veri[$alan] = Kurus::decimal(Kurus::kurus($veri[$alan]));
@@ -228,9 +243,47 @@ class EkstreIceAktarici
     }
 
     /**
-     * Onay: dahil satırlar onaylı (rapor ayı + parmak izi), diğerleri dışarıda. Hepsi ya da hiçbiri.
+     * Kullanıcının fatura kararı: işaretle / kaldır, sağlayıcı seç, hizmet dönemini seç ya da bilinmiyor bırak. Önerinin
+     * gerekçesi korunur; kullanıcının seçtiği dönemin kaynağı "kullanıcı" olur.
      *
-     * @return array{eklenen: int, atlanan: int, tekrar: int}
+     * @param  array{secildi?: bool, saglayici_id?: int|null, hizmet_donemi?: string|null}|null  $secim
+     * @return array<string, mixed>|null
+     */
+    private function faturaSecimi(KartIslemi $islem, ?array $secim): ?array
+    {
+        $oneri = $islem->fatura_onerisi ?? [
+            'guven' => 'kullanici', 'puan' => 0, 'saglayici_id' => null, 'fatura_turu_id' => null, 'adaylar' => [],
+            'gerekce' => ['Faturayı siz eşleştirdiniz.'], 'hizmet_donemi' => null, 'donem_kaynagi' => null, 'otomatik' => false, 'secildi' => false,
+        ];
+        if ($secim === null) {
+            return [...$oneri, 'secildi' => false];
+        }
+        if (array_key_exists('saglayici_id', $secim) && $secim['saglayici_id'] !== $oneri['saglayici_id']) {
+            $saglayici = $secim['saglayici_id'] !== null
+                ? FaturaSaglayicisi::where('hane_id', $islem->hane_id)->findOrFail($secim['saglayici_id'])
+                : null;
+            $oneri['saglayici_id'] = $saglayici?->id;
+            $oneri['fatura_turu_id'] = $saglayici?->fatura_turu_id;
+        }
+        if (array_key_exists('hizmet_donemi', $secim) && $secim['hizmet_donemi'] !== $oneri['hizmet_donemi']) {
+            $oneri['hizmet_donemi'] = $secim['hizmet_donemi'];
+            $oneri['donem_kaynagi'] = $secim['hizmet_donemi'] !== null ? 'kullanici' : null;
+        }
+        if (array_key_exists('secildi', $secim)) {
+            $oneri['secildi'] = (bool) $secim['secildi'];
+        }
+        if ($oneri['secildi'] && $oneri['saglayici_id'] === null) {
+            throw ValidationException::withMessages(['fatura' => 'Faturayı bağlamak için sağlayıcıyı seçin.']);
+        }
+
+        return $oneri;
+    }
+
+    /**
+     * Onay: dahil satırlar onaylı (rapor ayı + parmak izi), diğerleri dışarıda; işaretli fatura adayları faturaya
+     * bağlanır. Hepsi ya da hiçbiri.
+     *
+     * @return array{eklenen: int, atlanan: int, tekrar: int, fatura: int}
      *
      * @throws ValidationException
      */
@@ -252,6 +305,7 @@ class EkstreIceAktarici
             $eklenen = 0;
             $atlanan = 0;
             $tekrar = 0;
+            $fatura = 0;
             foreach ($this->kacinciSiralari($ekstre) as [$islem, $kacinci]) {
                 if ($islem->durum === KartIslemDurumu::Atlandi) {
                     $atlanan++;
@@ -264,6 +318,19 @@ class EkstreIceAktarici
                 }
                 $this->kurallar->onayla($islem, $ekstre, $kacinci);
                 $eklenen++;
+
+                $oneri = $islem->fatura_onerisi;
+                if (($oneri['secildi'] ?? false) && ($oneri['saglayici_id'] ?? null) !== null) {
+                    $this->faturalar->bagla(
+                        $islem,
+                        FaturaSaglayicisi::where('hane_id', $ekstre->hane_id)->findOrFail($oneri['saglayici_id']),
+                        $oneri['hizmet_donemi'] ?? null,
+                        $oneri['donem_kaynagi'] ?? null,
+                        ['guven' => $oneri['guven'] ?? null, 'gerekce' => $oneri['gerekce'] ?? [], 'otomatik' => $oneri['otomatik'] ?? false],
+                        $user->id,
+                    );
+                    $fatura++;
+                }
             }
             $ekstre->forceFill([
                 'durum' => EkstreDurumu::Onaylandi,
@@ -272,15 +339,18 @@ class EkstreIceAktarici
                 'onaylandi_at' => now(),
             ])->save();
 
-            return ['eklenen' => $eklenen, 'atlanan' => $atlanan, 'tekrar' => $tekrar];
+            return ['eklenen' => $eklenen, 'atlanan' => $atlanan, 'tekrar' => $tekrar, 'fatura' => $fatura];
         });
     }
 
-    /** Ekstre, satırları ve dosyası silinir (dosya işlem bittikten sonra) */
+    /** Ekstre, satırları ve dosyası silinir (dosya işlem bittikten sonra); bağlı faturalar "bekliyor"a döner */
     public function sil(Ekstre $ekstre): void
     {
         $yol = $ekstre->dosya_yolu;
-        DB::transaction(fn () => $ekstre->delete());
+        DB::transaction(function () use ($ekstre): void {
+            $ekstre->islemler()->get()->each(fn (KartIslemi $i) => $this->faturalar->islemCikti($i));
+            $ekstre->delete();
+        });
         if ($yol !== null) {
             Storage::disk(self::DISK)->delete($yol);
         }

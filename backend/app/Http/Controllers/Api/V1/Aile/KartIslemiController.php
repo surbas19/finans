@@ -7,6 +7,7 @@ use App\Enums\KartIslemTuru;
 use App\Http\Controllers\Controller;
 use App\Models\KartIslemi;
 use App\Services\Aile\ButceRaporu;
+use App\Services\Aile\FaturaEslestirici;
 use App\Services\Aile\KartIslemKurallari;
 use App\Services\Aile\KategoriBulucu;
 use App\Support\Donem;
@@ -104,9 +105,11 @@ class KartIslemiController extends Controller
      * Elle girilen satır silinir; ekstreden gelen satır dışarıda bırakılır (ekstre tekrar yüklenince yine gelmesin diye
      * ekstreyle birlikte durur, raporlara girmez).
      */
-    public function destroy(KartIslemi $islem): JsonResponse
+    public function destroy(KartIslemi $islem, FaturaEslestirici $faturalar): JsonResponse
     {
         Gate::authorize('hane-kaydi', $islem);
+        // Bağlı fatura ödenmemiş sayılır (yanlış satırsa başka satıra bağlanır)
+        $faturalar->islemCikti($islem);
         if ($islem->ekstre_id !== null) {
             $islem->update(['durum' => KartIslemDurumu::Atlandi, 'parmak_izi' => null, 'rapor_donemi' => null]);
 

@@ -3,11 +3,14 @@
 namespace App\Services\Aile;
 
 use App\Enums\EkstreDurumu;
+use App\Enums\FaturaDurumu;
 use App\Enums\GelirDuzeni;
 use App\Enums\GelirTuru;
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
 use App\Models\Ekstre;
+use App\Models\Fatura;
+use App\Models\FaturaTuru;
 use App\Models\Gelir;
 use App\Models\HaneUyesi;
 use App\Models\HarcamaKategorisi;
@@ -94,9 +97,20 @@ class ButceRaporu
         }
         $kartHarcamasi = array_sum($kategoriToplam);
 
+        // Kartla ödenmemiş (kart satırına bağlı olmayan) ödenmiş faturalar: ödendiği ayın gideri, Faturalar kategorisine.
+        // Kart satırına bağlı fatura zaten kart harcamasındadır, ikinci kez sayılmaz.
+        $baglantisiz = Fatura::where('hane_id', $haneId)->where('durum', FaturaDurumu::Odendi->value)->whereNull('kart_islemi_id')
+            ->whereBetween('odeme_tarihi', [Donem::ilkGun($donem)->toDateString(), Donem::sonGun($donem)->toDateString()])->get();
+        $baglantisizToplam = $baglantisiz->reduce(fn (int $t, Fatura $f): int => $t + Kurus::kurus($f->tutar), 0);
+        if ($baglantisizToplam > 0) {
+            $faturaKategorisi = $kategoriler->firstWhere('fatura', true)?->id ?? 0;
+            $kategoriToplam[$faturaKategorisi] = ($kategoriToplam[$faturaKategorisi] ?? 0) + $baglantisizToplam;
+        }
+
         return [
-            'toplam' => Kurus::tl($kartHarcamasi),
+            'toplam' => Kurus::tl($kartHarcamasi + $baglantisizToplam),
             'kart_harcamasi' => Kurus::tl($kartHarcamasi),
+            'kartsiz_faturalar' => Kurus::tl($baglantisizToplam),
             'kategoriler' => collect($kategoriToplam)
                 ->map(fn (int $t, int $id): array => [
                     'kategori_id' => $id ?: null,
@@ -155,13 +169,44 @@ class ButceRaporu
             'etiket' => Donem::etiket($donem),
             'gelir' => $gelir,
             'gider' => $gider,
+            'faturalar' => $this->faturaOzeti($haneId, $donem),
             // Toplamlar kuruşun yüzde biri (x/100): iki haneyle metne çevrilince kuruş tam geri gelir
             'fark' => Kurus::tl(Kurus::kurus(number_format($gelir['toplam'], 2, '.', '')) - Kurus::kurus(number_format($gider['toplam'], 2, '.', ''))),
         ];
     }
 
     /**
-     * Uyarılar: son ödeme tarihi 10 gün içinde (ya da en çok 5 gün geçmiş) olan, ödendi işaretlenmemiş ekstreler.
+     * Faturalar hizmet ayına göre (ödendiği aya göre değil). Bilgi amaçlı: kartla ödenenler kart harcamasında,
+     * kartsız ödenenler ödendiği ayın giderinde zaten var; burada ikinci kez gidere eklenmez.
+     *
+     * @return array<string, mixed>
+     */
+    public function faturaOzeti(int $haneId, string $donem): array
+    {
+        $faturalar = Fatura::where('hane_id', $haneId)->where('hizmet_donemi', $donem)->get();
+        $turler = FaturaTuru::haneIcin($haneId)->get()->keyBy('id');
+        $topla = fn (Collection $c): int => $c->reduce(fn (int $t, Fatura $f): int => $t + Kurus::kurus($f->tutar), 0);
+
+        return [
+            'toplam' => Kurus::tl($topla($faturalar)),
+            'odenen' => Kurus::tl($topla($faturalar->where('durum', FaturaDurumu::Odendi))),
+            'bekleyen' => Kurus::tl($topla($faturalar->where('durum', FaturaDurumu::Bekliyor))),
+            'kartla_odenen' => Kurus::tl($topla($faturalar->whereNotNull('kart_islemi_id'))),
+            'turler' => $faturalar->groupBy('fatura_turu_id')->map(fn (Collection $grup, int $turId): array => [
+                'fatura_turu_id' => $turId,
+                'ad' => $turler[$turId]->ad ?? '',
+                'ikon' => $turler[$turId]->ikon ?? null,
+                'toplam' => Kurus::tl($topla($grup)),
+                'adet' => $grup->count(),
+            ])->sortByDesc('toplam')->values(),
+            // Hizmet ayı bilinmeyen faturalar (hiçbir hizmet ayına yazılmadı; kullanıcının seçmesi beklenir)
+            'donemi_bilinmeyen' => Fatura::where('hane_id', $haneId)->whereNull('hizmet_donemi')->count(),
+        ];
+    }
+
+    /**
+     * Uyarılar: gecikmiş ve 10 gün içinde son ödemesi olan bekleyen faturalar; son ödeme tarihi 10 gün içinde (ya da
+     * en çok 5 gün geçmiş) olan, ödendi işaretlenmemiş ekstreler.
      *
      * @return array<string, mixed>
      */
@@ -171,8 +216,19 @@ class ButceRaporu
         $ekstreler = Ekstre::where('hane_id', $haneId)->where('durum', EkstreDurumu::Onaylandi->value)->where('odendi', false)
             ->whereBetween('son_odeme_tarihi', [$bugun->copy()->subDays(5)->toDateString(), $bugun->copy()->addDays(10)->toDateString()])
             ->with('kart')->orderBy('son_odeme_tarihi')->get();
+        $bekleyen = Fatura::where('hane_id', $haneId)->where('durum', FaturaDurumu::Bekliyor->value)
+            ->with('saglayici')->orderByRaw('son_odeme_tarihi is null')->orderBy('son_odeme_tarihi')->get();
+        $faturaSatiri = fn (Fatura $f): array => [
+            ...$f->ozet(),
+            'saglayici_ad' => $f->saglayici->ad,
+            'gun' => $f->son_odeme_tarihi ? (int) $bugun->diffInDays($f->son_odeme_tarihi, false) : null,
+        ];
 
         return [
+            'gecikmis_faturalar' => $bekleyen->filter(fn (Fatura $f): bool => $f->gecikmisMi())->map($faturaSatiri)->values(),
+            'bekleyen_faturalar' => $bekleyen->reject(fn (Fatura $f): bool => $f->gecikmisMi())
+                ->filter(fn (Fatura $f): bool => $f->son_odeme_tarihi === null || $f->son_odeme_tarihi->lte($bugun->copy()->addDays(10)))
+                ->map($faturaSatiri)->values(),
             'son_odemeler' => $ekstreler->map(fn (Ekstre $e): array => [
                 ...$e->ozet(),
                 'kart_ad' => $e->kart->ad,

@@ -104,7 +104,7 @@ class EkstreTest extends TestCase
             ->assertJsonPath('ekstre.alan_kaynaklari.son_odeme_tarihi', 'kullanici');
 
         $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()
-            ->assertJsonPath('rapor', ['eklenen' => 4, 'atlanan' => 1, 'tekrar' => 0])
+            ->assertJsonPath('rapor', ['eklenen' => 4, 'atlanan' => 1, 'tekrar' => 0, 'fatura' => 0])
             ->assertJsonPath('ekstre.durum', 'onaylandi');
         $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertJsonValidationErrors('ekstre');
 
@@ -179,7 +179,7 @@ class EkstreTest extends TestCase
         $this->assertSame(0, KartIslemi::where('ekstre_id', $kasim)->where('durum', 'onayli')->count());
 
         $this->putJson("/api/v1/aile/ekstreler/{$kasim}/satirlar/{$satirlar[0]['id']}", ['dahil' => false])->assertOk();
-        $this->postJson("/api/v1/aile/ekstreler/{$kasim}/onayla")->assertOk()->assertJsonPath('rapor', ['eklenen' => 2, 'atlanan' => 1, 'tekrar' => 1]);
+        $this->postJson("/api/v1/aile/ekstreler/{$kasim}/onayla")->assertOk()->assertJsonPath('rapor', ['eklenen' => 2, 'atlanan' => 1, 'tekrar' => 1, 'fatura' => 0]);
         $this->assertSame(1, KartIslemi::where('aciklama', 'MIGROS KADIKOY ISTANBUL')->where('islem_tarihi', '2026-10-25')->where('durum', 'onayli')->count());
 
         // Silme: satırlar ve dosya gider

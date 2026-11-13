@@ -9,6 +9,7 @@ use App\Models\Ekstre;
 use App\Models\Kart;
 use App\Models\KartIslemi;
 use App\Services\Ekstre\EkstreIceAktarici;
+use App\Support\Donem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -119,7 +120,14 @@ class EkstreController extends Controller
             'taksit_sayisi' => ['sometimes', 'nullable', 'integer', 'between:2,99'],
             'taksit_toplam' => ['sometimes', 'nullable', 'numeric', 'gt:0', 'max:10000000000', 'decimal:0,2'],
             'kategori_id' => ['sometimes', 'nullable', 'integer', Rule::exists('harcama_kategorileri', 'id')->where('hane_id', $ekstre->hane_id)],
-        ], [], ['islem_tarihi' => 'işlem tarihi', 'aciklama' => 'açıklama', 'tutar' => 'tutar', 'tur' => 'tür']);
+            // Fatura kararı: işaretle, sağlayıcı ve hizmet dönemi (boş = bilinmiyor)
+            'fatura' => ['sometimes', 'nullable', 'array'],
+            'fatura.secildi' => ['sometimes', 'boolean'],
+            'fatura.saglayici_id' => ['sometimes', 'nullable', 'integer', Rule::exists('fatura_saglayicilari', 'id')->where('hane_id', $ekstre->hane_id)],
+            'fatura.hizmet_donemi' => ['sometimes', 'nullable', 'regex:'.Donem::DESEN],
+        ], ['fatura.hizmet_donemi.regex' => 'Hizmet dönemi YYYY-AA olmalı.'], [
+            'islem_tarihi' => 'işlem tarihi', 'aciklama' => 'açıklama', 'tutar' => 'tutar', 'tur' => 'tür', 'fatura.saglayici_id' => 'sağlayıcı',
+        ]);
         $no = $veri['taksit_no'] ?? $islem->taksit_no;
         $sayi = $veri['taksit_sayisi'] ?? $islem->taksit_sayisi;
         if (($no === null) !== ($sayi === null) || ($no !== null && $no > $sayi)) {
@@ -139,7 +147,8 @@ class EkstreController extends Controller
             'ekstre' => $ekstre->fresh()->ozet(),
             'rapor' => $rapor,
             'message' => "{$rapor['eklenen']} satır eklendi, {$rapor['atlanan']} satır dışarıda bırakıldı"
-                .($rapor['tekrar'] > 0 ? " ({$rapor['tekrar']} tekrar)" : '').'.',
+                .($rapor['tekrar'] > 0 ? " ({$rapor['tekrar']} tekrar)" : '')
+                .($rapor['fatura'] > 0 ? ", {$rapor['fatura']} fatura bağlandı" : '').'.',
         ]);
     }
 

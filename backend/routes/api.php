@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Aile\BankaController;
 use App\Http\Controllers\Api\V1\Aile\EkstreController;
+use App\Http\Controllers\Api\V1\Aile\FaturaController;
 use App\Http\Controllers\Api\V1\Aile\GelirController;
 use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
 use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\V1\Aile\KartController;
 use App\Http\Controllers\Api\V1\Aile\KartIslemiController;
 use App\Http\Controllers\Api\V1\Aile\KategoriController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
+use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
 use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
 use App\Http\Controllers\Api\V1\IslemController;
@@ -79,6 +81,16 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::get('ekstreler/{ekstre}/dosya', [EkstreController::class, 'dosya'])->name('ekstreler.dosya');
             Route::put('ekstreler/{ekstre}/satirlar/{islem}', [EkstreController::class, 'satirGuncelle'])->name('ekstreler.satirlar.update');
             Route::post('ekstreler/{ekstre}/onayla', [EkstreController::class, 'onayla'])->name('ekstreler.onayla');
+
+            Route::get('fatura-turleri', [SaglayiciController::class, 'turler'])->name('fatura-turleri.index');
+            Route::post('fatura-turleri', [SaglayiciController::class, 'turEkle'])->name('fatura-turleri.store');
+            Route::delete('fatura-turleri/{tur}', [SaglayiciController::class, 'turSil'])->name('fatura-turleri.destroy');
+            Route::apiResource('saglayicilar', SaglayiciController::class)->except('show')->parameters(['saglayicilar' => 'saglayici']);
+            Route::post('saglayicilar/{saglayici}/desenler', [SaglayiciController::class, 'desenEkle'])->name('saglayicilar.desenler.store');
+            Route::delete('saglayici-desenleri/{desen}', [SaglayiciController::class, 'desenSil'])->name('saglayici-desenleri.destroy');
+            Route::apiResource('faturalar', FaturaController::class)->except('show')->parameters(['faturalar' => 'fatura']);
+            Route::post('faturalar/{fatura}/bagla', [FaturaController::class, 'bagla'])->name('faturalar.bagla');
+            Route::post('faturalar/{fatura}/coz', [FaturaController::class, 'coz'])->name('faturalar.coz');
             Route::get('ozet', AileOzetController::class)->name('ozet');
         });
 
