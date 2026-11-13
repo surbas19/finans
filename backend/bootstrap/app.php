@@ -13,7 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->statefulApi();
+
+        // CSRF yalnızca köken denetimiyle (Sec-Fetch-Site: same-origin); XSRF çerezi yazılmaz. Okul sisteminin
+        // .yoklm.com çerezleri bu adrese de geldiği için aynı adlı XSRF çerezi çakışırdı (CLAUDE.md → Çerez / CSRF).
+        $middleware->preventRequestForgery(originOnly: true);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

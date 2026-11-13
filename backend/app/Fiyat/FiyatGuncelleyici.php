@@ -9,6 +9,7 @@ use App\Models\Fiyat;
 use App\Models\FiyatGecmisi;
 use App\Models\KaynakDurumu;
 use App\Models\Varlik;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
@@ -69,7 +70,7 @@ class FiyatGuncelleyici
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Varlik>  $varliklar
+     * @param  Collection<int, Varlik>  $varliklar
      */
     private function kaynakGuncelle(string $ad, FiyatKaynagi $kaynak, $varliklar): int|string
     {
