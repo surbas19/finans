@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\HesapController;
 use App\Http\Controllers\Api\V1\IslemController;
 use App\Http\Controllers\Api\V1\IzlemeController;
 use App\Http\Controllers\Api\V1\OzetController;
+use App\Http\Controllers\Api\V1\PerformansController;
 use App\Http\Controllers\Api\V1\VarlikController;
 use App\Http\Controllers\Api\V1\Yonetim\KaynakController;
 use App\Http\Controllers\Api\V1\Yonetim\KullaniciController;
@@ -19,6 +20,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::put('ben/sifre', [GirisController::class, 'sifre'])->middleware('throttle:giris')->name('ben.sifre');
 
         Route::get('ozet', OzetController::class)->name('ozet');
+        Route::get('ozet/gecmis', PerformansController::class)->name('ozet.gecmis');
 
         Route::put('hesaplar/sira', [HesapController::class, 'sirala'])->name('hesaplar.sira');
         Route::apiResource('hesaplar', HesapController::class)->parameters(['hesaplar' => 'hesap']);

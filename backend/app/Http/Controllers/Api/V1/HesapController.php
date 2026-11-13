@@ -46,6 +46,7 @@ class HesapController extends Controller
         return response()->json([
             'hesap' => $portfoy['hesaplar'][0],
             'pozisyonlar' => $portfoy['pozisyonlar'],
+            'dagilim' => $portfoy['dagilim'],
             'islemler' => Islem::where('hesap_id', $hesap->id)->with('varlik')
                 ->orderByDesc('tarih')->orderByDesc('id')->get()
                 ->map(fn (Islem $i): array => [...$i->ozet(), 'varlik' => $i->varlik->ozet()]),

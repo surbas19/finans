@@ -97,6 +97,22 @@ class IslemVeHesapTest extends TestCase
         $this->assertDatabaseHas('islemler', ['id' => $alis->id, 'hesap_id' => $a->id]);
     }
 
+    public function test_hesap_detayi_dagilimi_yalnizca_o_hesabin_varliklari(): void
+    {
+        $user = User::factory()->create();
+        $a = Hesap::factory()->create(['user_id' => $user->id]);
+        $b = Hesap::factory()->create(['user_id' => $user->id]);
+        $hisse = $this->varlik('THYAO', fiyat: 100);
+        $altin = $this->varlik('GRAM', 'altin', 3000);
+        Islem::factory()->create(['hesap_id' => $a->id, 'user_id' => $user->id, 'varlik_id' => $hisse->id, 'tur' => 'alis', 'miktar' => 5, 'birim_fiyat' => 90]);
+        Islem::factory()->create(['hesap_id' => $b->id, 'user_id' => $user->id, 'varlik_id' => $altin->id, 'tur' => 'alis', 'miktar' => 2, 'birim_fiyat' => 2900]);
+
+        $this->actingAs($user)->getJson("/api/v1/hesaplar/{$a->id}")->assertOk()
+            ->assertJsonCount(1, 'dagilim')
+            ->assertJsonPath('dagilim.0.tur', 'hisse')
+            ->assertJsonPath('dagilim.0.deger', 500);
+    }
+
     public function test_giris_yapmayan_erisemez(): void
     {
         $this->getJson('/api/v1/ozet')->assertUnauthorized();

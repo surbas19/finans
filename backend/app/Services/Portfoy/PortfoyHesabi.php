@@ -3,10 +3,13 @@
 namespace App\Services\Portfoy;
 
 use App\Enums\VarlikTuru;
+use App\Models\FiyatGecmisi;
 use App\Models\Hesap;
 use App\Models\Islem;
 use App\Models\User;
 use App\Models\Varlik;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -59,6 +62,158 @@ class PortfoyHesabi
             'varliklar' => $this->varlikBazinda($pozisyonlar, $varliklar, $usd),
             'pozisyonlar' => $acik->sortByDesc(fn (array $s): float => $s['deger'] ?? -1)->values(),
         ];
+    }
+
+    /**
+     * Günlük değer / maliyet / kâr-zarar serisi; işlemler ve fiyat_gecmisi kapanışlarıyla geriye dönük hesaplanır.
+     *
+     * Kapanışı olmayan gün (hafta sonu, tatil) önceki kapanışı kullanır. Hiç kapanış yoksa o güne kadarki son işlem
+     * fiyatı (TL) kullanılır; o da yoksa pozisyon değere katılmaz. İkisinde de nokta `eksik` işaretlenir.
+     * Bugünün noktası güncel fiyatlarla hesaplanır (özetteki toplamla aynı). Maliyet ve K/Z yalnızca maliyeti
+     * bilinen kısımdandır. 400 günden uzun aralık haftalık (pazar + son gün) örneklenir.
+     *
+     * @return list<array{tarih: string, deger: float, maliyet: float, kz: float, eksik: bool}>
+     */
+    public function gecmis(User $user, ?int $hesapId, CarbonInterface $baslangic, CarbonInterface $bitis): array
+    {
+        $hesapIdleri = $user->hesaplar()->when($hesapId, fn ($q) => $q->whereKey($hesapId))->pluck('id');
+        $islemler = self::sirala(
+            Islem::where('user_id', $user->id)->whereIn('hesap_id', $hesapIdleri)->with('varlik.fiyat')->get()
+        );
+        if ($islemler->isEmpty()) {
+            return [];
+        }
+
+        $bas = max($baslangic->toDateString(), $islemler->first()->tarih->toDateString());
+        $son = $bitis->toDateString();
+        if ($bas > $son) {
+            return [];
+        }
+
+        /** @var array<int, Varlik> $varliklar */
+        $varliklar = $islemler->pluck('varlik', 'varlik_id')->all();
+        $usdVarlik = collect($varliklar)->contains(fn (Varlik $v): bool => $v->para_birimi === 'USD')
+            ? Varlik::where('tur', VarlikTuru::Doviz->value)->where('kod', 'USD')->with('fiyat')->first()
+            : null;
+        $idler = array_keys($varliklar);
+        if ($usdVarlik) {
+            $idler[] = $usdVarlik->id;
+        }
+
+        [$sonKapanis, $gunluk] = $this->kapanislar($idler, $bas, $son);
+        $bugun = now()->toDateString();
+        $guncelUsd = $usdVarlik?->fiyat?->fiyat;
+        $haftalik = Carbon::parse($bas)->diffInDays(Carbon::parse($son)) > 400;
+
+        /** @var array<string, Pozisyon> $pozisyonlar */
+        $pozisyonlar = [];
+        /** @var array<int, float> $islemFiyati */
+        $islemFiyati = [];
+        $noktalar = [];
+        $i = 0;
+        $sayi = $islemler->count();
+
+        for ($gun = Carbon::parse($bas); $gun->toDateString() <= $son; $gun->addDay()) {
+            $tarih = $gun->toDateString();
+            while ($i < $sayi && $islemler[$i]->tarih->toDateString() <= $tarih) {
+                $islem = $islemler[$i++];
+                $anahtar = $islem->hesap_id.'-'.$islem->varlik_id;
+                $pozisyonlar[$anahtar] ??= new Pozisyon($islem->hesap_id, $islem->varlik_id);
+                try {
+                    $pozisyonlar[$anahtar]->uygula($islem);
+                } catch (YetersizMiktar) {
+                    // hesapla() ile aynı: bozuk satış hesaba katılmaz.
+                }
+                if ($islem->birim_fiyat !== null) {
+                    $islemFiyati[$islem->varlik_id] = (float) $islem->birim_fiyat;
+                }
+            }
+            foreach ($gunluk[$tarih] ?? [] as $varlikId => $kapanis) {
+                $sonKapanis[$varlikId] = $kapanis;
+            }
+            if ($haftalik && ! $gun->isSunday() && $tarih !== $son) {
+                continue;
+            }
+
+            $bugunMu = $tarih === $bugun;
+            $usd = ($bugunMu ? $guncelUsd : null)
+                ?? ($usdVarlik ? ($sonKapanis[$usdVarlik->id] ?? null) : null)
+                ?? $guncelUsd;
+            $deger = $maliyet = $kz = 0.0;
+            $eksik = false;
+            foreach ($pozisyonlar as $p) {
+                $miktar = $p->miktar();
+                if ($miktar <= Pozisyon::EPS) {
+                    continue;
+                }
+                $varlik = $varliklar[$p->varlikId];
+                $fiyat = ($bugunMu ? self::tlFiyat($varlik, $usd) : null)
+                    ?? self::kapanisTl($varlik, $sonKapanis[$varlik->id] ?? null, $usd);
+                if ($fiyat === null) {
+                    $eksik = true;
+                    $fiyat = $islemFiyati[$varlik->id] ?? null;
+                    if ($fiyat === null) {
+                        continue;
+                    }
+                }
+                $deger += $miktar * $fiyat;
+                if ($p->miktarBilinen > Pozisyon::EPS) {
+                    $maliyet += $p->maliyetBilinen;
+                    $kz += $p->miktarBilinen * $fiyat - $p->maliyetBilinen;
+                }
+            }
+
+            $noktalar[] = [
+                'tarih' => $tarih,
+                'deger' => round($deger, 2),
+                'maliyet' => round($maliyet, 2),
+                'kz' => round($kz, 2),
+                'eksik' => $eksik,
+            ];
+        }
+
+        return $noktalar;
+    }
+
+    /**
+     * Aralıktan önceki son kapanış (ileri taşımak için) ve aralıktaki kapanışlar.
+     *
+     * @param  list<int>  $idler
+     * @return array{0: array<int, float>, 1: array<string, array<int, float>>}
+     */
+    private function kapanislar(array $idler, string $bas, string $son): array
+    {
+        $onceki = FiyatGecmisi::query()
+            ->joinSub(
+                FiyatGecmisi::selectRaw('varlik_id as vid, max(tarih) as son_tarih')
+                    ->whereIn('varlik_id', $idler)->where('tarih', '<', $bas)->groupBy('varlik_id'),
+                'onceki',
+                fn ($j) => $j->on('fiyat_gecmisi.varlik_id', '=', 'onceki.vid')->on('fiyat_gecmisi.tarih', '=', 'onceki.son_tarih'),
+            )
+            ->pluck('fiyat_gecmisi.kapanis', 'fiyat_gecmisi.varlik_id')
+            ->map(fn ($k): float => (float) $k)->all();
+
+        $gunluk = [];
+        FiyatGecmisi::whereIn('varlik_id', $idler)->whereBetween('tarih', [$bas, $son])
+            ->get(['varlik_id', 'tarih', 'kapanis'])
+            ->each(function (FiyatGecmisi $s) use (&$gunluk): void {
+                $gunluk[$s->tarih->toDateString()][$s->varlik_id] = (float) $s->kapanis;
+            });
+
+        return [$onceki, $gunluk];
+    }
+
+    private static function kapanisTl(Varlik $varlik, ?float $kapanis, ?float $usd): ?float
+    {
+        if ($kapanis === null) {
+            return null;
+        }
+
+        return match ($varlik->para_birimi) {
+            'TRY' => $kapanis,
+            'USD' => $usd ? $kapanis * $usd : null,
+            default => null,
+        };
     }
 
     /**
