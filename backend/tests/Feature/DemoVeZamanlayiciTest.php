@@ -43,6 +43,13 @@ class DemoVeZamanlayiciTest extends TestCase
         putenv('KURULUM_YONETICI=ikinci@ornek.test|İki|Yönetici');
         Artisan::call('kurulum:yonetici');
         $this->assertSame(1, User::count());
+
+        // Şifre sıfırlama yalnızca KURULUM_YONETICI e-postasındaki yöneticiye
+        $this->assertSame(1, Artisan::call('kurulum:yonetici', ['--sifirla' => true]));
+        putenv('KURULUM_YONETICI=ilk@ornek.test|İlk|Yönetici');
+        $eski = User::first()->password;
+        $this->assertSame(0, Artisan::call('kurulum:yonetici', ['--sifirla' => true]));
+        $this->assertNotSame($eski, User::first()->fresh()->password);
         putenv('KURULUM_YONETICI');
     }
 }

@@ -5,6 +5,7 @@ use App\Fiyat\Katalog;
 use App\Models\User;
 use Illuminate\Console\Scheduling\CallbackEvent;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -45,13 +46,31 @@ Artisan::command('katalog:esitle', function (): void {
 /**
  * Canlıda ilk kurulum: hiç kullanıcı yoksa .env'deki KURULUM_YONETICI="e-posta|Ad|Soyad" ile yönetici açar,
  * geçici şifreyi çıktıya (cron → deploy/kurulum.log) yazar. Kullanıcı varsa hiçbir şey yapmaz.
+ * --sifirla: o e-postadaki yöneticinin şifresini yeni geçici şifreyle değiştirir (cron → deploy/SIFRE-SIFIRLA).
  */
-Artisan::command('kurulum:yonetici', function (): int {
+Artisan::command('kurulum:yonetici {--sifirla}', function (): int {
+    $parcalar = array_map('trim', explode('|', (string) env('KURULUM_YONETICI', '')));
+    $gecerli = count($parcalar) === 3 && filter_var($parcalar[0], FILTER_VALIDATE_EMAIL);
+
+    if ($this->option('sifirla')) {
+        $yonetici = $gecerli ? User::where('email', mb_strtolower($parcalar[0]))->where('yonetici', true)->first() : null;
+        if (! $yonetici) {
+            $this->error('KURULUM_YONETICI e-postasıyla bir yönetici bulunamadı.');
+
+            return 1;
+        }
+        $sifre = Str::password(14, symbols: false);
+        $yonetici->forceFill(['password' => $sifre, 'aktif' => true, 'remember_token' => null])->save();
+        DB::table('sessions')->where('user_id', $yonetici->id)->delete();
+        $this->info("Şifre sıfırlandı: {$yonetici->email} — geçici şifre: {$sifre} (girişten sonra Profil'den değiştirin, bu log dosyasını silin)");
+
+        return 0;
+    }
+
     if (User::exists()) {
         return 0;
     }
-    $parcalar = array_map('trim', explode('|', (string) env('KURULUM_YONETICI', '')));
-    if (count($parcalar) !== 3 || ! filter_var($parcalar[0], FILTER_VALIDATE_EMAIL)) {
+    if (! $gecerli) {
         $this->error('KURULUM_YONETICI .env ayarı "e-posta|Ad|Soyad" biçiminde olmalı.');
 
         return 1;
