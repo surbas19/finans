@@ -19,6 +19,7 @@ Okul sisteminden tamamen ayrıdır: ayrı klasör, ayrı veritabanı, ayrı cron
 9. **Yönetim → Fiyat kaynakları → Şimdi güncelle**: Truncgil / Yahoo / Binance "çalışıyor" görünmeli. Sonra cron her 15 dakikada günceller.
 
 ## Yayın (güncelleme)
+Windows'ta proje kökündeki **`yayinla.bat`**'a çift tıklayın: menüden "Yayınla" ya da "Yalnızca denetle" seçilir (`yayinla.bat yayinla` / `yayinla.bat denetle` sormadan çalışır). Laragon'daki PHP 8.3 ve Composer'ı kendisi bulur, Git Bash ile aşağıdaki betiği çalıştırır. `canli-paket/ftp.env` yoksa ya da şifre boşsa dosyayı Not Defteri'nde açar. GitHub'a gönderilmemiş commit varsa uyarır (yayından sonra `git push`).
 ```bash
 bash backend/deploy/yayinla.sh            # main dalı: paketle + FTP ile gönder + cron'un açmasını bekle
 bash backend/deploy/yayinla.sh denetle    # yalnızca sürüm denetimi
