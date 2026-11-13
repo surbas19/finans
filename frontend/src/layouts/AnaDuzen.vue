@@ -37,7 +37,7 @@ async function cikis(): Promise<void> {
 <template>
   <div class="flex min-h-dvh flex-col">
     <header
-      class="sticky top-0 z-20 border-b border-surface-200/70 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/70"
+      class="sticky top-0 z-20 border-b border-surface-200/70 bg-white/85 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-white/70"
     >
       <div class="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
         <RouterLink

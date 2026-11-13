@@ -12,6 +12,18 @@ import router from './router'
 import { oturumDustuAyarla } from './api/http'
 import { primeVueAyarlari } from './config/primevue'
 import { useAuthStore } from './stores/auth'
+import { kurulumDinle } from './composables/useUygulamaKurulumu'
+
+// "Ana ekrana ekle" istemi sayfa açılır açılmaz gelir; bileşenlerden önce yakalanır.
+kurulumDinle()
+// Yalnızca derlenmiş uygulamada (canlı): telefona kurulabilirlik ve çevrimdışı uyarı sayfası. Veri önbelleğe alınmaz.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Kayıt olmazsa uygulama normal web sayfası olarak çalışmaya devam eder.
+    })
+  })
+}
 
 const app = createApp(App)
 

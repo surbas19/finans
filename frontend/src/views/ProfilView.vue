@@ -5,6 +5,7 @@ import Button from 'primevue/button'
 import Password from 'primevue/password'
 import FormAlani from '@/components/FormAlani.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
+import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import { finansApi } from '@/api/finans'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAuthStore } from '@/stores/auth'
@@ -40,6 +41,8 @@ async function cikis(): Promise<void> {
       </div>
       <Button label="Çıkış" icon="pi pi-sign-out" severity="secondary" outlined @click="cikis" />
     </section>
+
+    <UygulamaKurKarti />
 
     <section class="kart p-5">
       <h2 class="bolum-etiketi mb-3">Şifre değiştir</h2>

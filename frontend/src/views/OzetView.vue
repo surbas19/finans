@@ -9,6 +9,7 @@ import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import IslemFormu from '@/components/IslemFormu.vue'
 import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
+import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import { finansApi, HESAP_TURLERI, type HesapOzeti, type Ozet } from '@/api/finans'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { neZaman, tl } from '@/utils/bicim'
@@ -48,10 +49,23 @@ function islemKaydedildi(): void {
   yenile.value++
   void yukle()
 }
+
+const yenileniyor = ref(false)
+async function elleYenile(): Promise<void> {
+  yenileniyor.value = true
+  yenile.value++
+  try {
+    await yukle()
+  } finally {
+    yenileniyor.value = false
+  }
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
+    <UygulamaKurKarti ipucu />
+
     <!-- Hesap süzgeci -->
     <div v-if="tumHesaplar.length > 1" class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
       <button
@@ -124,8 +138,23 @@ function islemKaydedildi(): void {
         <Message v-if="ozet.toplam.fiyatsiz > 0" severity="warn" size="small">
           {{ ozet.toplam.fiyatsiz }} varlığın fiyatı yok; toplam değere katılmadı.
         </Message>
-        <p class="text-xs text-surface-400">
-          Fiyatlar {{ neZaman(ozet.son_guncelleme) }} güncellendi · BIST ~15 dk gecikmeli
+        <p class="flex items-center gap-1 text-xs text-surface-400">
+          <span>
+            Fiyatlar {{ neZaman(ozet.son_guncelleme) }} güncellendi · BIST ~15 dk gecikmeli
+          </span>
+          <!-- Ana ekrandan açılınca tarayıcının yenile düğmesi yok -->
+          <Button
+            icon="pi pi-refresh"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            class="!h-7 !w-7 shrink-0"
+            aria-label="Yenile"
+            title="Yenile"
+            :loading="yenileniyor"
+            @click="elleYenile"
+          />
         </p>
       </div>
     </section>
