@@ -28,6 +28,7 @@ bash backend/deploy/yayinla.sh denetle    # yalnızca sürüm denetimi
 - **Canlıda elle artisan çalıştırılamaz**; sunucuda yeni bir adım gerekiyorsa `deploy/cron.sh`'ye eklenir.
 
 ## Bakım
+- **Telefona kurulum:** Android Chrome'da Profil → "Ana ekrana ekle" (ya da menü ⋮ → Uygulamayı yükle); iPhone Safari'de Paylaş → Ana Ekrana Ekle. Service worker (`public/sw.js`) veri saklamaz, yalnızca bağlantı yokken `cevrimdisi.html`'i gösterir. İkon tasarımı değişirse `frontend/scripts/ikon-uret.ps1` yeniden çalıştırılır.
 - **Yönetici şifresi unutulursa:** *File Manager* → `finans-app/deploy/` içinde `SIFRE-SIFIRLA` adlı boş dosya oluşturun; bir dakika içinde `.env`'deki `KURULUM_YONETICI` e-postasına yeni geçici şifre verilir ve `kurulum.log`'a yazılır (giriş yapınca log silinir).
 - Zamanlanmış işlerin son çıktısı: `finans-app/storage/logs/zamanlayici.log`; hatalar: `storage/logs/laravel-*.log`.
 - **Çerezler:** okul sisteminin oturum çerezi `.yoklm.com` alanında olduğu için bu adrese de gelir; finansın çerezi `finans_oturum` adlı ve yalnızca `finans.yoklm.com`'a yazılır (`SESSION_DOMAIN=null`). CSRF köken denetimiyle yapılır, XSRF çerezi yok. Bu ayarlar değiştirilmez (CLAUDE.md).
