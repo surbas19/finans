@@ -209,6 +209,8 @@ export const finansApi = {
   islemEkle: (veri: IslemGirdisi) => http.post('/islemler', veri),
   islemGuncelle: (id: number, veri: IslemGirdisi) => http.put(`/islemler/${id}`, veri),
   islemSil: (id: number) => http.delete(`/islemler/${id}`),
+  /** Canlıdaki sürüm (yerelde null) */
+  surum: () => http.get<{ surum: string | null }>('/surum').then((r) => r.data.surum),
   topluMevcutEkle: (veri: { hesap_id: number; satirlar: TopluSatir[] }) =>
     http.post<{ eklenen: number; message: string }>('/islemler/toplu', veri).then((r) => r.data),
 

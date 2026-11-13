@@ -7,8 +7,8 @@ Sıra: önce otomatik güncelleme, sonra mobil uyum, en son ikisiyle birlikte ca
 ## Otomatik güncelleme (açık uygulama yeni sürümü kendisi yükler)
 - **Plan:** [planlar/otomatik-guncelleme.md](planlar/otomatik-guncelleme.md)
 - **Durum:** başladı (2026-11-13)
-- **Yapılanlar:** plan
-- **Sıradaki adım:** 1. `GET /api/v1/surum` + `SurumTest`
+- **Yapılanlar:** plan; `GET /api/v1/surum` + `SurumTest`; `__SURUM__` (vite.config), `utils/surumDenetimi.ts` + testleri, main.ts
+- **Sıradaki adım:** uçtan uca deneme (derlenmiş arayüz 8001 + deploy/SURUM), sonra kaydı kapat
 - **Komutlar:** `cd backend && php artisan test`; `cd frontend && npm run type-check && npm run lint && npx vitest run`
 
 ## Mobil uyum (kalanı)

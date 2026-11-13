@@ -14,6 +14,8 @@ node_modules/
 /backend/public/hot
 /backend/public/assets/
 /backend/resources/spa/
+# Paket sürümü (paket-hazirla.sh yalnızca pakette yazar; yerelde test / deneme artığı girmesin)
+/backend/deploy/SURUM
 /backend/public/storage
 /backend/storage/*.key
 

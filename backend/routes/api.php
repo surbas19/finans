@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\IslemController;
 use App\Http\Controllers\Api\V1\IzlemeController;
 use App\Http\Controllers\Api\V1\OzetController;
 use App\Http\Controllers\Api\V1\PerformansController;
+use App\Http\Controllers\Api\V1\SurumController;
 use App\Http\Controllers\Api\V1\VarlikController;
 use App\Http\Controllers\Api\V1\Yonetim\KaynakController;
 use App\Http\Controllers\Api\V1\Yonetim\KullaniciController;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function (): void {
     Route::post('giris', [GirisController::class, 'giris'])->middleware('throttle:giris')->name('giris');
+    // Girişsiz: giriş sayfasındaki açık uygulama da yeni sürümü fark etsin
+    Route::get('surum', SurumController::class)->middleware('throttle:api')->name('surum');
 
     Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
         Route::get('ben', [GirisController::class, 'ben'])->name('ben');

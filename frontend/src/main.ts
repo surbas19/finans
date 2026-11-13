@@ -13,6 +13,7 @@ import { oturumDustuAyarla } from './api/http'
 import { primeVueAyarlari } from './config/primevue'
 import { useAuthStore } from './stores/auth'
 import { kurulumDinle } from './composables/useUygulamaKurulumu'
+import { surumDenetiminiKur } from './utils/surumDenetimi'
 
 // "Ana ekrana ekle" istemi sayfa açılır açılmaz gelir; bileşenlerden önce yakalanır.
 kurulumDinle()
@@ -24,6 +25,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     })
   })
 }
+
+// Yeni sürüm yayınlanınca açık kalmış uygulama uygun anda kendini yeniler.
+surumDenetiminiKur(router)
 
 const app = createApp(App)
 
