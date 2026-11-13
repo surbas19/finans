@@ -11,12 +11,16 @@ import { miktar as miktarBicimi } from '@/utils/bicim'
 
 /** Sunucunun tek seferde kabul ettiği en çok satır */
 export const EN_COK_SATIR = 200
+/** Katalogda olmayan kodlar sunucuya bu büyüklükte parçalarla sorulur (`POST /varliklar/toplu` sınırı) */
+export const YENI_KOD_PARCASI = 50
 
 export interface TopluSatirSonucu {
   /** Metindeki satır numarası (1'den başlar) */
   satirNo: number
   ham: string
   varlik: Varlik | null
+  /** Katalogda yok ama kod biçiminde (ör. ASELS): eklerken Borsa İstanbul'da, yoksa kriptoda aranır */
+  yeniKod: string | null
   miktar: number | null
   birimFiyat: number | null
   /** YYYY-MM-DD */
@@ -97,24 +101,45 @@ export function tarihCoz(metin: string): string | null {
   return `${y}-${String(a).padStart(2, '0')}-${String(g).padStart(2, '0')}`
 }
 
-/** Önce kod, sonra ad eşleşmesi; birden çok türde aynı kod varsa hata */
+/** Sunucunun kaynakta arayabileceği kod biçimi (sadeleştirilmiş: büyük harf, Türkçe harf yok) */
+const KOD_BICIMI = /^[A-Z0-9]{2,12}$/
+
+/**
+ * Önce kod, sonra ad eşleşmesi; birden çok türde aynı kod varsa hata. Katalogda olmayan ama kod biçimindeki alan
+ * `yeniKod` olur (eklerken aranır); `bulunamayan` kümesindeki yeni kod (önceki aramada bulunamamış) hatadır.
+ */
 function varlikBul(
   alan: string,
   varliklar: Varlik[],
-): { varlik: Varlik | null; hata: string | null } {
+  bulunamayan: ReadonlySet<string>,
+): { varlik: Varlik | null; yeniKod: string | null; hata: string | null } {
   const anahtar = sade(alan)
   const kodla = varliklar.filter((v) => sade(v.kod) === anahtar)
   const adayler = kodla.length > 0 ? kodla : varliklar.filter((v) => sade(v.ad) === anahtar)
-  if (adayler.length === 1) return { varlik: adayler[0]!, hata: null }
+  if (adayler.length === 1) return { varlik: adayler[0]!, yeniKod: null, hata: null }
   if (adayler.length > 1) {
     const liste = adayler.map((v) => `${v.ad} (${VARLIK_TURLERI[v.tur].etiket})`).join(', ')
 
-    return { varlik: null, hata: `Birden çok varlık eşleşti: ${liste}. Kod yerine adını yazın.` }
+    return {
+      varlik: null,
+      yeniKod: null,
+      hata: `Birden çok varlık eşleşti: ${liste}. Kod yerine adını yazın.`,
+    }
+  }
+  if (KOD_BICIMI.test(anahtar)) {
+    return {
+      varlik: null,
+      yeniKod: anahtar,
+      hata: bulunamayan.has(anahtar)
+        ? `${anahtar} Borsa İstanbul'da ve kriptoda bulunamadı. Borsa kodunu yazın (ör. ASELS); fonsa önce "Kodla ekle" ile ekleyin.`
+        : null,
+    }
   }
 
   return {
     varlik: null,
-    hata: `Katalogda yok: ${alan.trim()}. Hisse, kripto ya da fonsa önce "Kodla ekle" ile ekleyin.`,
+    yeniKod: null,
+    hata: `Katalogda yok: ${alan.trim()}. Hisse ya da kriptoysa kodunu yazın (ör. THYAO); fonsa önce "Kodla ekle" ile ekleyin.`,
   }
 }
 
@@ -128,12 +153,14 @@ function alanTemizle(alan: string): string {
 /**
  * Metni satır satır çözer. Boş satırlar, `#` ile başlayan satırlar ve ilk alanı "kod / varlık" olan başlık satırı
  * atlanır. `varsayilanTarih` tarihi yazılmamış satırlara verilir; `bugun`den ileri tarih hatadır (ikisi de YYYY-MM-DD).
+ * `bulunamayan`: kaynakta aranıp bulunamamış yeni kodlar (o satırlar hatalı olur).
  */
 export function satirlariCoz(
   metin: string,
   varliklar: Varlik[],
   varsayilanTarih: string,
   bugun: string,
+  bulunamayan: ReadonlySet<string> = new Set(),
 ): TopluSatirSonucu[] {
   const sonuc: TopluSatirSonucu[] = []
 
@@ -151,6 +178,7 @@ export function satirlariCoz(
       satirNo: i + 1,
       ham,
       varlik: null,
+      yeniKod: null,
       miktar: null,
       birimFiyat: null,
       tarih: varsayilanTarih,
@@ -167,8 +195,9 @@ export function satirlariCoz(
     }
 
     if (kod !== '') {
-      const bulunan = varlikBul(kod, varliklar)
+      const bulunan = varlikBul(kod, varliklar, bulunamayan)
       kayit.varlik = bulunan.varlik
+      kayit.yeniKod = bulunan.yeniKod
       if (bulunan.hata) hatalar.push(bulunan.hata)
     }
 

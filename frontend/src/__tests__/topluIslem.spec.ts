@@ -93,14 +93,47 @@ describe('satirlariCoz', () => {
     expect(sonuc[0]!.satirNo).toBe(4)
   })
 
-  it('bilinmeyen ve belirsiz kod, eksik alan', () => {
-    const [bilinmeyen, belirsiz, eksik] = coz('ASELS;10\nATA;1\nGRAM')
+  it('bilinmeyen ad, belirsiz kod, eksik alan', () => {
+    const [bilinmeyen, belirsiz, eksik] = coz('Türk Telekom;10\nATA;1\nGRAM')
 
-    expect(bilinmeyen!.hata).toContain('Katalogda yok: ASELS')
+    expect(bilinmeyen!.hata).toContain('Katalogda yok: Türk Telekom')
+    expect(bilinmeyen!.hata).toContain('kodunu yazın')
+    expect(bilinmeyen!.yeniKod).toBeNull()
     expect(belirsiz!.hata).toContain('Birden çok varlık')
     expect(eksik!.hata).toContain('Kod ve miktar gerekli')
     // Adıyla yazılınca belirsizlik kalkar
     expect(coz('Ata Yatırım;1')[0]!.varlik?.id).toBe(7)
+  })
+
+  it('katalogda olmayan kod hata değil, eklerken aranacak yeni kod', () => {
+    const [hisse, turkce, kisa] = coz('asels;10;150\nşok;5\nX;1')
+
+    expect(hisse).toMatchObject({
+      varlik: null,
+      yeniKod: 'ASELS',
+      miktar: 10,
+      birimFiyat: 150,
+      hata: null,
+    })
+    // Türkçe harfler sadeleşir (sunucu yalnızca A-Z, 0-9 kabul eder)
+    expect(turkce).toMatchObject({ yeniKod: 'SOK', hata: null })
+    // Kod en az 2 karakter
+    expect(kisa!.yeniKod).toBeNull()
+    expect(kisa!.hata).toContain('Katalogda yok: X')
+  })
+
+  it('kaynakta bulunamayan yeni kod hatalı olur', () => {
+    const [bulunamayan, digeri] = satirlariCoz(
+      'ASELSAN;10\nSOL;2',
+      KATALOG,
+      BUGUN,
+      BUGUN,
+      new Set(['ASELSAN']),
+    )
+
+    expect(bulunamayan!.yeniKod).toBe('ASELSAN')
+    expect(bulunamayan!.hata).toContain("ASELSAN Borsa İstanbul'da ve kriptoda bulunamadı")
+    expect(digeri).toMatchObject({ yeniKod: 'SOL', hata: null })
   })
 
   it('sayı, tarih ve alan sayısı hataları', () => {

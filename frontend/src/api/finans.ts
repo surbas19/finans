@@ -238,6 +238,15 @@ export const finansApi = {
       .then((r) => r.data.gecmis),
   varlikEkle: (veri: { tur: VarlikTuru; kod: string; ad?: string | null }) =>
     http.post<{ varlik: Varlik; message: string }>('/varliklar', veri).then((r) => r.data),
+  /** Katalogda olmayan kodlar: önce Borsa İstanbul, sonra kripto; bulunanlar kataloğa eklenir (en çok 50 kod) */
+  varliklariKodlaBul: (kodlar: string[]) =>
+    http
+      .post<{
+        varliklar: Varlik[]
+        bulunamayan: string[]
+        ulasilamayan: string[]
+      }>('/varliklar/toplu', { kodlar })
+      .then((r) => r.data),
   elleFiyat: (id: number, fiyat: number) => http.put(`/varliklar/${id}/fiyat`, { fiyat }),
 
   izleme: () => http.get<{ varliklar: Varlik[] }>('/izleme').then((r) => r.data.varliklar),
