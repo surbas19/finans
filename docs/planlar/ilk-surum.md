@@ -146,3 +146,9 @@ Her kaynak `FiyatKaynagi` arayüzünü uygulayan ayrı bir sınıftır: `guncel(
 - **CSRF:** Laravel 13 `preventRequestForgery(originOnly: true)` → `Sec-Fetch-Site: same-origin` olmayan yazma isteği
   reddedilir, XSRF çerezi hiç yazılmaz. Arayüz ve API aynı köken olduğu için XSRF çerezi çakışması (okulun `.yoklm.com`
   çerezi) tamamen ortadan kalkar; oturum çerezi adı `finans_oturum`.
+
+## Uygulamada plandan farklar (2026-11-13)
+- **TCMB kullanılmadı:** dövizin geçmişi Yahoo'dan (`USDTRY=X`) tek istekle çekiliyor; güncel döviz Truncgil'den. TCMB yedeği ileride eklenebilir.
+- **Ek sayfa "İşlemler":** bütün işlemler tek listede (hesaba göre süzülür); hesap ve varlık sayfalarında da işlem geçmişi var.
+- **Değerleme fiyatı:** Truncgil'de `alış` (kuyumcunun / bankanın aldığı); ekranda satış fiyatı da gösterilir. İşlem formu alışta güncel satış, satışta güncel alış fiyatını önerir.
+- **Tek paket:** arayüz Laravel içine gömülü yayınlanır (`finans-app.zip`), okuldaki gibi iki paket yok.
