@@ -23,12 +23,13 @@ defineProps<{
     <li v-for="p in pozisyonlar" :key="`${p.hesap_id}-${p.varlik.id}`">
       <RouterLink
         :to="{ name: 'varlik', params: { id: p.varlik.id } }"
-        class="flex items-center gap-3 px-1 py-3.5 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
+        class="relative flex items-center gap-3 px-1 py-3.5 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
       >
+        <!-- Şerit kartın sol boşluğunda durur: telefonda varlık adına yer kalsın -->
         <span
           v-if="renkler"
           data-test="pozisyon-seridi"
-          class="-mr-1 w-1 self-stretch rounded-full"
+          class="absolute inset-y-3 -left-2.5 w-1 rounded-full sm:-left-1"
           :style="{ background: `var(${renkler.get(p.varlik.id) ?? '--p-surface-200'})` }"
         />
         <span

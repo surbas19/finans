@@ -48,6 +48,20 @@ function halkaAciklamasi(s: PortfoySlayti): string {
   return `${s.ad} dağılımı: ${parcalar.join(', ') || 'boş'}`
 }
 
+/**
+ * Grafik verisi yalnızca slaytlar değişince yeniden kurulur: şablonda her çizimde yeni dizi verilseydi seçim her
+ * değiştiğinde (çerçeve rengi) bütün halkalar baştan çizilirdi (PrimeVue Chart veri değişince grafiği yeniden kurar).
+ */
+const grafikler = computed(() =>
+  props.slaytlar.map((s) => ({
+    etiketler: s.dilimler.map((d) => d.etiket),
+    seriler: [
+      { ad: s.ad, veri: s.dilimler.map((d) => d.deger), renk: s.dilimler.map((d) => d.renk) },
+    ],
+    aciklama: halkaAciklamasi(s),
+  })),
+)
+
 function slaytEleman(sira: number): HTMLElement | null {
   return (serit.value?.children[sira] as HTMLElement | undefined) ?? null
 }
@@ -195,15 +209,9 @@ onBeforeUnmount(() => {
               <VeriGrafigi
                 v-if="s.dilimler.length > 0"
                 tur="doughnut"
-                :etiketler="s.dilimler.map((d) => d.etiket)"
-                :seriler="[
-                  {
-                    ad: s.ad,
-                    veri: s.dilimler.map((d) => d.deger),
-                    renk: s.dilimler.map((d) => d.renk),
-                  },
-                ]"
-                :aciklama="halkaAciklamasi(s)"
+                :etiketler="grafikler[i]!.etiketler"
+                :seriler="grafikler[i]!.seriler"
+                :aciklama="grafikler[i]!.aciklama"
                 :gosterge="false"
                 :ipucu="false"
                 kesim="72%"

@@ -96,8 +96,9 @@ async function cikis(): Promise<void> {
     <main
       class="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-10"
     >
+      <!-- Yol (parametreler dahil) değişince sayfa yeniden kurulur; sorgu değişince kurulmaz (Özet'in ?hesap=) -->
       <RouterView v-slot="{ Component, route: r }">
-        <component :is="Component" :key="r.fullPath" class="sayfa-giris" />
+        <component :is="Component" :key="r.path" class="sayfa-giris" />
       </RouterView>
     </main>
 
