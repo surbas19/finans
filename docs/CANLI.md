@@ -24,6 +24,7 @@ Windows'ta proje kökündeki **`yayinla.bat`**'a çift tıklayın: menüden "Yay
 bash backend/deploy/yayinla.sh            # main dalı: paketle + FTP ile gönder + cron'un açmasını bekle
 bash backend/deploy/yayinla.sh denetle    # yalnızca sürüm denetimi
 ```
+- **Açık uygulamalar yeni sürümü kendisi yükler:** telefonda ana ekrandan açılmış ya da tarayıcıda açık kalmış uygulama, öne gelince ya da sayfa değişince `/api/v1/surum`'u (paketteki `deploy/SURUM`) kendi derleme sürümüyle karşılaştırır; farklıysa açık pencere / dolu form yokken sessizce yenilenir, varsa sonraki sayfa geçişinde yeni sürümle açılır (`frontend/src/utils/surumDenetimi.ts`). Bu özelliği içermeyen eski sürümle açılmış uygulama bir kez elle yenilenir.
 - Yalnızca commit'lenmiş kod paketlenir; yalnızca `main` dalı yayınlanır. Canlıdaki sürüm gönderilecek kodun atası değilse yayın durur (öbür bilgisayarda yapılmış yayını ezmemek için).
 - Cron paketi açar, `deploy/KUR` işaretiyle migration + katalog eşitleme + önbellek adımlarını bir kez çalıştırır. Hata olursa işaret `KUR.hata` olur; sorun giderilince adını `KUR` yapın.
 - **Canlıda elle artisan çalıştırılamaz**; sunucuda yeni bir adım gerekiyorsa `deploy/cron.sh`'ye eklenir.
