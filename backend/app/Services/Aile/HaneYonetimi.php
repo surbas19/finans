@@ -20,10 +20,10 @@ use Illuminate\Validation\ValidationException;
 class HaneYonetimi
 {
     /** `hane_id` taşıyan aile tabloları (üyeler hariç); yeni tablo eklenince buraya da yazılır */
-    public const AILE_TABLOLARI = [];
+    public const AILE_TABLOLARI = ['gelir_kaynaklari', 'gelirler'];
 
     /** Üyeye bağlı kayıtlar (tablo => sütun); kaydı olan üye silinmez, pasif olur */
-    public const UYE_BAGLARI = [];
+    public const UYE_BAGLARI = ['gelir_kaynaklari' => 'uye_id', 'gelirler' => 'uye_id'];
 
     public function __construct(private VarsayilanAileKayitlari $varsayilanlar) {}
 

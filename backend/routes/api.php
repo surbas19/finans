@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Aile\GelirController;
+use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
 use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
 use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
@@ -53,6 +55,9 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::post('uyeler', [AileHaneController::class, 'uyeEkle'])->name('uyeler.store');
             Route::put('uyeler/{uye}', [AileHaneController::class, 'uyeGuncelle'])->name('uyeler.update');
             Route::delete('uyeler/{uye}', [AileHaneController::class, 'uyeSil'])->name('uyeler.destroy');
+
+            Route::apiResource('gelir-kaynaklari', GelirKaynagiController::class)->except('show')->parameters(['gelir-kaynaklari' => 'kaynak']);
+            Route::apiResource('gelirler', GelirController::class)->except('show')->parameters(['gelirler' => 'gelir']);
         });
 
         Route::prefix('yonetim')->name('yonetim.')->group(function (): void {
