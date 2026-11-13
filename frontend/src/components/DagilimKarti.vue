@@ -36,6 +36,7 @@ function oran(deger: number): string {
       :seriler="grafik.seriler"
       aciklama="Varlık türlerine göre dağılım"
       yukseklik="15rem"
+      :deger-bicimi="tl"
     />
     <ul class="mt-3 flex flex-col gap-1.5 text-sm">
       <li v-for="d in dagilim" :key="d.tur" class="flex items-center justify-between gap-2">

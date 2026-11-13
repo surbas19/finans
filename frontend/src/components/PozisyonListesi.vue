@@ -13,6 +13,8 @@ defineProps<{
   pozisyonlar: Pozisyon[]
   /** Satırda hesap adı (varlığın hangi hesapta olduğu) */
   hesapAdi?: (p: Pozisyon) => string | undefined
+  /** Varlık kimliği → soldaki şeridin rengi (Özet'teki halka dilimiyle aynı; `--p-...` değişkeni) */
+  renkler?: Map<number, string>
 }>()
 </script>
 
@@ -23,6 +25,12 @@ defineProps<{
         :to="{ name: 'varlik', params: { id: p.varlik.id } }"
         class="flex items-center gap-3 px-1 py-3.5 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
       >
+        <span
+          v-if="renkler"
+          data-test="pozisyon-seridi"
+          class="-mr-1 w-1 self-stretch rounded-full"
+          :style="{ background: `var(${renkler.get(p.varlik.id) ?? '--p-surface-200'})` }"
+        />
         <span
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface-100 text-surface-600"
           :title="VARLIK_TURLERI[p.varlik.tur].etiket"

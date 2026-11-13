@@ -54,6 +54,8 @@ export interface HesapOzeti extends Toplam {
   sira: number
   not: string | null
   varlik_sayisi: number
+  /** Türlere göre dağılım (özette ve hesap listesinde gelir) */
+  dagilim?: DagilimDilimi[]
 }
 
 export interface Pozisyon {

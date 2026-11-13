@@ -24,8 +24,23 @@ const props = withDefaults(
     yukseklik?: string
     /** Çubuk grafiği yatay çizer (uzun etiketler için). */
     yatay?: boolean
+    /** Alttaki etiket listesi (halkada varsayılan açık). */
+    gosterge?: boolean
+    /** İpucundaki değerin biçimi (ör. TL). */
+    degerBicimi?: (deger: number) => string
+    /** Halkanın iç boşluğu (Chart.js `cutout`). */
+    kesim?: string
+    /** Dokununca / üzerine gelince ipucu (küçük halkada kapatılır: tuvale sığmaz). */
+    ipucu?: boolean
   }>(),
-  { yukseklik: '16rem', yatay: false },
+  {
+    yukseklik: '16rem',
+    yatay: false,
+    gosterge: true,
+    degerBicimi: undefined,
+    kesim: '65%',
+    ipucu: true,
+  },
 )
 
 /** Kategorik sıra: indigo, zümrüt, kehribar, gök, gül, gri. */
@@ -85,7 +100,7 @@ const options = computed(() => {
     locale: 'tr-TR',
     plugins: {
       legend: {
-        display: halka.value || props.seriler.length > 1,
+        display: halka.value ? props.gosterge : props.seriler.length > 1,
         position: 'bottom',
         labels: {
           color: metin,
@@ -95,12 +110,22 @@ const options = computed(() => {
         },
       },
       tooltip: {
+        enabled: props.ipucu,
         titleFont: { family: 'Plus Jakarta Sans Variable' },
         bodyFont: { family: 'Plus Jakarta Sans Variable' },
+        ...(props.degerBicimi
+          ? {
+              callbacks: {
+                // Halkada dilim adı, çizgi / çubukta seri adı
+                label: (o: { label?: string; raw: unknown; dataset?: { label?: string } }) =>
+                  `${(halka.value ? o.label : o.dataset?.label) ?? ''}: ${props.degerBicimi!(Number(o.raw))}`,
+              },
+            }
+          : {}),
       },
     },
     ...(halka.value
-      ? { cutout: '65%' }
+      ? { cutout: props.kesim }
       : {
           scales: {
             x: { ...eksen, grid: props.yatay ? eksen.grid : { display: false }, beginAtZero: true },
