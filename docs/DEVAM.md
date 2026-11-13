@@ -4,10 +4,10 @@
 
 ## İlk sürüm
 - **Plan:** [planlar/ilk-surum.md](planlar/ilk-surum.md) (1. adım sonucu planın sonunda)
-- **Durum:** backend bitti (uçlar, Policy, zamanlayıcı, seeder, 29 test geçiyor). Frontend başlamadı.
+- **Durum:** backend + frontend çalışıyor (29 backend, 6 frontend testi; type-check / lint temiz; curl ile giriş / CSRF / özet denendi). Yayın betikleri yok.
 - **Yapılanlar:**
   - 1. adım: kaynak denemesi bitti (Truncgil, Yahoo, Binance, TCMB çalışıyor; TEFAS engelli → fon fiyatı elle).
   - Laravel 13 + Sanctum kuruldu, `.env` MySQL `finans` (+ `finans_test`), oturum çerezi `finans_oturum`.
-- **Sıradaki adım:** frontend iskeleti (Vue 3 + PrimeVue 4.5 + Tailwind 4, port 5174, /api proxy → 8001, build → backend/public/assets + backend/resources/spa); ekranlar: giriş, özet, hesaplar, hesap detayı + işlem formu, izleme, varlık detayı + grafik, yönetim; sonra yayın betikleri + CANLI.md.
+- **Sıradaki adım:** yayın betikleri (backend/deploy: yayinla.sh, paket-hazirla.sh, paket-ac.php, cron.sh; okuldakinden uyarlanır), .env.production.example, docs/CANLI.md (cPanel adımları); sonra kullanıcıya GitHub deposu ve cPanel kurulumu anlatılır.
 - **Dikkat:** GitHub deposu henüz yok (kullanıcı açacak, `gh` kurulu değil); şimdilik yalnızca yerel commit.
 - **Komutlar:** `cd backend && php artisan migrate:fresh --seed`

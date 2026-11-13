@@ -1,0 +1,100 @@
+/* PrimeVue bileşen stilleri Tailwind utility sınıflarından önce gelsin (utility'ler ezebilsin). */
+@layer theme, base, primevue, components, utilities;
+
+@import 'tailwindcss';
+@import 'tailwindcss-primeui';
+@import 'primeicons/primeicons.css';
+/* Mikro-animasyonlar: token'lar, utility'ler, PrimeVue yumuşatmaları, hareketi azalt desteği */
+@import './hareket.css';
+
+/* Tipografi: Plus Jakarta Sans (uygulamayla birlikte gelir, harici istek yok). Kurallar: okul sisteminin docs/TASARIM.md belgesi */
+@theme {
+  --font-sans:
+    'Plus Jakarta Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--p-surface-800);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tailwind 4 düğmelerde imleci varsayılana çevirir; tıklanabilir her şeyde el işareti görünsün. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+}
+
+/*
+ * Kaydırma çubukları en fazla 2 px (Chrome, Edge, Safari). Firefox piksel genişlik desteklemez; orada en ince
+ * seçenek kullanılır. Firefox kuralı yalnızca ::-webkit-scrollbar bilinmiyorsa uygulanır: Chrome 121+ standart
+ * `scrollbar-width` verilince ::-webkit-scrollbar stilini yok sayar.
+ */
+::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(100 116 139 / 0.45);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(100 116 139 / 0.7);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(100 116 139 / 0.45) transparent;
+  }
+}
+
+/* Zemin: açık gri üzerinde köşelerden gelen hafif turkuaz ışık; kartlar bunun üzerinde beyaz durur. */
+body {
+  background:
+    radial-gradient(
+      60rem 40rem at 0% 0%,
+      color-mix(in srgb, var(--p-primary-100) 70%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      50rem 40rem at 100% 100%,
+      color-mix(in srgb, var(--p-sky-100) 60%, transparent),
+      transparent 70%
+    ),
+    var(--p-surface-50);
+  background-attachment: fixed;
+}
+
+/* Ortak kart: bütün içerik kutuları. Yuvarlak köşe, ince çerçeve, çok hafif gölge. */
+@utility kart {
+  border-radius: 1.5rem;
+  background: var(--p-surface-0);
+  border: 1px solid color-mix(in srgb, var(--p-surface-200) 70%, transparent);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.03),
+    0 12px 32px -16px rgb(15 23 42 / 0.1);
+}
+
+/* Bölüm etiketi: kart başındaki küçük, aralıklı, büyük harfli başlık ("YOKLAMA", "SAYFALAR"). */
+@utility bolum-etiketi {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p-primary-700);
+}
+
+#app {
+  min-height: 100dvh;
+}

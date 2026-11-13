@@ -1,0 +1,301 @@
+/*
+ * Hareket sistemi (mikro-animasyonlar). Kurallar: okul sisteminin docs/TASARIM.md belgesi → "Hareket".
+ * - Yalnızca transform, opacity, renk ve gölge canlandırılır (yerleşim özelliği yok, will-change yok).
+ * - Kısa ve sade: kullanıcı "animasyon var" diye fark etmemeli, uygulama yalnızca daha akıcı hissettirmeli.
+ * - Dokunmatikte hover hareketi yok; "hareketi azalt" tercihinde her şey anlık.
+ * PrimeVue'nun kendi animasyonları kendi sınıfları üzerinden, `components` katmanında (primevue katmanından sonra)
+ * yumuşatılır; bileşenlerin çalışma mantığına dokunulmaz.
+ */
+
+/* ---- Token'lar ---- */
+:root {
+  --hareket-hizli: 120ms;
+  --hareket-normal: 200ms;
+  --hareket-yavas: 260ms;
+  --egri-standart: cubic-bezier(0.2, 0, 0, 1);
+  --egri-cikis: cubic-bezier(0.16, 1, 0.3, 1);
+  --egri-giris: cubic-bezier(0.4, 0, 1, 1);
+  --kayma-kisa: 6px;
+}
+
+/* ---- Keyframe'ler ---- */
+@keyframes hareket-giris-yukari {
+  from {
+    opacity: 0;
+    transform: translateY(var(--kayma-kisa));
+  }
+}
+@keyframes hareket-solma-giris {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hareket-sayfa-giris {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hareket-diyalog-giris {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes hareket-diyalog-cikis {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+@keyframes hareket-panel-giris {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes hareket-panel-cikis {
+  to {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+@keyframes hareket-bildirim-giris {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes hareket-bildirim-cikis {
+  to {
+    opacity: 0;
+    margin-bottom: 0;
+    grid-template-rows: 0fr;
+    transform: translateY(-6px);
+  }
+}
+
+/* ---- Utility'ler (mixin karşılığı) ---- */
+
+/* Tıklanabilir kart: yalnızca fare/kalem ile hover'da 2px kalkar, gölge biraz güçlenir; basınca hafifçe çöker. */
+@utility etkilesimli-kart {
+  transition:
+    transform var(--hareket-normal) var(--egri-cikis),
+    box-shadow var(--hareket-normal) var(--egri-cikis);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 2px 4px rgb(15 23 42 / 0.04),
+        0 16px 36px -16px rgb(15 23 42 / 0.16);
+    }
+  }
+
+  &:active {
+    transform: scale(0.99);
+    transition-duration: var(--hareket-hizli);
+  }
+}
+
+/* Tek seferlik giriş (kart / bölüm / içerik iskeletten gelince) */
+@utility giris-yukari {
+  animation: hareket-giris-yukari var(--hareket-normal) var(--egri-cikis) backwards;
+}
+
+/* İstatistik değeri: sade solma (sayı sayma yok) */
+@utility sayi-giris {
+  animation: hareket-solma-giris 180ms var(--egri-standart) backwards;
+}
+
+/*
+ * Liste girişi (ul / tbody / grid): çocuklar 6px aşağıdan solarak gelir. Yalnızca ilk 8 çocuk 20 ms aralıkla
+ * gecikir (en çok 140 ms); sonrakiler gecikmesiz. "Daha fazla" ile eklenen satırlar da yalnızca kısa giriş yapar.
+ */
+@utility liste-giris {
+  & > * {
+    animation: hareket-giris-yukari var(--hareket-normal) var(--egri-cikis) backwards;
+  }
+  & > *:nth-child(2) {
+    animation-delay: 20ms;
+  }
+  & > *:nth-child(3) {
+    animation-delay: 40ms;
+  }
+  & > *:nth-child(4) {
+    animation-delay: 60ms;
+  }
+  & > *:nth-child(5) {
+    animation-delay: 80ms;
+  }
+  & > *:nth-child(6) {
+    animation-delay: 100ms;
+  }
+  & > *:nth-child(7) {
+    animation-delay: 120ms;
+  }
+  & > *:nth-child(8) {
+    animation-delay: 140ms;
+  }
+  & > *:nth-child(n + 25) {
+    animation: none;
+  }
+}
+
+/* Sayfa geçişi: yalnızca kısa solma (transform yok: sayfadaki sabit öğeler kaymaz), çıkış animasyonu yok */
+@utility sayfa-giris {
+  animation: hareket-sayfa-giris 140ms var(--egri-standart) backwards;
+}
+
+/* ---- Genel etkileşimler ve PrimeVue yumuşatmaları ---- */
+@layer components {
+  /* Düğmeler: renk/gölge geçişi; basınca hafif çökme. Disabled ve yükleniyor durumunda hareket yok. */
+  .p-button {
+    transition:
+      background-color var(--hareket-hizli) var(--egri-standart),
+      border-color var(--hareket-hizli) var(--egri-standart),
+      color var(--hareket-hizli) var(--egri-standart),
+      box-shadow var(--hareket-hizli) var(--egri-standart),
+      transform var(--hareket-hizli) var(--egri-standart);
+  }
+  .p-button:not(:disabled):not(.p-button-loading):active {
+    transform: scale(0.97);
+  }
+
+  /* Form alanları: odakta çerçeve ve halka yumuşak değişir */
+  .p-inputtext,
+  .p-select,
+  .p-multiselect,
+  .p-textarea,
+  .p-autocomplete-input,
+  .p-inputnumber-input,
+  .p-datepicker-input,
+  .p-password-input {
+    transition:
+      border-color 160ms var(--egri-standart),
+      box-shadow 160ms var(--egri-standart),
+      background-color 160ms var(--egri-standart);
+  }
+
+  /* Seçim kutuları, anahtarlar: kutu rengi ve topuz kayması */
+  .p-checkbox-box,
+  .p-radiobutton-box,
+  .p-toggleswitch-slider,
+  .p-toggleswitch-handle {
+    transition:
+      background-color 150ms var(--egri-standart),
+      border-color 150ms var(--egri-standart),
+      transform 150ms var(--egri-cikis),
+      box-shadow 150ms var(--egri-standart);
+  }
+  .p-checkbox-icon {
+    animation: hareket-solma-giris 120ms var(--egri-standart);
+  }
+
+  /* Sekmeler, hap seçiciler */
+  .p-togglebutton,
+  .p-togglebutton-content,
+  .p-tab {
+    transition:
+      background-color 150ms var(--egri-standart),
+      color 150ms var(--egri-standart),
+      border-color 150ms var(--egri-standart);
+  }
+
+  /* Tablo ve liste satırları: çok hafif hover arka planı */
+  .p-datatable-tbody > tr {
+    transition: background-color var(--hareket-hizli) var(--egri-standart);
+  }
+
+  /* Form hata metni (FormAlani) ve iletiler: kısa giriş, titreşim yok */
+  small.text-red-600 {
+    animation: hareket-giris-yukari 160ms var(--egri-cikis) backwards;
+    --kayma-kisa: 2px;
+  }
+  .p-message-enter-active {
+    animation: hareket-giris-yukari 180ms var(--egri-cikis);
+  }
+  .p-message-leave-active {
+    animation: hareket-diyalog-cikis 120ms var(--egri-giris) forwards;
+  }
+
+  /* Diyalog ve onay penceresi: büyük zoom yerine 8px yukarı + %98 ölçek; kapanış daha hızlı */
+  .p-dialog-enter-active {
+    animation: hareket-diyalog-giris 220ms var(--egri-cikis);
+  }
+  .p-dialog-leave-active {
+    animation: hareket-diyalog-cikis 140ms var(--egri-giris) forwards;
+  }
+  .p-overlay-mask-enter-active {
+    animation-duration: 200ms;
+  }
+  .p-overlay-mask-leave-active {
+    animation-duration: 140ms;
+  }
+
+  /* Açılır paneller (Select, AutoComplete, Menu, DatePicker…): 4px kayma + solma */
+  .p-anchored-overlay-enter-active {
+    animation: hareket-panel-giris 160ms var(--egri-cikis);
+  }
+  .p-anchored-overlay-leave-active {
+    animation: hareket-panel-cikis 100ms var(--egri-giris) forwards;
+  }
+
+  /* Telefon menüsü (Drawer): kayma korunur, süre kısalır; kapanış daha hızlı */
+  .p-drawer-enter-active {
+    animation-duration: var(--hareket-yavas) !important;
+    animation-timing-function: var(--egri-cikis) !important;
+  }
+  /* forwards: PrimeVue'nun kapanış animasyonu son kareyi tutmaz; animasyon bitince çekmece kaldırılana kadar bir an
+     açık konumuna geri döner (kapanırken yanıp sönme) */
+  .p-drawer-leave-active {
+    animation-duration: var(--hareket-normal) !important;
+    animation-timing-function: var(--egri-giris) !important;
+    animation-fill-mode: forwards !important;
+  }
+
+  /* Bildirimler (üst orta): 8px yukarıdan solarak gelir, kaybolurken yer kapanır */
+  .p-toast-message-enter-active {
+    animation: hareket-bildirim-giris 220ms var(--egri-cikis);
+  }
+  .p-toast-message-leave-active {
+    animation: hareket-bildirim-cikis 180ms var(--egri-giris) forwards;
+  }
+
+  /* İskelet: daha yavaş ve sönük parlama */
+  .p-skeleton::after {
+    animation-duration: 1.6s;
+    opacity: 0.6;
+  }
+
+  /* Telefonda açılır paneller ve bildirimler ekran dışına taşmasın */
+  @media (max-width: 639px) {
+    .p-select-overlay,
+    .p-autocomplete-overlay,
+    .p-multiselect-overlay,
+    .p-datepicker-panel,
+    .p-menu-overlay,
+    .p-popover {
+      max-width: calc(100vw - 16px);
+    }
+    .p-toast {
+      width: calc(100vw - 16px);
+      max-width: 25rem;
+    }
+  }
+}
+
+/* ---- Erişilebilirlik: hareketi azalt tercihinde her şey anlık ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .etkilesimli-kart:hover {
+    transform: none;
+  }
+}
