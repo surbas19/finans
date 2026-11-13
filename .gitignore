@@ -1,0 +1,37 @@
+# Ortam / gizli bilgiler
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Bağımlılıklar
+/backend/vendor/
+node_modules/
+
+# Derleme çıktıları
+/frontend/dist/
+/backend/public/build/
+/backend/public/hot
+/backend/public/assets/
+/backend/resources/spa/
+/backend/public/storage
+/backend/storage/*.key
+
+# Loglar / önbellek
+*.log
+/backend/storage/logs/*
+/backend/bootstrap/cache/*.php
+.phpunit.result.cache
+
+# Editör / işletim sistemi
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Lokal Claude ayarları
+.claude/settings.local.json
+
+# Canlı paketleri ve FTP bilgisi (backend/deploy/yayinla.sh)
+/canli-paket/
