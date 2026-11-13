@@ -33,6 +33,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
 
         Route::get('varliklar', [VarlikController::class, 'index'])->name('varliklar.index');
         Route::post('varliklar', [VarlikController::class, 'store'])->middleware('throttle:kaynak')->name('varliklar.store');
+        Route::post('varliklar/toplu', [VarlikController::class, 'toplu'])->middleware('throttle:kaynak')->name('varliklar.toplu');
         Route::get('varliklar/{varlik}', [VarlikController::class, 'show'])->name('varliklar.show');
         Route::get('varliklar/{varlik}/gecmis', [VarlikController::class, 'gecmis'])->name('varliklar.gecmis');
         Route::put('varliklar/{varlik}/fiyat', [VarlikController::class, 'elleFiyat'])->name('varliklar.fiyat');

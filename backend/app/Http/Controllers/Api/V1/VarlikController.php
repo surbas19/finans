@@ -12,6 +12,7 @@ use App\Models\FiyatGecmisi;
 use App\Models\IzlemeKaydi;
 use App\Models\Varlik;
 use App\Services\Portfoy\PortfoyHesabi;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -107,19 +108,70 @@ class VarlikController extends Controller
             VarlikTuru::Kripto => $this->kripto($binance, $kod),
             VarlikTuru::Fon => [['ad' => trim((string) $veri['ad']), 'birim' => 'pay', 'kaynak' => 'elle', 'kaynak_kodu' => null], null],
         };
-        $varlik = Varlik::create([
-            ...$alanlar,
-            'tur' => $tur->value,
-            'kod' => $kod,
-            'aktif' => true,
-            'sira' => 1000,
-            'ekleyen_id' => $request->user()->id,
-        ]);
-        if ($fiyat) {
-            $guncelleyici->kaydet($varlik->id, $fiyat, $varlik->kaynak, false);
-        }
+        $varlik = $this->olustur($tur, $kod, $alanlar, $fiyat, $request->user()->id, $guncelleyici);
 
         return response()->json(['varlik' => $varlik->load('fiyat')->ozet(), 'message' => 'Varlık kataloğa eklendi.'], 201);
+    }
+
+    /**
+     * Toplu eklemede katalogda olmayan kodlar: önce Borsa İstanbul, bulunamazsa kripto (TRY paritesi); bulunanlar
+     * kataloğa eklenir. Katalogda zaten olan (hisse / kripto / fon) olduğu gibi döner. Fon kaynaktan bulunamaz.
+     */
+    public function toplu(Request $request, YahooKaynagi $yahoo, BinanceKaynagi $binance, FiyatGuncelleyici $guncelleyici): JsonResponse
+    {
+        $veri = $request->validate([
+            'kodlar' => ['required', 'array', 'min:1', 'max:50'],
+            'kodlar.*' => ['required', 'string', 'regex:/^[A-Za-z0-9]{2,12}$/'],
+        ], [
+            'kodlar.max' => 'Tek seferde en çok :max kod aranabilir.',
+            'kodlar.*.regex' => 'Kod 2–12 harf ya da rakam olmalı (ör. THYAO, BTC).',
+        ], ['kodlar' => 'kodlar', 'kodlar.*' => 'kod']);
+        $kodlar = array_values(array_unique(array_map(mb_strtoupper(...), $veri['kodlar'])));
+        $kullaniciId = $request->user()->id;
+
+        $sira = [VarlikTuru::Hisse, VarlikTuru::Kripto, VarlikTuru::Fon];
+        $varolan = Varlik::whereIn('kod', $kodlar)->whereIn('tur', array_map(fn (VarlikTuru $t): string => $t->value, $sira))->get()
+            ->sortBy(fn (Varlik $v): int => (int) array_search($v->tur, $sira, true))
+            ->unique('kod')->keyBy('kod');
+        $bulunan = new EloquentCollection;
+        foreach ($varolan as $varlik) {
+            $varlik->aktif || $varlik->forceFill(['aktif' => true])->save();
+            $bulunan->push($varlik);
+        }
+
+        $bulunamayan = [];
+        $ulasilamayan = [];
+        $kalan = array_values(array_diff($kodlar, $varolan->keys()->all()));
+        if ($kalan !== []) {
+            $borsa = $yahoo->dogrulaHepsi(array_map(fn (string $k): string => $k.'.IS', $kalan));
+            $kriptoAranacak = [];
+            foreach ($kalan as $kod) {
+                $sonuc = $borsa['bulunan'][$kod.'.IS'] ?? null;
+                if ($sonuc && $sonuc['para_birimi'] === 'TRY') {
+                    $bulunan->push($this->olustur(VarlikTuru::Hisse, $kod, self::hisseAlanlari($kod, $sonuc['ad']), $sonuc['fiyat'], $kullaniciId, $guncelleyici));
+                } else {
+                    $kriptoAranacak[] = $kod;
+                }
+            }
+
+            $kripto = $kriptoAranacak !== [] ? $binance->dogrulaHepsi(array_map(fn (string $k): string => $k.'TRY', $kriptoAranacak)) : null;
+            foreach ($kriptoAranacak as $kod) {
+                $sonuc = $kripto['bulunan'][$kod.'TRY'] ?? null;
+                if ($sonuc) {
+                    $bulunan->push($this->olustur(VarlikTuru::Kripto, $kod, self::kriptoAlanlari($kod), $sonuc['fiyat'], $kullaniciId, $guncelleyici));
+                } elseif (in_array($kod.'.IS', $borsa['ulasilamayan'], true) || in_array($kod.'TRY', $kripto['ulasilamayan'] ?? [], true)) {
+                    $ulasilamayan[] = $kod;
+                } else {
+                    $bulunamayan[] = $kod;
+                }
+            }
+        }
+
+        return response()->json([
+            'varliklar' => $bulunan->load('fiyat')->map(fn (Varlik $v): array => $v->ozet())->values(),
+            'bulunamayan' => $bulunamayan,
+            'ulasilamayan' => $ulasilamayan,
+        ]);
     }
 
     /**
@@ -156,7 +208,7 @@ class VarlikController extends Controller
             throw ValidationException::withMessages(['kod' => "Borsa İstanbul'da {$kod} kodlu hisse bulunamadı."]);
         }
 
-        return [['ad' => $sonuc['ad'], 'birim' => 'pay', 'kaynak' => 'yahoo', 'kaynak_kodu' => $kod.'.IS', 'gecikmeli' => true], $sonuc['fiyat']];
+        return [self::hisseAlanlari($kod, $sonuc['ad']), $sonuc['fiyat']];
     }
 
     /**
@@ -169,7 +221,45 @@ class VarlikController extends Controller
             throw ValidationException::withMessages(['kod' => "{$kod}/TRY paritesi bulunamadı."]);
         }
 
-        return [['ad' => $kod, 'birim' => 'adet', 'kaynak' => 'binance', 'kaynak_kodu' => $kod.'TRY'], $sonuc['fiyat']];
+        return [self::kriptoAlanlari($kod), $sonuc['fiyat']];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function hisseAlanlari(string $kod, string $ad): array
+    {
+        return ['ad' => $ad, 'birim' => 'pay', 'kaynak' => 'yahoo', 'kaynak_kodu' => $kod.'.IS', 'gecikmeli' => true];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function kriptoAlanlari(string $kod): array
+    {
+        return ['ad' => $kod, 'birim' => 'adet', 'kaynak' => 'binance', 'kaynak_kodu' => $kod.'TRY'];
+    }
+
+    /**
+     * Kullanıcının eklediği varlık: katalogda sona dizilir; kaynaktan gelen ilk fiyat hemen yazılır.
+     *
+     * @param  array<string, mixed>  $alanlar
+     */
+    private function olustur(VarlikTuru $tur, string $kod, array $alanlar, ?FiyatVerisi $fiyat, int $kullaniciId, FiyatGuncelleyici $guncelleyici): Varlik
+    {
+        $varlik = Varlik::create([
+            ...$alanlar,
+            'tur' => $tur->value,
+            'kod' => $kod,
+            'aktif' => true,
+            'sira' => 1000,
+            'ekleyen_id' => $kullaniciId,
+        ]);
+        if ($fiyat) {
+            $guncelleyici->kaydet($varlik->id, $fiyat, $varlik->kaynak, false);
+        }
+
+        return $varlik;
     }
 
     /**

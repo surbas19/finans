@@ -5,9 +5,9 @@
 ## Toplu eklemede yeni hisse / kripto kodları ([planlar/toplu-yeni-kod.md](planlar/toplu-yeni-kod.md))
 Sorun: toplu eklemede katalogda olmayan hisse kodu "önce Kodla ekle" hatası veriyor. Çözüm: "Ekle"de yeni kodlar `POST /api/v1/varliklar/toplu` ile önce BIST'te, sonra kriptoda aranıp kataloğa eklenir, sonra kayıt yapılır.
 
-- [ ] Arka uç: `YahooKaynagi` / `BinanceKaynagi::dogrulaHepsi` (Http::pool), `VarlikController::toplu` + ortak `olustur()`, rota, `TopluVarlikTest`
+- [x] Arka uç: `YahooKaynagi` / `BinanceKaynagi::dogrulaHepsi` (Http::pool), `VarlikController::toplu` + ortak `olustur()`, rota, `TopluVarlikTest`
 - [ ] Ön yüz: `topluIslem.ts` (`yeniKod`, `bulunamayan`), `finansApi.varliklariKodlaBul`, `TopluEkleDialog` (önce kod çöz, sonra kaydet), testler
 - [ ] Tüm testler, uçtan uca deneme (`toplu-dene.mjs`)
 - [ ] ILERLEME satırı, bu kaydı sil, commit + push, canlıya yayın (`yayinla.bat yayinla`)
 
-**Sıradaki adım:** arka uç.
+**Sıradaki adım:** ön yüz (`topluIslem.ts` → `api/finans.ts` → `TopluEkleDialog.vue`).

@@ -6,6 +6,8 @@ use App\Fiyat\FiyatKaynagi;
 use App\Fiyat\FiyatVerisi;
 use App\Models\Varlik;
 use Carbon\CarbonInterface;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -81,6 +83,38 @@ class BinanceKaynagi implements FiyatKaynagi
         $veri = $cevap->successful() && is_array($cevap->json()) ? self::coz($cevap->json()) : null;
 
         return $veri ? ['fiyat' => $veri] : null;
+    }
+
+    /**
+     * Birden çok TRY paritesini aynı anda doğrular. Her sembol ayrı istek: çoklu `symbols=` sorgusu tek geçersiz
+     * sembolde bütünüyle 400 döner. 400 (geçersiz sembol) "bulunamadı"; bağlantı hatası, 429, 5xx "ulaşılamadı".
+     *
+     * @param  list<string>  $semboller
+     * @return array{bulunan: array<string, array{fiyat: FiyatVerisi}>, bulunamayan: list<string>, ulasilamayan: list<string>}
+     */
+    public function dogrulaHepsi(array $semboller): array
+    {
+        $cevaplar = Http::pool(fn (Pool $pool): array => array_map(
+            fn (string $sembol) => $pool->as($sembol)
+                ->timeout(10)->connectTimeout(5)->acceptJson()
+                ->get(self::ADRES.'ticker/24hr', ['symbol' => $sembol]),
+            $semboller,
+        ), 10);
+
+        $sonuc = ['bulunan' => [], 'bulunamayan' => [], 'ulasilamayan' => []];
+        foreach ($semboller as $sembol) {
+            $cevap = $cevaplar[$sembol] ?? null;
+            $veri = $cevap instanceof Response && $cevap->successful() && is_array($cevap->json()) ? self::coz($cevap->json()) : null;
+            if ($veri) {
+                $sonuc['bulunan'][$sembol] = ['fiyat' => $veri];
+            } elseif ($cevap instanceof Response && ($cevap->badRequest() || $cevap->successful())) {
+                $sonuc['bulunamayan'][] = $sembol;
+            } else {
+                $sonuc['ulasilamayan'][] = $sembol;
+            }
+        }
+
+        return $sonuc;
     }
 
     /**

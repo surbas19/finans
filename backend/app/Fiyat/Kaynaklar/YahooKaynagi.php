@@ -94,6 +94,47 @@ class YahooKaynagi implements FiyatKaynagi
     {
         $cevap = Http::timeout(10)->connectTimeout(5)->withUserAgent('Mozilla/5.0 (finans)')
             ->get(self::ADRES.rawurlencode($sembol), ['range' => '1d', 'interval' => '1d']);
+
+        return self::ozetCoz($cevap, $sembol);
+    }
+
+    /**
+     * Birden çok sembolü aynı anda doğrular (toplu eklemedeki yeni kodlar). Yalnızca 404 ya da fiyatsız cevap
+     * "bulunamadı" sayılır; bağlantı hatası, 429, 5xx "ulaşılamadı" (kod var olabilir).
+     *
+     * @param  list<string>  $semboller
+     * @return array{bulunan: array<string, array{ad: string, para_birimi: string, fiyat: FiyatVerisi}>, bulunamayan: list<string>, ulasilamayan: list<string>}
+     */
+    public function dogrulaHepsi(array $semboller): array
+    {
+        $cevaplar = Http::pool(fn (Pool $pool): array => array_map(
+            fn (string $sembol) => $pool->as($sembol)
+                ->timeout(10)->connectTimeout(5)->withUserAgent('Mozilla/5.0 (finans)')
+                ->get(self::ADRES.rawurlencode($sembol), ['range' => '1d', 'interval' => '1d']),
+            $semboller,
+        ), 10);
+
+        $sonuc = ['bulunan' => [], 'bulunamayan' => [], 'ulasilamayan' => []];
+        foreach ($semboller as $sembol) {
+            $cevap = $cevaplar[$sembol] ?? null;
+            $ozet = $cevap instanceof Response ? self::ozetCoz($cevap, $sembol) : null;
+            if ($ozet) {
+                $sonuc['bulunan'][$sembol] = $ozet;
+            } elseif ($cevap instanceof Response && ($cevap->notFound() || $cevap->successful())) {
+                $sonuc['bulunamayan'][] = $sembol;
+            } else {
+                $sonuc['ulasilamayan'][] = $sembol;
+            }
+        }
+
+        return $sonuc;
+    }
+
+    /**
+     * @return array{ad: string, para_birimi: string, fiyat: FiyatVerisi}|null
+     */
+    private static function ozetCoz(Response $cevap, string $sembol): ?array
+    {
         $fiyat = self::fiyatCoz($cevap);
         if (! $fiyat) {
             return null;
