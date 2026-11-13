@@ -3,7 +3,6 @@
 > Açık işler ve son tamamlananlar. Yarım işler: [DEVAM.md](DEVAM.md).
 
 ## Kullanıcının yapacakları
-- [ ] GitHub'da boş, **özel** `finans` deposu açılacak; sonra `git remote add origin … && git push -u origin main` (Claude yapar).
 - [ ] Canlı kurulum: [CANLI.md](CANLI.md) → "İlk kurulum" (alt alan adı, PHP 8.3, SSL, veritabanı, `.env`, cron).
 
 ## Sıradaki
