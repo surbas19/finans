@@ -8,8 +8,10 @@ import HesapFormu from '@/components/HesapFormu.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
 import { finansApi, HESAP_TURLERI, type HesapOzeti } from '@/api/finans'
 import { useSonIstek } from '@/composables/useSonIstek'
+import { useAuthStore } from '@/stores/auth'
 import { tl } from '@/utils/bicim'
 
+const auth = useAuthStore()
 const hesaplar = ref<HesapOzeti[] | null>(null)
 const formAcik = ref(false)
 const sonIstek = useSonIstek()
@@ -62,6 +64,10 @@ onMounted(yukle)
             <span class="block truncate font-semibold text-surface-900">{{ h.ad }}</span>
             <span class="block truncate text-xs text-surface-500">
               {{ HESAP_TURLERI[h.tur].etiket }} · {{ h.varlik_sayisi }} varlık
+              <!-- Hanede başkasının hesabı -->
+              <template v-if="h.sahip_ad && h.sahip_id !== auth.kullanici?.id">
+                · {{ h.sahip_ad }}</template
+              >
             </span>
           </span>
           <i class="pi pi-angle-right text-surface-400" />

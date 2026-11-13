@@ -65,6 +65,7 @@ class Hesap extends Model
             'id' => $this->id,
             // Hanede başkasının hesabıysa arayüz sahibinin adını yazar
             'sahip_id' => $this->user_id,
+            'sahip_ad' => $this->relationLoaded('user') ? $this->user?->ad : null,
             'ad' => $this->ad,
             'tur' => $this->tur->value,
             'renk' => $this->renk,

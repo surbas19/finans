@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { finansApi, type Kullanici } from '@/api/finans'
+import { useAileStore } from '@/stores/aile'
 
 export const useAuthStore = defineStore('auth', () => {
   const kullanici = ref<Kullanici | null>(null)
@@ -35,6 +36,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   function temizle(): void {
     kullanici.value = null
+    // Aynı sekmede başka kişi girerse önceki hanenin adları görünmesin
+    useAileStore().bosalt()
   }
 
   return { kullanici, denetlendi, yonetici, denetle, giris, cikis, temizle }

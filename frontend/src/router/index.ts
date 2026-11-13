@@ -60,6 +60,63 @@ export const rotalar: RouteRecordRaw[] = [
         meta: { baslik: 'İşlemler' },
       },
       {
+        // Aile finansı (Bütçe): hanenin gelirleri, kartları, ekstreleri, faturaları
+        path: 'aile',
+        component: () => import('@/layouts/AileDuzeni.vue'),
+        children: [
+          {
+            path: '',
+            name: 'aile',
+            component: () => import('@/views/aile/AileOzetView.vue'),
+            meta: { baslik: 'Bütçe' },
+          },
+          {
+            path: 'gelirler',
+            name: 'aile-gelirler',
+            component: () => import('@/views/aile/GelirlerView.vue'),
+            meta: { baslik: 'Gelirler' },
+          },
+          {
+            path: 'kartlar',
+            name: 'aile-kartlar',
+            component: () => import('@/views/aile/KartlarView.vue'),
+            meta: { baslik: 'Kartlar' },
+          },
+          {
+            path: 'kartlar/:id(\\d+)',
+            name: 'aile-kart',
+            component: () => import('@/views/aile/KartDetayView.vue'),
+            props: (r) => ({ id: Number(r.params.id) }),
+            meta: { baslik: 'Kart' },
+          },
+          {
+            path: 'ekstreler/:id(\\d+)',
+            name: 'aile-ekstre',
+            component: () => import('@/views/aile/EkstreView.vue'),
+            props: (r) => ({ id: Number(r.params.id) }),
+            meta: { baslik: 'Ekstre' },
+          },
+          {
+            path: 'islemler',
+            name: 'aile-islemler',
+            component: () => import('@/views/aile/AileIslemlerView.vue'),
+            meta: { baslik: 'Kart işlemleri' },
+          },
+          {
+            path: 'faturalar',
+            name: 'aile-faturalar',
+            component: () => import('@/views/aile/FaturalarView.vue'),
+            meta: { baslik: 'Faturalar' },
+          },
+          {
+            path: 'ayarlar',
+            name: 'aile-ayarlar',
+            component: () => import('@/views/aile/AileAyarlarView.vue'),
+            meta: { baslik: 'Bütçe ayarları' },
+          },
+        ],
+      },
+      {
         path: 'profil',
         name: 'profil',
         component: () => import('@/views/ProfilView.vue'),

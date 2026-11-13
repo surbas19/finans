@@ -33,6 +33,10 @@ export interface TopluSatirSonucu {
 const BASLIK_ALANLARI = new Set(['KOD', 'VARLIK', 'VARLIK KODU', 'AD'])
 
 /** Karşılaştırma için: Türkçe büyük harf, harf işaretleri atılmış (çeyrek = ÇEYREK = CEYREK) */
+export function sadeMetin(metin: string): string {
+  return sade(metin)
+}
+
 function sade(metin: string): string {
   return metin
     .trim()

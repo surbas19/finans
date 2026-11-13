@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
+import Select from 'primevue/select'
 import Tab from 'primevue/tab'
 import TabList from 'primevue/tablist'
 import TabPanel from 'primevue/tabpanel'
@@ -15,7 +16,12 @@ import { useToast } from 'primevue/usetoast'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
-import { finansApi, type KaynakDurumu, type YonetimKullanicisi } from '@/api/finans'
+import {
+  finansApi,
+  type KaynakDurumu,
+  type YonetimHanesi,
+  type YonetimKullanicisi,
+} from '@/api/finans'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAuthStore } from '@/stores/auth'
@@ -41,10 +47,36 @@ const sifreKisi = ref<YonetimKullanicisi | null>(null)
 const yeniSifre = ref('')
 const sifreFormu = useFormGonder()
 
+const haneler = ref<YonetimHanesi[]>([])
+
 async function yukle(): Promise<void> {
-  const [k, d] = await Promise.all([finansApi.kullanicilar(), finansApi.kaynaklar()])
+  const [k, d, h] = await Promise.all([
+    finansApi.kullanicilar(),
+    finansApi.kaynaklar(),
+    finansApi.haneler(),
+  ])
   kullanicilar.value = k
   kaynaklar.value = d
+  haneler.value = h
+}
+
+/** Hane seçenekleri: mevcut haneler (içindekilerle) + yeni hane */
+const haneSecenekleri = computed(() => [
+  ...haneler.value.map((h) => ({
+    deger: h.id as number | 'yeni',
+    etiket: `${h.ad} (${h.kullanicilar.join(', ') || 'boş'})`,
+  })),
+  { deger: 'yeni' as number | 'yeni', etiket: 'Yeni hane (yalnız)' },
+])
+
+async function haneDegistir(k: YonetimKullanicisi, hane: number | 'yeni'): Promise<void> {
+  try {
+    await finansApi.kullaniciGuncelle(k.id, { hane })
+    toast.add({ severity: 'success', summary: `${k.ad_soyad} haneye bağlandı`, life: 3000 })
+    await yukle()
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Hane değişmedi', detail: hataMesaji(e), life: 7000 })
+  }
 }
 
 onMounted(yukle)
@@ -181,6 +213,17 @@ async function sifreKaydet(): Promise<void> {
                 <div
                   class="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end"
                 >
+                  <Select
+                    :model-value="k.hane?.id ?? null"
+                    :options="haneSecenekleri"
+                    option-label="etiket"
+                    option-value="deger"
+                    placeholder="Hane yok"
+                    size="small"
+                    class="min-w-0 flex-1 sm:w-56 sm:flex-none"
+                    :aria-label="`${k.ad_soyad} hanesi`"
+                    @update:model-value="(h: number | 'yeni') => haneDegistir(k, h)"
+                  />
                   <Button label="Şifre" icon="pi pi-key" text size="small" @click="sifreAc(k)" />
                   <label class="flex items-center gap-2 text-sm text-surface-600">
                     <ToggleSwitch

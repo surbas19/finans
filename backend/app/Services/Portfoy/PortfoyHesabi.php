@@ -27,7 +27,7 @@ class PortfoyHesabi
      */
     private function hesaplar(User $user, ?int $hesapId): Builder
     {
-        return Hesap::erisilebilir($user)->when($hesapId, fn ($q) => $q->whereKey($hesapId))->orderBy('sira')->orderBy('id');
+        return Hesap::erisilebilir($user)->with('user:id,ad')->when($hesapId, fn ($q) => $q->whereKey($hesapId))->orderBy('sira')->orderBy('id');
     }
 
     /**

@@ -55,6 +55,9 @@ export interface HesapOzeti extends Toplam {
   sira: number
   not: string | null
   varlik_sayisi: number
+  /** Hanede hesabı açan kişi (başkasının hesabıysa adı gösterilir) */
+  sahip_id?: number
+  sahip_ad?: string | null
   /** Türlere göre dağılım (özette ve hesap listesinde gelir) */
   dagilim?: DagilimDilimi[]
 }
@@ -173,6 +176,14 @@ export interface KaynakDurumu {
 export interface YonetimKullanicisi extends Kullanici {
   aktif: boolean
   son_giris: string | null
+  /** Hanesi: aynı hanedekiler hesapları ve aile kayıtlarını birlikte görür */
+  hane: { id: number; ad: string } | null
+}
+
+export interface YonetimHanesi {
+  id: number
+  ad: string
+  kullanicilar: string[]
 }
 
 export const finansApi = {
@@ -276,8 +287,18 @@ export const finansApi = {
   }) => http.post('/yonetim/kullanicilar', veri),
   kullaniciGuncelle: (
     id: number,
-    veri: Partial<{ ad: string; soyad: string; aktif: boolean; yonetici: boolean; sifre: string }>,
+    veri: Partial<{
+      ad: string
+      soyad: string
+      aktif: boolean
+      yonetici: boolean
+      sifre: string
+      /** Bağlanacak hane ya da "yeni" (kendi başına yeni hane) */
+      hane: number | 'yeni'
+    }>,
   ) => http.put(`/yonetim/kullanicilar/${id}`, veri),
+  haneler: () =>
+    http.get<{ haneler: YonetimHanesi[] }>('/yonetim/haneler').then((r) => r.data.haneler),
   kaynaklar: () =>
     http.get<{ kaynaklar: KaynakDurumu[] }>('/yonetim/kaynaklar').then((r) => r.data.kaynaklar),
   kaynaklariGuncelle: () =>

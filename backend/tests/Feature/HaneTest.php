@@ -41,7 +41,8 @@ class HaneTest extends TestCase
 
         // Eş: listede, özette, işlemlerde görür; sahibi belli
         $this->actingAs($es)->getJson('/api/v1/hesaplar')->assertOk()
-            ->assertJsonPath('hesaplar.0.ad', 'Yatırım')->assertJsonPath('hesaplar.0.sahip_id', $ben->id);
+            ->assertJsonPath('hesaplar.0.ad', 'Yatırım')->assertJsonPath('hesaplar.0.sahip_id', $ben->id)
+            ->assertJsonPath('hesaplar.0.sahip_ad', $ben->ad);
         $this->actingAs($es)->getJson('/api/v1/ozet')->assertOk()->assertJsonPath('toplam.deger', 6000);
         $this->actingAs($es)->getJson("/api/v1/ozet?hesap_id={$hesap->id}")->assertOk();
         $this->actingAs($es)->getJson("/api/v1/ozet/gecmis?hesap_id={$hesap->id}")->assertOk();

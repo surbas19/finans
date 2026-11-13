@@ -13,6 +13,7 @@ const router = useRouter()
 
 const menu = computed(() => [
   { ad: 'ozet', etiket: 'Özet', ikon: 'pi pi-chart-pie' },
+  { ad: 'aile', etiket: 'Bütçe', ikon: 'pi pi-calculator' },
   { ad: 'hesaplar', etiket: 'Hesaplar', ikon: 'pi pi-wallet' },
   { ad: 'izleme', etiket: 'İzleme', ikon: 'pi pi-eye' },
   { ad: 'islemler', etiket: 'İşlemler', ikon: 'pi pi-list' },
@@ -24,6 +25,7 @@ function seciliMi(ad: string): boolean {
   const simdiki = String(route.name ?? '')
   if (ad === 'hesaplar') return simdiki === 'hesaplar' || simdiki === 'hesap'
   if (ad === 'izleme') return simdiki === 'izleme' || simdiki === 'varlik'
+  if (ad === 'aile') return simdiki === 'aile' || simdiki.startsWith('aile-')
 
   return simdiki === ad
 }

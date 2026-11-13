@@ -12,9 +12,9 @@
 - [x] 3. Bankalar, kartlar, kategoriler, kart işlemleri, rapor kuralları (ButceRaporu) — arka uç + testler
 - [x] 4. PDF ekstre (smalot): yükleme, ayrıştırma, inceleme, onay, tekrar, dosya erişimi — arka uç + testler
 - [x] 5. Faturalar: türler, sağlayıcılar, desenler, eşleştirme, otomatik kayıt, bağla / çöz — arka uç + testler
-- [ ] 6. Arayüz: Bütçe bölümü (özet, gelirler, kartlar, ekstre inceleme, işlemler, faturalar, ayarlar), Hesaplar'da sahip, Yönetim'de hane
+- [x] 6. Arayüz: Bütçe bölümü (özet, gelirler, kartlar, ekstre inceleme, işlemler, faturalar, ayarlar), Hesaplar'da sahip, Yönetim'de hane
 - [ ] 7. Demo verisi, belgeler (CLAUDE.md, CANLI.md), uçtan uca (360 / 320 / 1280), son gözden geçirme
 
-**Sıradaki adım:** 6. Arayüz: api (aile.ts), router /aile/*, menüye "Bütçe", sekmeler; sırayla Özet, Gelirler, Kartlar (+ekstre yükle), Ekstre inceleme, İşlemler, Faturalar, Ayarlar; Hesaplar'da sahip, Yönetim'de hane.
+**Sıradaki adım:** 7. Demo verisi (DemoSeeder: hane, gelirler, kartlar, ekstre, sağlayıcılar, faturalar), belgeler (CLAUDE.md hane izolasyonu / PDF / smalot lisansı / kuruş, CANLI.md), npm run build, uçtan uca (360 / 320 / 1280), son gözden geçirme.
 
 Komutlar: `cd backend && php artisan migrate && php artisan test`; `cd frontend && npm run type-check && npm run lint && npx vitest run && npm run build`.
