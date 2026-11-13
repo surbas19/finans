@@ -139,7 +139,9 @@ async function elleKaydet(): Promise<void> {
 
         <div v-if="varlik" class="mt-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p class="text-3xl font-bold tracking-tight text-surface-900 tabular-nums">
+            <p
+              class="text-2xl font-bold tracking-tight text-surface-900 tabular-nums min-[375px]:text-3xl"
+            >
               {{
                 varlik.fiyat
                   ? fiyat(varlik.fiyat.satis ?? varlik.fiyat.fiyat, varlik.para_birimi)

@@ -177,15 +177,20 @@ async function sifreKaydet(): Promise<void> {
                     {{ k.email }} · son giriş {{ k.son_giris ? neZaman(k.son_giris) : 'yok' }}
                   </p>
                 </div>
-                <Button label="Şifre" icon="pi pi-key" text size="small" @click="sifreAc(k)" />
-                <label class="flex items-center gap-2 text-sm text-surface-600">
-                  <ToggleSwitch
-                    :model-value="k.aktif"
-                    :disabled="k.id === auth.kullanici?.id"
-                    @update:model-value="(v: boolean) => aktifDegistir(k, v)"
-                  />
-                  {{ k.aktif ? 'Açık' : 'Kapalı' }}
-                </label>
+                <!-- Telefonda adın altında ayrı satır, masaüstünde aynı satırda -->
+                <div
+                  class="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end"
+                >
+                  <Button label="Şifre" icon="pi pi-key" text size="small" @click="sifreAc(k)" />
+                  <label class="flex items-center gap-2 text-sm text-surface-600">
+                    <ToggleSwitch
+                      :model-value="k.aktif"
+                      :disabled="k.id === auth.kullanici?.id"
+                      @update:model-value="(v: boolean) => aktifDegistir(k, v)"
+                    />
+                    {{ k.aktif ? 'Açık' : 'Kapalı' }}
+                  </label>
+                </div>
               </li>
             </ul>
           </TabPanel>

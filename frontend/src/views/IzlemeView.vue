@@ -103,7 +103,7 @@ async function kodlaEklendi(v: Varlik): Promise<void> {
       <li v-for="v in liste" :key="v.id">
         <RouterLink
           :to="{ name: 'varlik', params: { id: v.id } }"
-          class="flex items-center gap-3 py-3 hover:bg-surface-50"
+          class="flex items-center gap-3 py-3.5 hover:bg-surface-50 sm:py-3"
         >
           <span
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface-100 text-surface-600"

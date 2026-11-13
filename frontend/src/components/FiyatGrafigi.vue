@@ -72,6 +72,12 @@ const options = computed(() => {
   const metin = css('--p-surface-500') || '#64748b'
   const cizgi = css('--p-surface-200') || '#e2e8f0'
   const yazi = { family: 'Plus Jakarta Sans Variable', size: 11 }
+  // Eksende kısa yazı (telefonda çizim alanı daralmasın): binden büyükse ondalıksız, değilse en çok 2 ondalık.
+  // Tam değer ipucunda (tooltip) görünür.
+  const isaret = props.paraBirimi === 'USD' ? '$' : '₺'
+  const eksen = (v: number) =>
+    isaret +
+    new Intl.NumberFormat('tr-TR', { maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2 }).format(v)
 
   return {
     maintainAspectRatio: false,
@@ -92,7 +98,7 @@ const options = computed(() => {
           color: metin,
           font: yazi,
           maxTicksLimit: 5,
-          callback: (v: number) => fiyat(v, props.paraBirimi),
+          callback: eksen,
         },
         grid: { color: cizgi },
         border: { display: false },

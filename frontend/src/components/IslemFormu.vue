@@ -62,6 +62,9 @@ function bosForm(): IslemGirdisi {
   }
 }
 
+/** Hesaplar gelene kadar "önce hesap ekleyin" uyarısı gösterilmez */
+const yukleniyor = ref(false)
+
 watch(gorunur, async (acik) => {
   if (!acik) return
   hatalar.value = {}
@@ -79,13 +82,18 @@ watch(gorunur, async (acik) => {
       }
     : { ...bosForm(), ...props.varsayilan }
   tarihSecimi.value = new Date(`${form.value.tarih}T00:00:00`)
-  await Promise.all([
-    katalog.yukle(),
-    finansApi.hesaplar().then((v) => {
-      hesaplar.value = v.hesaplar
-      if (!form.value.hesap_id && v.hesaplar.length === 1) form.value.hesap_id = v.hesaplar[0]!.id
-    }),
-  ])
+  yukleniyor.value = true
+  try {
+    await Promise.all([
+      katalog.yukle(),
+      finansApi.hesaplar().then((v) => {
+        hesaplar.value = v.hesaplar
+        if (!form.value.hesap_id && v.hesaplar.length === 1) form.value.hesap_id = v.hesaplar[0]!.id
+      }),
+    ])
+  } finally {
+    yukleniyor.value = false
+  }
 })
 
 const varlikGruplari = computed(() =>
@@ -162,7 +170,7 @@ async function kaydet(): Promise<void> {
     :baslik="islem ? 'İşlemi düzenle' : 'İşlem ekle'"
     :genislik="34"
   >
-    <Message v-if="gorunur && hesaplar.length === 0" severity="warn" class="mb-3">
+    <Message v-if="gorunur && !yukleniyor && hesaplar.length === 0" severity="warn" class="mb-3">
       Önce bir hesap ekleyin (Hesaplar → Hesap ekle).
     </Message>
     <form class="flex flex-col gap-4" @submit.prevent="kaydet">

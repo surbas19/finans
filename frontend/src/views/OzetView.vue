@@ -104,7 +104,7 @@ async function elleYenile(): Promise<void> {
           <Skeleton v-if="!ozet" width="12rem" height="2.5rem" class="mt-2" />
           <p
             v-else
-            class="sayi-giris mt-1 text-3xl font-bold tracking-tight text-surface-900 tabular-nums sm:text-4xl"
+            class="sayi-giris mt-1 text-2xl font-bold tracking-tight text-surface-900 tabular-nums min-[375px]:text-3xl sm:text-4xl"
           >
             {{ tl(ozet.toplam.deger) }}
           </p>
@@ -149,7 +149,7 @@ async function elleYenile(): Promise<void> {
             rounded
             size="small"
             severity="secondary"
-            class="!h-7 !w-7 shrink-0"
+            class="!h-10 !w-10 shrink-0 sm:!h-7 sm:!w-7"
             aria-label="Yenile"
             title="Yenile"
             :loading="yenileniyor"

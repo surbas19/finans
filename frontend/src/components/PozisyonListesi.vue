@@ -21,7 +21,7 @@ defineProps<{
     <li v-for="p in pozisyonlar" :key="`${p.hesap_id}-${p.varlik.id}`">
       <RouterLink
         :to="{ name: 'varlik', params: { id: p.varlik.id } }"
-        class="flex items-center gap-3 px-1 py-3 transition-colors hover:bg-surface-50 sm:px-3"
+        class="flex items-center gap-3 px-1 py-3.5 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
       >
         <span
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface-100 text-surface-600"

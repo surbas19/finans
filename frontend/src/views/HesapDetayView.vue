@@ -144,7 +144,9 @@ function hesabiSil(): void {
         </div>
         <div v-if="hesap" class="mt-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p class="text-3xl font-bold tracking-tight text-surface-900 tabular-nums">
+            <p
+              class="text-2xl font-bold tracking-tight text-surface-900 tabular-nums min-[375px]:text-3xl"
+            >
               {{ tl(hesap.deger) }}
             </p>
             <p class="mt-1 flex flex-wrap gap-x-3 text-sm text-surface-500">
