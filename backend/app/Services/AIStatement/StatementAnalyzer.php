@@ -39,23 +39,39 @@ class StatementAnalyzer
      */
     public function hazirla(string $pdf, bool $arkaPlan): array
     {
-        try {
-            $okunan = $this->okuyucu->oku($pdf, metinsizKabul: true);
-        } catch (EkstreOkunamadi) {
-            throw YapayZekaHatasi::metinYok();
-        }
-        $sayfaMetinleri = array_map(
-            fn (array $sayfa): string => implode("\n", $this->temizleyici->temizle($this->normalizer->normalize([$sayfa])[0])),
-            $okunan['sayfalar'],
-        );
+        $okunan = $this->sayfaMetinleri($pdf);
         $gonderilen = '';
-        foreach ($sayfaMetinleri as $i => $metin) {
+        foreach ($okunan['sayfa_metinleri'] as $i => $metin) {
             $gonderilen .= '[SAYFA '.($i + 1)."]\n".$metin."\n\n";
         }
 
         return [
             'govde' => $this->istemci->govde($this->istem(), $pdf, self::DOSYA_ADI, $gonderilen, $this->sema(), $arkaPlan),
-            'sayfa_metinleri' => $sayfaMetinleri,
+            ...$okunan,
+        ];
+    }
+
+    /**
+     * Sunucunun PDF'ten okuduğu, normalize edilmiş ve kişisel satırları çıkarılmış sayfa metinleri (kaynak satır
+     * denetimi bunlarla yapılır). Taranmış sayfanın metni boştur.
+     *
+     * @return array{sayfa_metinleri: list<string>, sayfa_sayisi: int, metinsiz: bool}
+     *
+     * @throws YapayZekaHatasi
+     */
+    public function sayfaMetinleri(string $pdf): array
+    {
+        try {
+            $okunan = $this->okuyucu->oku($pdf, metinsizKabul: true);
+        } catch (EkstreOkunamadi) {
+            throw YapayZekaHatasi::metinYok();
+        }
+
+        return [
+            'sayfa_metinleri' => array_map(
+                fn (array $sayfa): string => implode("\n", $this->temizleyici->temizle($this->normalizer->normalize([$sayfa])[0])),
+                $okunan['sayfalar'],
+            ),
             'sayfa_sayisi' => $okunan['sayfa_sayisi'],
             'metinsiz' => $okunan['metinsiz'],
         ];

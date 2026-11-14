@@ -74,6 +74,36 @@ class YapayZekaHatasi extends RuntimeException
         return new self('arka_plan_yok', 'Yapay zekâ arka plan modunu kabul etmedi; analiz sıraya alındı.');
     }
 
+    public static function beklenmeyen(): self
+    {
+        return new self('beklenmeyen', 'Yapay zekâ analizi beklenmeyen bir hatayla durdu. Yeniden deneyin; ekstreniz olduğu gibi duruyor.');
+    }
+
+    /** Çalışma kaydındaki koddan kullanıcı mesajı (durum ucu) */
+    public static function mesaj(string $kod): string
+    {
+        if (str_starts_with($kod, 'http_')) {
+            return self::http((int) substr($kod, 5))->getMessage();
+        }
+
+        return (match ($kod) {
+            'kapali' => self::kapali(),
+            'baglanti' => self::baglanti(),
+            'zaman_asimi' => self::zamanAsimi(),
+            'hiz_siniri' => self::hizSiniri(),
+            'model_reddi' => self::reddedildi(),
+            'yarim' => self::yarimKaldi(),
+            'iptal' => self::iptal(),
+            'model_hatasi' => self::modelHatasi(),
+            'arka_plan_yok' => self::arkaPlanYok(),
+            'dosya_buyuk' => self::dosyaBuyuk((int) config('ekstre.ai_max_mb')),
+            'bozuk_json' => self::bozukJson(),
+            'sema' => self::semaHatasi(),
+            'metin_yok' => self::metinYok(),
+            default => self::beklenmeyen(),
+        })->getMessage();
+    }
+
     public static function dosyaBuyuk(int $mb): self
     {
         return new self('dosya_buyuk', "PDF yapay zekâ için çok büyük (en çok {$mb} MB).");

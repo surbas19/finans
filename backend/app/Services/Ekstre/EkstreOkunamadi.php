@@ -16,7 +16,7 @@ class EkstreOkunamadi extends RuntimeException
 
     public static function metinsiz(): self
     {
-        return new self('Bu PDF\'de okunabilir metin yok (taranmış görüntü olabilir). OCR desteklenmiyor: sunucuda OCR aracı yok ve finansal belge dış servise gönderilmez. Satırları kartın sayfasından elle girebilirsiniz.');
+        return new self('Bu PDF\'de okunabilir metin yok (taranmış görüntü olabilir). Sunucuda OCR aracı yok; yapay zekâ açıksa "Yapay zekâ ile oku" onayıyla yükleyin (PDF görüntüsünden okunur), değilse satırları kartın sayfasından elle girebilirsiniz.');
     }
 
     public static function bozuk(): self

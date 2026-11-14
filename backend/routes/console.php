@@ -3,6 +3,7 @@
 use App\Fiyat\FiyatGuncelleyici;
 use App\Fiyat\Katalog;
 use App\Models\User;
+use App\Services\AIStatement\EkstreAiIsleyici;
 use Illuminate\Console\Scheduling\CallbackEvent;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,16 @@ Artisan::command('fiyat:guncelle {kaynak?}', function (FiyatGuncelleyici $guncel
 
 // 15 dakikada bir. Kilit 10 dakikada düşer (paylaşımlı sunucu bir çalışmayı yarıda keserse ertesi çalışma takılmasın).
 $zamanla('fiyat:guncelle', 'fiyat-guncelle')->everyFifteenMinutes()->withoutOverlapping(10);
+
+Artisan::command('ekstre:ai-isle', function (EkstreAiIsleyici $isleyici): void {
+    $sayi = $isleyici->cron();
+    if ($sayi > 0) {
+        $this->line("{$sayi} yapay zekâ çalışması ilerletildi.");
+    }
+})->purpose('Yapay zekâ ekstre analizlerini ilerletir (defer başlatmadıysa devralır, arka plandaki yanıtı sorar, takılanı bitirir)');
+
+// Her dakika; senkron yol (arka plan modu yoksa) burada çalışır. Kilit 10 dakikada düşer.
+$zamanla('ekstre:ai-isle', 'ekstre-ai')->everyMinute()->withoutOverlapping(10);
 
 Artisan::command('katalog:esitle', function (): void {
     $this->info(Katalog::esitle().' hazır varlık eşitlendi.');

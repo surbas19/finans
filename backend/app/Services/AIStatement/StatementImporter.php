@@ -47,6 +47,9 @@ class StatementImporter
             }
 
             $satirlar = $analiz['kabul'];
+            // PHP okuyucunun sonucu (mutabakat, teşhis) çapraz kontrol için saklanır; yeniden analizde ilki korunur
+            $onceki = $ekstre->denetim ?? [];
+            $php = $onceki['php'] ?? array_diff_key($onceki, ['ai' => true, 'php' => true]);
             $denetim = $this->mutabakat->denetle(
                 ['donem_borcu' => $ekstre->donem_borcu !== null ? (string) $ekstre->donem_borcu : null],
                 ['onceki_borc' => self::tutar($ai['summary']['previous_balance'] ?? null, eksiOlabilir: true)],
@@ -57,8 +60,11 @@ class StatementImporter
                 'okunamayan' => $okunamayan,
                 'banka_profili' => 'ai',
                 'kalan_taksit' => $this->aktarici->kalanTaksit($satirlar),
+                // Maskeli standart JSON (JSON görünümü; liste ve özet yanıtlarına girmez)
+                'ai_cikti' => $ai,
                 'denetim' => [
                     ...$denetim,
+                    'php' => $php,
                     'ai' => [
                         'model' => $analiz['model'],
                         'banka' => mb_substr((string) $ai['bank_name'], 0, 60),

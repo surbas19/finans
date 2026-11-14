@@ -22,7 +22,7 @@ class Ekstre extends Model
 
     protected $fillable = [
         'hane_id', 'kart_id', 'durum', 'donem_baslangic', 'kesim_tarihi', 'son_odeme_tarihi', 'donem_borcu',
-        'asgari_odeme', 'alan_kaynaklari', 'okunamayan', 'banka_profili', 'denetim', 'kalan_taksit', 'odendi', 'onayli_kesim_tarihi', 'dosya_yolu', 'dosya_adi',
+        'asgari_odeme', 'alan_kaynaklari', 'okunamayan', 'banka_profili', 'denetim', 'ai_cikti', 'kalan_taksit', 'odendi', 'onayli_kesim_tarihi', 'dosya_yolu', 'dosya_adi',
         'dosya_boyutu', 'sayfa_sayisi', 'dosya_ozeti', 'olusturan_id', 'onaylayan_id', 'onaylandi_at',
     ];
 
@@ -42,6 +42,7 @@ class Ekstre extends Model
             'alan_kaynaklari' => 'array',
             'okunamayan' => 'array',
             'denetim' => 'array',
+            'ai_cikti' => 'array',
             'kalan_taksit' => 'decimal:2',
             'odendi' => 'boolean',
             'onaylandi_at' => 'datetime',
@@ -62,6 +63,14 @@ class Ekstre extends Model
     public function islemler(): HasMany
     {
         return $this->hasMany(KartIslemi::class)->orderBy('sira')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<EkstreAiCalismasi, $this>
+     */
+    public function aiCalismalari(): HasMany
+    {
+        return $this->hasMany(EkstreAiCalismasi::class);
     }
 
     /** "Şubat 2026" (kesim ayı) ya da null */

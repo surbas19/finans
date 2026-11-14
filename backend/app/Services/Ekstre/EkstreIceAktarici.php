@@ -14,11 +14,11 @@ use App\Models\User;
 use App\Services\Aile\FaturaEslestirici;
 use App\Services\Aile\KartIslemKurallari;
 use App\Services\Aile\KategoriBulucu;
+use App\Services\AIStatement\PdfUploadService;
 use App\Support\Kurus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -43,6 +43,7 @@ class EkstreIceAktarici
         private FaturaEslestirici $faturalar,
         private EkstreMutabakati $mutabakat,
         private EkstreTeshisi $teshis,
+        private PdfUploadService $yukleme,
     ) {}
 
     /** Hanede aynı dosya daha önce yüklendiyse o ekstre */
@@ -52,43 +53,41 @@ class EkstreIceAktarici
     }
 
     /**
+     * @param  bool  $metinsizKabul  yapay zekâ onayı verildiyse taranmış (metinsiz) PDF de kabul edilir: PHP okuyucu
+     *                               satır çıkaramaz, yapay zekâ görüntüden okur
+     *
      * @throws ValidationException PDF değilse / okunamazsa / aynı dosya varsa
      */
-    public function yukle(User $user, Kart $kart, UploadedFile $dosya): Ekstre
+    public function yukle(User $user, Kart $kart, UploadedFile $dosya, bool $metinsizKabul = false): Ekstre
     {
-        $icerik = (string) file_get_contents($dosya->getRealPath());
-        // Uzantı ve MIME'a ek: içerik gerçekten PDF mi (ilk 1 KB'ta imza)
-        if (! str_contains(substr($icerik, 0, 1024), '%PDF-')) {
-            throw ValidationException::withMessages(['dosya' => 'Dosya PDF değil.']);
-        }
-        $ozet = hash('sha256', $icerik);
-        if ($onceki = $this->ayniDosya((int) $user->hane_id, $ozet)) {
+        $pdf = $this->yukleme->oku($dosya);
+        if ($onceki = $this->ayniDosya((int) $user->hane_id, $pdf['ozet'])) {
             throw ValidationException::withMessages(['dosya' => 'Bu dosya '.$onceki->created_at->format('d.m.Y').' tarihinde yüklendi ('
                 .$onceki->kart->ad.($onceki->donemEtiketi() ? ', '.$onceki->donemEtiketi().' ekstresi' : '').'). Aynı ekstre ikinci kez eklenmez.']);
         }
 
         try {
-            $metin = $this->okuyucu->oku($icerik);
+            $metin = $this->okuyucu->oku($pdf['icerik'], $metinsizKabul);
         } catch (EkstreOkunamadi $e) {
             throw ValidationException::withMessages(['dosya' => $e->getMessage()]);
         }
         $sonuc = $this->ayristirici->ayristir($metin['sayfalar']);
         $sonuc['teshis'] = $this->teshis->olustur($metin['sayfalar'], $sonuc);
 
-        $yol = 'ekstreler/'.$user->hane_id.'/'.Str::uuid()->toString().'.pdf';
-        Storage::disk(self::DISK)->put($yol, $icerik);
+        $yol = $this->yukleme->sakla($user, $pdf['icerik'], 'ekstreler');
         try {
-            return DB::transaction(fn (): Ekstre => $this->taslakYaz($user, $kart, $dosya, $yol, $ozet, $metin['sayfa_sayisi'], $sonuc));
+            return DB::transaction(fn (): Ekstre => $this->taslakYaz($user, $kart, $pdf, $yol, $metin['sayfa_sayisi'], $sonuc));
         } catch (Throwable $e) {
-            Storage::disk(self::DISK)->delete($yol);
+            $this->yukleme->sil($yol);
             throw $e;
         }
     }
 
     /**
+     * @param  array{ozet: string, ad: string, boyut: int}  $pdf
      * @param  array{alanlar: array<string, string|null>, okunamayan: list<string>, satirlar: list<array<string, mixed>>}  $sonuc
      */
-    private function taslakYaz(User $user, Kart $kart, UploadedFile $dosya, string $yol, string $ozet, int $sayfaSayisi, array $sonuc): Ekstre
+    private function taslakYaz(User $user, Kart $kart, array $pdf, string $yol, int $sayfaSayisi, array $sonuc): Ekstre
     {
         $alanlar = $sonuc['alanlar'];
         $kaynaklar = collect($alanlar)->filter()->map(fn (): string => 'pdf')->all();
@@ -110,10 +109,10 @@ class EkstreIceAktarici
             'denetim' => [...$this->mutabakat->denetle($sonuc['alanlar'], $sonuc['ozet'] ?? [], $sonuc['satirlar']), ...($sonuc['teshis'] ? ['teshis' => $sonuc['teshis']] : [])],
             'kalan_taksit' => $this->kalanTaksit($sonuc['satirlar']),
             'dosya_yolu' => $yol,
-            'dosya_adi' => mb_substr($dosya->getClientOriginalName(), 0, 190),
-            'dosya_boyutu' => $dosya->getSize(),
+            'dosya_adi' => $pdf['ad'],
+            'dosya_boyutu' => $pdf['boyut'],
             'sayfa_sayisi' => $sayfaSayisi,
-            'dosya_ozeti' => $ozet,
+            'dosya_ozeti' => $pdf['ozet'],
             'olusturan_id' => $user->id,
         ]);
 

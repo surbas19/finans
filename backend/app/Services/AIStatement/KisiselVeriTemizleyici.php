@@ -53,7 +53,20 @@ class KisiselVeriTemizleyici
         return false;
     }
 
-    private function maskele(string $satir): string
+    /**
+     * Saklanacak yapay zekâ çıktısı (JSON görünümü): her metin alanı maskelenir (kart, IBAN, telefon, kimlik, e-posta);
+     * anahtarlar ve sayılar değişmez.
+     */
+    public function maskeleHepsi(mixed $veri): mixed
+    {
+        if (is_string($veri)) {
+            return $this->maskele($veri);
+        }
+
+        return is_array($veri) ? array_map(fn (mixed $v): mixed => $this->maskeleHepsi($v), $veri) : $veri;
+    }
+
+    public function maskele(string $satir): string
     {
         $satir = (string) preg_replace('/\b\d{4}[ -]?\d{2}\*{2}[ -]?\*{4}[ -]?\d{4}\b/u', '[KART]', $satir);
         $satir = (string) preg_replace('/\b\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4}\b/u', '[KART]', $satir);

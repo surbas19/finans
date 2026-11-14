@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Aile\BankaController;
+use App\Http\Controllers\Api\V1\Aile\EkstreAnalizController;
 use App\Http\Controllers\Api\V1\Aile\EkstreController;
 use App\Http\Controllers\Api\V1\Aile\FaturaController;
 use App\Http\Controllers\Api\V1\Aile\GelirController;
 use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
 use App\Http\Controllers\Api\V1\Aile\GelirTuruController;
 use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
+use App\Http\Controllers\Api\V1\Aile\HesapEkstresiController;
 use App\Http\Controllers\Api\V1\Aile\KartController;
 use App\Http\Controllers\Api\V1\Aile\KartIslemiController;
 use App\Http\Controllers\Api\V1\Aile\KategoriController;
@@ -86,7 +88,16 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::delete('ekstreler/{ekstre}', [EkstreController::class, 'destroy'])->name('ekstreler.destroy');
             Route::get('ekstreler/{ekstre}/dosya', [EkstreController::class, 'dosya'])->name('ekstreler.dosya');
             Route::put('ekstreler/{ekstre}/satirlar/{islem}', [EkstreController::class, 'satirGuncelle'])->name('ekstreler.satirlar.update');
-            Route::post('ekstreler/{ekstre}/yapay-zeka', [EkstreController::class, 'yapayZeka'])->middleware('throttle:ekstre')->name('ekstreler.yapay-zeka');
+            // Yapay zekâ analizi: başlat (onaylı, 202), durum (yoklama), iptal, maskeli JSON
+            Route::post('ekstreler/{ekstre}/yapay-zeka', [EkstreAnalizController::class, 'baslat'])->middleware('throttle:ekstre')->name('ekstreler.yapay-zeka');
+            Route::get('ekstreler/{ekstre}/yapay-zeka', [EkstreAnalizController::class, 'durum'])->name('ekstreler.yapay-zeka.durum');
+            Route::post('ekstreler/{ekstre}/yapay-zeka/iptal', [EkstreAnalizController::class, 'iptal'])->name('ekstreler.yapay-zeka.iptal');
+            Route::get('ekstreler/{ekstre}/yapay-zeka/json', [EkstreAnalizController::class, 'json'])->name('ekstreler.yapay-zeka.json');
+            // Banka hesabı ekstresi: yalnızca yapay zekâ analizi ve önizleme
+            Route::get('hesap-ekstreleri', [HesapEkstresiController::class, 'index'])->name('hesap-ekstreleri.index');
+            Route::post('hesap-ekstreleri', [HesapEkstresiController::class, 'store'])->middleware('throttle:ekstre')->name('hesap-ekstreleri.store');
+            Route::get('hesap-ekstreleri/{hesap}', [HesapEkstresiController::class, 'show'])->name('hesap-ekstreleri.show');
+            Route::delete('hesap-ekstreleri/{hesap}', [HesapEkstresiController::class, 'destroy'])->name('hesap-ekstreleri.destroy');
             Route::post('ekstreler/{ekstre}/onayla', [EkstreController::class, 'onayla'])->name('ekstreler.onayla');
 
             Route::get('fatura-turleri', [SaglayiciController::class, 'turler'])->name('fatura-turleri.index');

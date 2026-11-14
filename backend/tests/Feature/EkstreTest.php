@@ -127,7 +127,8 @@ class EkstreTest extends TestCase
         $this->yukle(OrnekPdf::yaz([['GIZLI EKSTRE 10.11.2026 MARKET 100,00']], sifreli: true))
             ->assertJsonValidationErrors('dosya')->assertJsonFragment(['PDF şifreli. Bankanın şifreli ekstresini açıp şifresiz olarak kaydedin (ör. "PDF olarak yazdır") ve onu yükleyin.']);
         $metinsiz = $this->yukle(OrnekPdf::metinsiz())->assertJsonValidationErrors('dosya');
-        $this->assertStringContainsString('OCR desteklenmiyor', $metinsiz->json('errors.dosya.0'));
+        // Yapay zekâ onayı olmadan metinsiz PDF alınmaz (onayla alınır: YapayZekaEkstreTest)
+        $this->assertStringContainsString('okunabilir metin yok', $metinsiz->json('errors.dosya.0'));
 
         $this->assertSame(0, Ekstre::count());
         $this->assertSame([], Storage::disk('local')->allFiles());

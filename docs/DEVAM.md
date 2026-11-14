@@ -10,13 +10,13 @@
 - [x] 3. Referans fixture (`ekstre:fixture`, tests/Fixtures/ekstre/garanti_bonus) + GarantiReferansEkstreTest (75 satır tek tek; mutabakat 100.632,22 tutuyor). Fark nedeni: Garanti "BONUS …" satırlarının rakamı Bonus (TL) sütununda (TL değil) → bonus_hareketleri; özet kontrolü birleşik (dönem hareketi); yazılı "Hesap Kesim Tarihi" türetilenden önce (10 Kasım)
 - [x] 4. JSON şeması v2 (direction, 13 tür, döviz, needs_review, ayrıntılı özet + banka hesabı alanları, bonus earned/used, page_audit page_number/found_count/status) + istem v2 (PDF + [SAYFA n] metni, bonus sütunu TL değil); TransactionValidator / StatementAuditService / StatementImporter v2 alan adlarına uyarlandı; EkstreSemasiTest (strict kuralları)
 - [x] 5. OpenAIClient: govde (input_file base64 "ekstre.pdf" + detail + temizlenmiş [SAYFA n] metni + max_output_tokens), baslat / sor / iptal (arka plan), senkron yol; hata kodları + arka_plan_yok / dosya_buyuk / iptal / model_hatasi; config/ekstre.php + .env örnekleri; StatementAnalyzer hazirla / coz / analiz; okuyucu metinsizKabul; ekstre:ai-dene (yerel canlı deneme). **Yerel anahtar yok: canlı deneme yapılmadı.**
-- [ ] 6. Analiz motoru: migration'lar, PdfUploadService, EkstreAiIsleyici, defer + cron, uçlar, metinsiz PDF
+- [x] 6. Analiz motoru: migration'lar …001100 hesap_ekstreleri, …001200 ekstreler.ai_cikti + çalışma alanları (yerelde ileri / geri / ileri); PdfUploadService (finfo MIME + imza + EKSTRE_MAX_MB + SHA-256 + özel disk); EkstreAiIsleyici (baslat / defer / ilerlet / cron / iptal; tek etkin çalışma, koşullu UPDATE, kilit, 5 sn yoklama, 15 dk zaman aşımı, arka_plan_yok → cron senkron); EkstreAnalizController (başlat 202 / durum / iptal / json); HesapEkstresiController (yalnız önizleme, PDF analizden sonra silinir); yüklemede yapay_zeka onayı + metinsiz PDF; analiz sürerken düzeltme / onay kapalı; testler 132
 - [ ] 7. Doğrulama motoru: TransactionValidator v2, DuplicateDetector, denetim, çapraz kontrol, maskeleme, inceleme kapısı
 - [ ] 8. Arayüz: aktarım merkezi, ilerleme, JSON görünümü, inceleme, banka hesabı önizlemesi
 - [ ] 9. Testler + uçtan uca; EKSTRE_AI_AKTARIM varsayılanı açılır
 - [ ] 10. Rapor, ILERLEME, bu kaydı sil
 
-**Sıradaki adım:** 6 (migration'lar: ekstreler.ai_cikti, ekstre_ai_calismalari sütunları + hesap_ekstresi_id, hesap_ekstreleri; PdfUploadService; EkstreAiIsleyici + defer + cron ekstre:ai-isle; uçlar başlat / durum / JSON / iptal; metinsiz PDF yükleme).
+**Sıradaki adım:** 7 (TransactionValidator v2: metinsiz sayfa → inceleme, benzer satır → inceleme, Garanti en sağ tutar, özet satırı reddi, tür / yön uyuşmazlığı; DuplicateDetector; StatementAuditService v2; çapraz kontrol PHP ↔ AI (kesim tarihi farkı onayı kapatır, hangi satırlar kalır); banka hesabı satır + bakiye denetimi; inceleme kapısı + EKSTRE_AI_AKTARIM). Ön yüz henüz eski senkron yanıtı bekliyor (8. aşama).
 
 ## Yayın bekleyenler
 `main`'de yayımlanmamış, kullanıcı onayı bekleniyor: `4c6413c` (fatura dönemi = kesim ayı; dönemsiz faturaları tamamlayan migration) ve gelir türleri (migration `…001000`, var olan gelirleri taşır).

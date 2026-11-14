@@ -23,7 +23,7 @@ class HaneYonetimi
      * `hane_id` taşıyan aile tabloları (üyeler hariç); yeni tablo eklenince buraya da yazılır. Varsayılanla gelen
      * tanımlar (harcama kategorileri, gelir türleri) kayıt sayılmaz.
      */
-    public const AILE_TABLOLARI = ['gelir_kaynaklari', 'gelirler', 'bankalar', 'kartlar', 'ekstreler', 'kart_islemleri', 'fatura_turleri', 'fatura_saglayicilari', 'faturalar'];
+    public const AILE_TABLOLARI = ['gelir_kaynaklari', 'gelirler', 'bankalar', 'kartlar', 'ekstreler', 'kart_islemleri', 'fatura_turleri', 'fatura_saglayicilari', 'faturalar', 'hesap_ekstreleri'];
 
     /** Üyeye bağlı kayıtlar (tablo => sütun); kaydı olan üye silinmez, pasif olur */
     public const UYE_BAGLARI = ['gelir_kaynaklari' => 'uye_id', 'gelirler' => 'uye_id', 'kartlar' => 'sahip_uye_id'];
