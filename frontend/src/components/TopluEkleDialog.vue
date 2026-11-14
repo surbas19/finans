@@ -7,6 +7,7 @@ import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
+import VarlikAdi from '@/components/VarlikAdi.vue'
 import { useToast } from 'primevue/usetoast'
 import { finansApi, type HesapOzeti } from '@/api/finans'
 import { hataMesaji } from '@/api/http'
@@ -277,12 +278,10 @@ async function kaydet(): Promise<void> {
               "
             />
             <div class="min-w-0 flex-1">
-              <p class="flex flex-wrap items-baseline gap-x-2">
-                <span class="text-xs text-surface-400 tabular-nums">{{ s.satirNo }}.</span>
-                <span v-if="s.varlik" class="font-semibold text-surface-900">
-                  {{ s.varlik.ad }}
-                  <span class="font-normal text-surface-400">{{ s.varlik.kod }}</span>
-                </span>
+              <!-- Kaydırmasız: uzun ad satır numarasından ayrılmaz, kısalır -->
+              <p class="flex min-w-0 items-baseline gap-x-2">
+                <span class="shrink-0 text-xs text-surface-400 tabular-nums">{{ s.satirNo }}.</span>
+                <VarlikAdi v-if="s.varlik" :kod="s.varlik.kod" :ad="s.varlik.ad" />
                 <span v-else-if="s.yeniKod" class="font-semibold text-surface-900">{{
                   s.yeniKod
                 }}</span>

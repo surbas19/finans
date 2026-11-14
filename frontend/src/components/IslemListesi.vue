@@ -2,6 +2,7 @@
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import { islemEtiketi, type Islem } from '@/api/finans'
+import VarlikAdi from '@/components/VarlikAdi.vue'
 import { useIslemSil } from '@/composables/useIslemSil'
 import { fiyat, miktar, tarih, tl, yuzde } from '@/utils/bicim'
 
@@ -58,7 +59,7 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
       <button
         type="button"
         class="flex min-h-14 w-full items-center gap-3 py-3 text-left transition-colors active:bg-surface-50 sm:hidden"
-        :aria-label="`${tarih(i.tarih)} ${islemEtiketi(i.tur, i.varlik?.tur)} ${i.varlik?.ad ?? ''}: düzenle`"
+        :aria-label="`${tarih(i.tarih)} ${islemEtiketi(i.tur, i.varlik?.tur)} ${i.varlik ? `${i.varlik.kod} ${i.varlik.ad}` : ''}: düzenle`"
         data-test="islem-karti"
         @click="emit('duzenle', i)"
       >
@@ -69,7 +70,7 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
               :severity="TUR_RENGI[i.tur]"
               class="shrink-0"
             />
-            <span class="truncate font-medium text-surface-900">{{ i.varlik?.ad ?? '' }}</span>
+            <VarlikAdi v-if="i.varlik" :kod="i.varlik.kod" :ad="i.varlik.ad" />
           </span>
           <span class="mt-1 line-clamp-2 text-xs text-surface-500 tabular-nums">
             {{ ayrintiMetni(i, true) }}
@@ -90,9 +91,13 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
       <div class="hidden items-center gap-3 py-3 sm:flex">
         <div class="w-20 shrink-0 text-xs text-surface-500 tabular-nums">{{ tarih(i.tarih) }}</div>
         <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <Tag :value="islemEtiketi(i.tur, i.varlik?.tur)" :severity="TUR_RENGI[i.tur]" />
-            <span class="truncate font-medium text-surface-900">{{ i.varlik?.ad ?? '' }}</span>
+          <div class="flex items-center gap-2">
+            <Tag
+              :value="islemEtiketi(i.tur, i.varlik?.tur)"
+              :severity="TUR_RENGI[i.tur]"
+              class="shrink-0"
+            />
+            <VarlikAdi v-if="i.varlik" :kod="i.varlik.kod" :ad="i.varlik.ad" />
           </div>
           <div class="mt-0.5 truncate text-xs text-surface-500">
             {{ ayrintiMetni(i, false) }}

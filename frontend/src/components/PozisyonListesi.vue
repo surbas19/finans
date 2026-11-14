@@ -3,6 +3,7 @@ import Tag from 'primevue/tag'
 import type { Pozisyon } from '@/api/finans'
 import { VARLIK_TURLERI } from '@/api/finans'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
+import VarlikAdi from '@/components/VarlikAdi.vue'
 import { fiyat, miktar, tl } from '@/utils/bicim'
 
 /**
@@ -53,10 +54,7 @@ function altSatir(p: Pozisyon): string {
         </span>
         <!-- Dar ekranda ad en az bu kadar yer alır; sağdaki K/Z sığmazsa yüzde alt satıra iner -->
         <span class="min-w-[5.5rem] flex-1">
-          <span class="flex items-center gap-2">
-            <span class="truncate font-semibold text-surface-900">{{ p.varlik.ad }}</span>
-            <span class="shrink-0 text-xs text-surface-400">{{ p.varlik.kod }}</span>
-          </span>
+          <VarlikAdi :kod="p.varlik.kod" :ad="p.varlik.ad" />
           <span class="block truncate text-xs text-surface-500">{{ altSatir(p) }}</span>
           <span v-if="p.maliyeti_bilinmeyen_miktar > 0" class="block text-xs text-amber-700">
             <template v-if="p.varlik.tur === 'bes'">Kâr yüzdesi girilmedi</template>

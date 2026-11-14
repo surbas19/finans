@@ -11,6 +11,7 @@ import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import BosDurum from '@/components/BosDurum.vue'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
+import VarlikAdi from '@/components/VarlikAdi.vue'
 import VarlikEkleDialog from '@/components/VarlikEkleDialog.vue'
 import { finansApi, sabitFiyatli, VARLIK_TURLERI, type Varlik, type VarlikTuru } from '@/api/finans'
 import { hataMesaji } from '@/api/http'
@@ -114,13 +115,11 @@ async function kodlaEklendi(v: Varlik): Promise<void> {
           </span>
           <span class="min-w-0 flex-1">
             <span class="flex items-center gap-2">
-              <span class="truncate font-semibold text-surface-900">{{ v.ad }}</span>
+              <VarlikAdi :kod="v.kod" :ad="v.ad" />
               <Tag v-if="v.gecikmeli" value="gecikmeli" severity="secondary" class="!text-[10px]" />
               <Tag v-if="v.fiyat?.elle" value="elle" severity="warn" class="!text-[10px]" />
             </span>
-            <span class="block text-xs text-surface-500">
-              {{ v.kod }} · {{ neZaman(v.fiyat?.zaman) }}
-            </span>
+            <span class="block text-xs text-surface-500">{{ neZaman(v.fiyat?.zaman) }}</span>
           </span>
           <span class="flex shrink-0 flex-col items-end">
             <span class="font-semibold text-surface-900 tabular-nums">
@@ -172,8 +171,7 @@ async function kodlaEklendi(v: Varlik): Promise<void> {
                     : 'pi-circle text-surface-300'
                 "
               />
-              <span class="min-w-0 flex-1 truncate">{{ v.ad }}</span>
-              <span class="text-xs text-surface-400">{{ v.kod }}</span>
+              <span class="min-w-0 flex-1"><VarlikAdi :kod="v.kod" :ad="v.ad" /></span>
             </button>
           </section>
           <p v-if="gruplar.length === 0" class="py-6 text-center text-sm text-surface-500">

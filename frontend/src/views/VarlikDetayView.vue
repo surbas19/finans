@@ -123,9 +123,9 @@ async function elleKaydet(): Promise<void> {
             </span>
             <div class="min-w-0">
               <Skeleton v-if="!varlik" width="10rem" height="1.5rem" />
-              <h1 v-else class="truncate text-lg font-bold text-surface-900">{{ varlik.ad }}</h1>
+              <h1 v-else class="truncate text-lg font-bold text-surface-900">{{ varlik.kod }}</h1>
               <p v-if="varlik" class="flex flex-wrap items-center gap-2 text-xs text-surface-500">
-                {{ varlik.kod }} · {{ VARLIK_TURLERI[varlik.tur].etiket }} · {{ varlik.birim }}
+                {{ varlik.ad }} · {{ VARLIK_TURLERI[varlik.tur].etiket }} · {{ varlik.birim }}
                 <Tag
                   v-if="varlik.gecikmeli"
                   value="~15 dk gecikmeli"

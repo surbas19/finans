@@ -9,6 +9,7 @@ import SelectButton from 'primevue/selectbutton'
 import Textarea from 'primevue/textarea'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
+import VarlikAdi from '@/components/VarlikAdi.vue'
 import VarlikEkleDialog from '@/components/VarlikEkleDialog.vue'
 import {
   finansApi,
@@ -114,7 +115,8 @@ const varlikGruplari = computed(() =>
       etiket: VARLIK_TURLERI[tur].etiket,
       ogeler: katalog.varliklar
         .filter((v) => v.tur === tur)
-        .map((v) => ({ deger: v.id, etiket: `${v.ad} (${v.kod})` })),
+        // `etiket` aramada kullanılır; görünüm VarlikAdi (kod vurgulu)
+        .map((v) => ({ deger: v.id, etiket: `${v.kod} ${v.ad}`, kod: v.kod, ad: v.ad })),
     }))
     .filter((g) => g.ogeler.length > 0),
 )
@@ -279,7 +281,15 @@ async function kaydet(): Promise<void> {
             filter-placeholder="Ara: gram, USD, THYAO…"
             placeholder="Seçin"
             class="min-w-0 flex-1"
-          />
+          >
+            <template #value="{ placeholder }">
+              <VarlikAdi v-if="secilenVarlik" :kod="secilenVarlik.kod" :ad="secilenVarlik.ad" />
+              <span v-else>{{ placeholder }}</span>
+            </template>
+            <template #option="{ option }">
+              <VarlikAdi :kod="option.kod" :ad="option.ad" />
+            </template>
+          </Select>
           <Button
             icon="pi pi-plus"
             severity="secondary"
