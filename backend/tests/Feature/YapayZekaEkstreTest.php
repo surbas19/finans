@@ -165,17 +165,22 @@ class YapayZekaEkstreTest extends TestCase
         $this->assertSame(['taslak', 'taslak'], $satirlar->pluck('durum')->all()); // finans hareketi yazılmadı
         $this->assertStringContainsString('Yapay zekâ okudu', $satirlar[0]['okuma']['uyarilar'][0]);
 
-        // İstek: Responses API, strict şema, kayıt yok, anahtar başlıkta; kişisel veri gitmedi
+        // İstek: Responses API, PDF input_file (base64, genel dosya adı, detail=high) + temizlenmiş sayfa metni, strict
+        // şema, kayıt yok (store:false), çıktı sınırı, anahtar başlıkta; metin parçasında kişisel veri yok
         Http::assertSent(function (IstemciIstegi $i): bool {
             $govde = $i->data();
-            $metin = $govde['input'][1]['content'][0]['text'];
+            [$dosya, $metin] = $govde['input'][1]['content'];
+            $pdf = base64_decode(substr($dosya['file_data'], strlen('data:application/pdf;base64,')), true);
 
             return $i->hasHeader('Authorization', 'Bearer test-anahtar')
-                && $govde['model'] === 'test-model' && $govde['store'] === false
+                && $govde['model'] === 'test-model' && $govde['store'] === false && ! isset($govde['background'])
+                && $govde['max_output_tokens'] === 32000
                 && $govde['text']['format']['type'] === 'json_schema' && $govde['text']['format']['strict'] === true
                 && $govde['text']['format']['schema']['additionalProperties'] === false
-                && str_contains($metin, '[SAYFA 1]') && str_contains($metin, 'MIGROS KADIKOY')
-                && ! str_contains($metin, '4506') && ! str_contains($metin, 'ALI VELI');
+                && $dosya['type'] === 'input_file' && $dosya['filename'] === 'ekstre.pdf' && $dosya['detail'] === 'high'
+                && str_starts_with((string) $pdf, '%PDF-')
+                && $metin['type'] === 'input_text' && str_contains($metin['text'], '[SAYFA 1]') && str_contains($metin['text'], 'MIGROS KADIKOY')
+                && ! str_contains($metin['text'], '4506') && ! str_contains($metin['text'], 'ALI VELI');
         });
 
         // Çalışma kaydı içeriksiz

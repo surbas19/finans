@@ -35,12 +35,16 @@ return [
         ],
     ],
 
-    // Ekstre yapay zekâ yedeği (varsayılan kapalı: anahtar boşsa özellik yok). Yalnızca kişisel satırları çıkarılmış
-    // metin ve yalnızca kullanıcı onayıyla gönderilir.
+    // Yapay zekâ ile ekstre analizi (varsayılan kapalı: anahtar boşsa özellik yok). PDF + temizlenmiş sayfa metni,
+    // yalnızca kullanıcının her analizdeki onayıyla; store:false. Model PDF görüntüsünü okuyabilmeli.
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
         'model' => env('OPENAI_MODEL', 'gpt-4.1'),
-        'timeout' => (int) env('OPENAI_TIMEOUT', 120),
+        'pdf_detail' => env('OPENAI_PDF_DETAIL', 'high'),
+        'max_output_tokens' => (int) env('OPENAI_MAX_OUTPUT_TOKENS', 32000),
+        // Senkron çağrı (cron) için bekleme; arka plan modunda istekler kısa sürer
+        'timeout' => (int) env('OPENAI_TIMEOUT', 300),
+        'arka_plan' => (bool) env('OPENAI_ARKA_PLAN', true),
         'url' => env('OPENAI_URL', 'https://api.openai.com/v1/responses'),
     ],
 

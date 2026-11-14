@@ -10,12 +10,18 @@ use App\Services\Ekstre\PdfMetinOkuyucu;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Yapay zekâ yedeği analizi: saklı PDF'in metnini okur, normalize eder, kişisel veriyi çıkarır, "[SAYFA n]" başlıklı
- * metni modele şema ile gönderir, dönen JSON'u şemaya ve satır satır doğrulatır, sayfa denetimini yapar. Hiçbir şeyi
- * kaydetmez (kayıt `StatementImporter`'da, kullanıcı onayından sonra). PDF'in kendisi değil temizlenmiş metin gider.
+ * Yapay zekâ ile ekstre analizi, iki adım:
+ * - `hazirla`: PDF'in sunucuda okunan metni normalize edilir, kişisel satırları çıkarılır, "[SAYFA n]" başlıklarıyla
+ *   birleştirilir; istek gövdesi PDF dosyası (input_file) + bu metin + strict şemadır.
+ * - `coz`: dönen JSON şemaya ve satır satır doğrulanır (kaynak satır o sayfada mı, tutar satırda mı), sayfa denetimi
+ *   yapılır. Hiçbir şeyi kaydetmez (kayıt StatementImporter'da; aktarım kullanıcı onayıyla).
+ * Arka plan çalışmasında iki adım ayrı isteklerde yürür; senkron yolda `analiz` ikisini birden yapar.
  */
 class StatementAnalyzer
 {
+    /** OpenAI'ye giden dosya adı: yüklenen adın içinde kişi adı olabilir */
+    public const DOSYA_ADI = 'ekstre.pdf';
+
     public function __construct(
         private PdfMetinOkuyucu $okuyucu,
         private MetinNormalizer $normalizer,
@@ -27,47 +33,99 @@ class StatementAnalyzer
     ) {}
 
     /**
-     * @return array{ai: array<string, mixed>, kabul: list<array<string, mixed>>, reddedilen: list<array<string, mixed>>, sayfa_denetimi: array<string, mixed>, model: string}
+     * @return array{govde: array<string, mixed>, sayfa_metinleri: list<string>, sayfa_sayisi: int, metinsiz: bool}
      *
      * @throws YapayZekaHatasi
      */
-    public function analiz(Ekstre $ekstre): array
+    public function hazirla(string $pdf, bool $arkaPlan): array
     {
-        if (! $this->istemci->acikMi()) {
-            throw YapayZekaHatasi::kapali();
-        }
-        $disk = Storage::disk(EkstreIceAktarici::DISK);
-        if ($ekstre->dosya_yolu === null || ! $disk->exists($ekstre->dosya_yolu)) {
-            throw YapayZekaHatasi::metinYok();
-        }
         try {
-            $sayfalar = $this->okuyucu->oku((string) $disk->get($ekstre->dosya_yolu))['sayfalar'];
+            $okunan = $this->okuyucu->oku($pdf, metinsizKabul: true);
         } catch (EkstreOkunamadi) {
             throw YapayZekaHatasi::metinYok();
         }
-
-        $temiz = array_map(fn (array $sayfa): array => $this->temizleyici->temizle($this->normalizer->normalize([$sayfa])[0]), $sayfalar);
-        $sayfaMetinleri = array_map(fn (array $s): string => implode("\n", $s), $temiz);
+        $sayfaMetinleri = array_map(
+            fn (array $sayfa): string => implode("\n", $this->temizleyici->temizle($this->normalizer->normalize([$sayfa])[0])),
+            $okunan['sayfalar'],
+        );
         $gonderilen = '';
         foreach ($sayfaMetinleri as $i => $metin) {
             $gonderilen .= '[SAYFA '.($i + 1)."]\n".$metin."\n\n";
         }
 
-        $sema = json_decode((string) file_get_contents(app_path('Schemas/bank_statement_schema.json')), true);
-        $istem = (string) file_get_contents(app_path('Prompts/statement_extraction.txt'));
-        $veri = $this->istemci->yapilandirilmisCevap($istem, $gonderilen, $sema);
-        if ($this->jsonDogrulayici->dogrula($veri, $sema) !== []) {
+        return [
+            'govde' => $this->istemci->govde($this->istem(), $pdf, self::DOSYA_ADI, $gonderilen, $this->sema(), $arkaPlan),
+            'sayfa_metinleri' => $sayfaMetinleri,
+            'sayfa_sayisi' => $okunan['sayfa_sayisi'],
+            'metinsiz' => $okunan['metinsiz'],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $veri  modelin JSON'u
+     * @param  list<string>  $sayfaMetinleri
+     * @return array{ai: array<string, mixed>, kabul: list<array<string, mixed>>, reddedilen: list<array<string, mixed>>, sayfa_denetimi: array<string, mixed>, model: string}
+     *
+     * @throws YapayZekaHatasi
+     */
+    public function coz(array $veri, array $sayfaMetinleri, int $sayfaSayisi): array
+    {
+        if ($this->jsonDogrulayici->dogrula($veri, $this->sema()) !== []) {
             throw YapayZekaHatasi::semaHatasi();
         }
-
         ['kabul' => $kabul, 'reddedilen' => $reddedilen] = $this->islemDogrulayici->dogrula($veri['transactions'], $sayfaMetinleri);
 
         return [
             'ai' => $veri,
             'kabul' => $kabul,
             'reddedilen' => $reddedilen,
-            'sayfa_denetimi' => $this->denetim->denetle(count($sayfalar), $veri['page_audit'], $kabul, $reddedilen),
+            'sayfa_denetimi' => $this->denetim->denetle($sayfaSayisi, $veri['page_audit'], $kabul, $reddedilen),
             'model' => (string) config('services.openai.model'),
         ];
+    }
+
+    /**
+     * Senkron analiz (cron yolu): hazırla → yanıtı bekle → çöz.
+     *
+     * @return array{ai: array<string, mixed>, kabul: list<array<string, mixed>>, reddedilen: list<array<string, mixed>>, sayfa_denetimi: array<string, mixed>, model: string}
+     *
+     * @throws YapayZekaHatasi
+     */
+    public function analiz(Ekstre $ekstre): array
+    {
+        $hazir = $this->hazirla($this->pdf($ekstre->dosya_yolu), arkaPlan: false);
+
+        return $this->coz($this->istemci->yapilandirilmisCevap($hazir['govde']), $hazir['sayfa_metinleri'], $hazir['sayfa_sayisi']);
+    }
+
+    /**
+     * Saklı PDF'in içeriği.
+     *
+     * @throws YapayZekaHatasi
+     */
+    public function pdf(?string $yol): string
+    {
+        if (! $this->istemci->acikMi()) {
+            throw YapayZekaHatasi::kapali();
+        }
+        $disk = Storage::disk(EkstreIceAktarici::DISK);
+        if ($yol === null || ! $disk->exists($yol)) {
+            throw YapayZekaHatasi::metinYok();
+        }
+
+        return (string) $disk->get($yol);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sema(): array
+    {
+        return json_decode((string) file_get_contents(app_path('Schemas/bank_statement_schema.json')), true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    private function istem(): string
+    {
+        return (string) file_get_contents(app_path('Prompts/statement_extraction.txt'));
     }
 }

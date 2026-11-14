@@ -21,11 +21,13 @@ class PdfMetinOkuyucu
     private const SUTUN_BOSLUGU = 12;
 
     /**
-     * @return array{sayfalar: list<list<string>>, sayfa_sayisi: int}
+     * @param  bool  $metinsizKabul  taranmış (metinsiz) PDF istisna yerine `metinsiz: true` ile döner (yapay zekâ
+     *                               görüntüden okuyabilir); şifreli / bozuk PDF yine reddedilir
+     * @return array{sayfalar: list<list<string>>, sayfa_sayisi: int, metinsiz: bool}
      *
      * @throws EkstreOkunamadi
      */
-    public function oku(string $icerik): array
+    public function oku(string $icerik, bool $metinsizKabul = false): array
     {
         $sayfalar = array_map(
             fn (array $satirlar): array => array_map(fn (array|string $grup): string => is_string($grup) ? $grup : $this->birlestir($grup), $satirlar),
@@ -33,11 +35,12 @@ class PdfMetinOkuyucu
         );
 
         $metin = implode("\n", array_merge(...($sayfalar ?: [[]])));
-        if (! preg_match('/\d/', $metin) || mb_strlen(trim($metin)) < 20) {
+        $metinsiz = ! preg_match('/\d/', $metin) || mb_strlen(trim($metin)) < 20;
+        if ($metinsiz && ! $metinsizKabul) {
             throw EkstreOkunamadi::metinsiz();
         }
 
-        return ['sayfalar' => $sayfalar, 'sayfa_sayisi' => count($sayfalar)];
+        return ['sayfalar' => $sayfalar, 'sayfa_sayisi' => count($sayfalar), 'metinsiz' => $metinsiz];
     }
 
     /**

@@ -5,7 +5,7 @@ namespace App\Services\AIStatement;
 use RuntimeException;
 
 /**
- * Yapay zekâ yedeğinin hatası. Mesaj kullanıcıya gösterilir; PDF / ekstre içeriği, istek ve yanıt gövdesi içermez,
+ * Yapay zekâ ile ekstre analizinin hatası. Mesaj kullanıcıya gösterilir; PDF / ekstre içeriği, istek ve yanıt gövdesi içermez,
  * loglanmaz. `kod` kayıt tablosuna yazılır.
  */
 class YapayZekaHatasi extends RuntimeException
@@ -17,7 +17,7 @@ class YapayZekaHatasi extends RuntimeException
 
     public static function kapali(): self
     {
-        return new self('kapali', 'Yapay zekâ yedeği kapalı (sunucuda OPENAI_API_KEY tanımlı değil).');
+        return new self('kapali', 'Yapay zekâ ile analiz kapalı (sunucuda OPENAI_API_KEY tanımlı değil).');
     }
 
     public static function baglanti(): self
@@ -49,9 +49,34 @@ class YapayZekaHatasi extends RuntimeException
         return new self('model_reddi', 'Yapay zekâ modeli bu içeriği işlemeyi reddetti. Satırları elle ekleyebilirsiniz.');
     }
 
-    public static function yarimKaldi(): self
+    public static function yarimKaldi(string $neden = ''): self
     {
-        return new self('yarim', 'Yapay zekâ yanıtı yarım kaldı (ekstre çok uzun olabilir). Satırları elle ekleyebilirsiniz.');
+        return new self('yarim', match ($neden) {
+            'max_output_tokens' => 'Yapay zekâ yanıtı yarım kaldı: ekstre çıktı sınırını aştı (OPENAI_MAX_OUTPUT_TOKENS). Satırları elle ekleyebilirsiniz.',
+            'content_filter' => 'Yapay zekâ yanıtı içerik filtresine takıldı. Satırları elle ekleyebilirsiniz.',
+            default => 'Yapay zekâ yanıtı yarım kaldı (ekstre çok uzun olabilir). Satırları elle ekleyebilirsiniz.',
+        });
+    }
+
+    public static function iptal(): self
+    {
+        return new self('iptal', 'Yapay zekâ analizi iptal edildi.');
+    }
+
+    public static function modelHatasi(): self
+    {
+        return new self('model_hatasi', 'Yapay zekâ analizi tamamlanamadı (servis hatası). Yeniden deneyin; ekstreniz olduğu gibi duruyor.');
+    }
+
+    /** Arka plan modu bu ayarla kabul edilmedi: çalışma senkron yola (cron) geçer; kullanıcıya gösterilmez */
+    public static function arkaPlanYok(): self
+    {
+        return new self('arka_plan_yok', 'Yapay zekâ arka plan modunu kabul etmedi; analiz sıraya alındı.');
+    }
+
+    public static function dosyaBuyuk(int $mb): self
+    {
+        return new self('dosya_buyuk', "PDF yapay zekâ için çok büyük (en çok {$mb} MB).");
     }
 
     public static function bozukJson(): self
