@@ -12,6 +12,8 @@ export interface Kullanici {
   ad_soyad: string
   email: string
   yonetici: boolean
+  /** Profil resminin adresi (yalnızca kendisi, hanedekiler ve yönetici açabilir); yoksa baş harfler */
+  resim: string | null
 }
 
 export interface FiyatOzeti {
@@ -58,6 +60,7 @@ export interface HesapOzeti extends Toplam {
   /** Hanede hesabı açan kişi (başkasının hesabıysa adı gösterilir) */
   sahip_id?: number
   sahip_ad?: string | null
+  sahip_resim?: string | null
   /** Türlere göre dağılım (özette ve hesap listesinde gelir) */
   dagilim?: DagilimDilimi[]
 }
@@ -195,6 +198,16 @@ export const finansApi = {
   cikis: () => http.post('/cikis'),
   sifre: (veri: { mevcut_sifre: string; yeni_sifre: string; yeni_sifre_confirmation: string }) =>
     http.put<{ message: string }>('/ben/sifre', veri),
+  /** Tarayıcıda kırpılıp küçültülmüş resim (`kareKucult`) */
+  resimYukle: (resim: Blob) => {
+    const veri = new FormData()
+    veri.append('resim', resim, resim.type === 'image/webp' ? 'profil.webp' : 'profil.jpg')
+
+    return http
+      .post<{ kullanici: Kullanici; message: string }>('/ben/resim', veri)
+      .then((r) => r.data.kullanici)
+  },
+  resimSil: () => http.delete<{ kullanici: Kullanici }>('/ben/resim').then((r) => r.data.kullanici),
 
   ozet: (hesapId: number | null) =>
     http.get<Ozet>('/ozet', { params: hesapId ? { hesap_id: hesapId } : {} }).then((r) => r.data),

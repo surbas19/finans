@@ -7,6 +7,7 @@ import Tag from 'primevue/tag'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useToast } from 'primevue/usetoast'
 import { aileApi, type HaneUyesi, type Saglayici } from '@/api/aile'
+import KisiResmi from '@/components/KisiResmi.vue'
 import { hataMesaji } from '@/api/http'
 import { useAileStore } from '@/stores/aile'
 
@@ -142,6 +143,7 @@ async function desenEkle(s: Saglayici): Promise<void> {
       </p>
       <ul class="divide-y divide-surface-100">
         <li v-for="u in aile.uyeler" :key="u.id" class="flex items-center gap-2 py-2">
+          <KisiResmi :ad="u.ad" :resim="u.resim" :renk="u.renk" />
           <span
             class="min-w-0 flex-1 truncate"
             :class="u.aktif ? 'text-surface-900' : 'text-surface-400'"

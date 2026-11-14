@@ -62,6 +62,8 @@ export interface HaneUyesi {
   ad: string
   renk: string | null
   user_id: number | null
+  /** Girişi olan üyenin profil resmi */
+  resim: string | null
   aktif: boolean
   sira: number
 }

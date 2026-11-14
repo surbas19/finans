@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import KisiResmi from '@/components/KisiResmi.vue'
 import { useAuthStore } from '@/stores/auth'
 
 /**
@@ -67,18 +68,20 @@ async function cikis(): Promise<void> {
         <div class="ml-auto flex items-center gap-1">
           <RouterLink
             :to="{ name: 'profil' }"
-            class="hidden max-w-40 truncate rounded-full px-3 py-1.5 text-sm text-surface-600 hover:bg-surface-100 sm:block"
+            class="hidden max-w-48 items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm text-surface-600 hover:bg-surface-100 sm:flex"
           >
-            <i class="pi pi-user mr-1.5 text-xs" />{{ auth.kullanici?.ad_soyad }}
+            <KisiResmi :ad="auth.kullanici?.ad_soyad ?? ''" :resim="auth.kullanici?.resim" />
+            <span class="truncate">{{ auth.kullanici?.ad_soyad }}</span>
           </RouterLink>
-          <Button
-            icon="pi pi-user"
-            text
-            rounded
-            class="sm:!hidden"
+          <!-- Telefonda yalnızca resim (dokunma alanı 40 px) -->
+          <RouterLink
+            :to="{ name: 'profil' }"
+            class="flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-100 sm:hidden"
             aria-label="Profil"
-            @click="router.push({ name: 'profil' })"
-          />
+            data-test="ust-profil"
+          >
+            <KisiResmi :ad="auth.kullanici?.ad_soyad ?? ''" :resim="auth.kullanici?.resim" />
+          </RouterLink>
           <Button
             icon="pi pi-sign-out"
             text

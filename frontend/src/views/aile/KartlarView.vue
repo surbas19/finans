@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import BosDurum from '@/components/BosDurum.vue'
+import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import KartFormu from '@/components/aile/KartFormu.vue'
 import { aileApi, type Ekstre } from '@/api/aile'
@@ -110,7 +111,7 @@ function sonEkstre(kartId: number): Ekstre | undefined {
                   <Tag v-if="!k.aktif" value="Pasif" severity="secondary" />
                 </span>
                 <span class="block text-xs text-surface-500">
-                  {{ aile.uyeAdi(k.sahip_uye_id) }}
+                  <KisiEtiketi :kisi="aile.uye(k.sahip_uye_id)" />
                   <template v-if="k.kesim_gunu"> · kesim {{ k.kesim_gunu }}</template>
                   <template v-if="k.son_odeme_gunu"> · son ödeme {{ k.son_odeme_gunu }}</template>
                 </span>

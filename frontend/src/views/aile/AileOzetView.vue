@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import AySecici from '@/components/aile/AySecici.vue'
+import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import VeriGrafigi from '@/components/VeriGrafigi.vue'
 import {
@@ -219,8 +220,9 @@ const gunMetni = (gun: number | null | undefined) =>
             <span class="min-w-0 flex-1">
               <span class="block truncate text-sm font-semibold">{{ b.kaynak.ad }}</span>
               <span class="block text-xs text-surface-500"
-                >{{ aile.uyeAdi(b.kaynak.uye_id)
-                }}<template v-if="b.tarih"> · {{ tarih(b.tarih) }}</template></span
+                ><KisiEtiketi :kisi="aile.uye(b.kaynak.uye_id)" /><template v-if="b.tarih">
+                  · {{ tarih(b.tarih) }}</template
+                ></span
               >
             </span>
             <span class="text-sm text-surface-500 tabular-nums">{{

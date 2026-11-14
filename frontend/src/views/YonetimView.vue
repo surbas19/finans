@@ -14,6 +14,7 @@ import Tag from 'primevue/tag'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useToast } from 'primevue/usetoast'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
+import KisiResmi from '@/components/KisiResmi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
 import {
@@ -200,6 +201,7 @@ async function sifreKaydet(): Promise<void> {
                 :key="k.id"
                 class="flex flex-wrap items-center gap-3 py-3"
               >
+                <KisiResmi :ad="k.ad_soyad" :resim="k.resim" boyut="md" />
                 <div class="min-w-0 flex-1">
                   <p class="flex items-center gap-2 font-semibold text-surface-900">
                     {{ k.ad_soyad }}

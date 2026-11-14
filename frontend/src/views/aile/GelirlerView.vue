@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
+import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import AySecici from '@/components/aile/AySecici.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import GelirKaynagiFormu from '@/components/aile/GelirKaynagiFormu.vue'
@@ -235,7 +236,7 @@ function kaynakAdi(id: number | null): string {
                 {{ k.ad }}
               </span>
               <span class="block text-xs text-surface-500">
-                {{ aile.uyeAdi(k.uye_id) }} · {{ GELIR_TURLERI[k.tur] }} ·
+                <KisiEtiketi :kisi="aile.uye(k.uye_id)" /> · {{ GELIR_TURLERI[k.tur] }} ·
                 {{ k.siklik ? GELIR_SIKLIKLARI[k.siklik] : GELIR_DUZENLERI[k.duzen] }}
                 <template v-if="!k.aktif"> · pasif</template>
               </span>

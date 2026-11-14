@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
+import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import DegisimEtiketi from '@/components/DegisimEtiketi.vue'
 import HesapFormu from '@/components/HesapFormu.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
@@ -66,8 +67,8 @@ onMounted(yukle)
               {{ HESAP_TURLERI[h.tur].etiket }} · {{ h.varlik_sayisi }} varlık
               <!-- Hanede başkasının hesabı -->
               <template v-if="h.sahip_ad && h.sahip_id !== auth.kullanici?.id">
-                · {{ h.sahip_ad }}</template
-              >
+                · <KisiEtiketi :kisi="{ ad: h.sahip_ad, resim: h.sahip_resim }"
+              /></template>
             </span>
           </span>
           <i class="pi pi-angle-right text-surface-400" />

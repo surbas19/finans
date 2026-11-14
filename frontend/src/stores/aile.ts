@@ -56,7 +56,8 @@ export const useAileStore = defineStore('aile', () => {
 
   const uyeler = computed(() => hane.value?.uyeler ?? [])
   const aktifUyeler = computed(() => uyeler.value.filter((u) => u.aktif))
-  const uyeAdi = (id: number | null | undefined) => uyeler.value.find((u) => u.id === id)?.ad ?? ''
+  const uye = (id: number | null | undefined) => uyeler.value.find((u) => u.id === id)
+  const uyeAdi = (id: number | null | undefined) => uye(id)?.ad ?? ''
   const kartAdi = (id: number | null | undefined) =>
     kartlar.value.find((k) => k.id === id)?.ad ?? ''
   const bankaAdi = (id: number | null | undefined) =>
@@ -76,6 +77,7 @@ export const useAileStore = defineStore('aile', () => {
     aktifUyeler,
     yukle,
     bosalt,
+    uye,
     uyeAdi,
     kartAdi,
     bankaAdi,

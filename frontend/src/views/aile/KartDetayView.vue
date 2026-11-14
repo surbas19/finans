@@ -9,6 +9,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import BosDurum from '@/components/BosDurum.vue'
+import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import KartFormu from '@/components/aile/KartFormu.vue'
 import KartIslemFormu from '@/components/aile/KartIslemFormu.vue'
@@ -99,7 +100,8 @@ function kartiSil(): void {
             <template v-else>
               <h2 class="truncate text-lg font-bold text-surface-900">{{ kart.ad }}</h2>
               <p class="text-sm text-surface-500">
-                {{ aile.bankaAdi(kart.banka_id) }} · {{ aile.uyeAdi(kart.sahip_uye_id) }}
+                {{ aile.bankaAdi(kart.banka_id) }} ·
+                <KisiEtiketi :kisi="aile.uye(kart.sahip_uye_id)" />
                 <template v-if="kart.kesim_gunu"> · kesim {{ kart.kesim_gunu }}</template>
                 <template v-if="kart.son_odeme_gunu">
                   · son ödeme {{ kart.son_odeme_gunu }}</template
