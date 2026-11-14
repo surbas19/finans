@@ -135,8 +135,11 @@ async function alanlariKaydet(): Promise<void> {
     'Dönem bilgileri kaydedildi',
   )
   if (sonuc) {
+    const kesimDegisti = sonuc.ekstre.kesim_tarihi !== ekstre.value?.kesim_tarihi
     ekstre.value = sonuc.ekstre
     alanlariDoldur(sonuc.ekstre)
+    // Faturaların hizmet dönemi (seçilmediyse) kesim ayını izler: satırlar yeniden okunur
+    if (kesimDegisti) await yukle()
   }
 }
 

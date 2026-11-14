@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
 use App\Models\Concerns\HaneyeAit;
+use App\Services\Aile\FaturaEslestirici;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -99,7 +100,11 @@ class KartIslemi extends Model
             'ham_metin' => $this->ham_metin,
             'sayfa' => $this->sayfa,
             'okuma' => $this->okuma ?? ['alanlar' => [], 'uyarilar' => [], 'tutar_adaylari' => []],
-            'fatura_onerisi' => $this->fatura_onerisi,
+            // Hizmet dönemi karar verilmemişse ekstrenin güncel kesim ayı
+            'fatura_onerisi' => FaturaEslestirici::guncelDonem(
+                $this->fatura_onerisi,
+                $this->fatura_onerisi !== null ? $this->ekstre?->kesim_tarihi : null,
+            ),
         ];
     }
 }

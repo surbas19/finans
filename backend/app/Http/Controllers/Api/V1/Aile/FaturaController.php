@@ -92,7 +92,10 @@ class FaturaController extends Controller
         return response()->json(['message' => 'Fatura silindi; bağlı kart satırı giderde kalır.']);
     }
 
-    /** Faturayı (bağsız) onaylı bir kart satırına bağlar: ödendi olur, ödeme tarihi kart satırının tarihi */
+    /**
+     * Faturayı (bağsız) onaylı bir kart satırına bağlar: ödendi olur, ödeme tarihi kart satırının tarihi; dönemi
+     * bilinmiyorsa satırın ekstresinin kesim ayı
+     */
     public function bagla(Request $request, Fatura $fatura): JsonResponse
     {
         Gate::authorize('hane-kaydi', $fatura);
@@ -112,6 +115,7 @@ class FaturaController extends Controller
                 'durum' => FaturaDurumu::Odendi,
                 'odeme_tarihi' => $islem->islem_tarihi,
                 'eslesme' => ['guven' => 'kullanici', 'gerekce' => ['Kart satırını siz bağladınız.'], 'otomatik' => false],
+                ...$this->eslestirici->bosDonemiTamamla($fatura, $islem),
             ])->save();
         });
 

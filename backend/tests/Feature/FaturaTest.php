@@ -54,10 +54,11 @@ class FaturaTest extends TestCase
         ];
     }
 
-    private function ekstreYukle(array $satirlar, string $kesim = '10.11.2026'): int
+    /** @param  string|null  $kesim  null: PDF'te kesim tarihi yok */
+    private function ekstreYukle(array $satirlar, ?string $kesim = '10.11.2026'): int
     {
         $pdf = OrnekPdf::yaz([[
-            [40 => 'Hesap Kesim Tarihi', 200 => $kesim],
+            ...($kesim !== null ? [[40 => 'Hesap Kesim Tarihi', 200 => $kesim]] : []),
             ...array_map(fn (array $s): array => [40 => $s[0], 110 => $s[1], 450 => $s[2]], $satirlar),
         ]]);
 
@@ -118,6 +119,77 @@ class FaturaTest extends TestCase
         $this->getJson('/api/v1/aile/faturalar?bilinmeyen=1')->assertJsonCount(0, 'faturalar');
         $this->getJson('/api/v1/aile/faturalar?donem=2026-11')->assertJsonCount(1, 'faturalar');
         $this->getJson("/api/v1/aile/faturalar?kart_id={$this->kart}")->assertJsonCount(3, 'faturalar');
+    }
+
+    public function test_hizmet_donemi_secilmedikce_ekstrenin_kesim_ayini_izler(): void
+    {
+        // PDF'te kesim tarihi yok: dönem önce bilinmiyor
+        $id = $this->ekstreYukle([
+            ['08.10.2026', 'IGDAS OTOMATIK ODEME', '845,00'],   // aday (orta), dönem açıklamada yok
+            ['09.10.2026', 'KIRTASIYE DUNYASI', '120,00'],      // aday yok; kullanıcı faturaya bağlar
+            ['10.10.2026', 'ISKI SU FATURA', '300,00'],         // aday; kullanıcı "bilinmiyor" der
+        ], null);
+        $satir = fn (int $i): array => $this->getJson("/api/v1/aile/ekstreler/{$id}")->assertOk()->json("satirlar.{$i}");
+        $donem = fn (int $i): array => [$satir($i)['fatura_onerisi']['hizmet_donemi'], $satir($i)['fatura_onerisi']['donem_kaynagi']];
+        $this->assertSame([null, null], $donem(0));
+        $this->assertStringContainsString('dönemi seçin', end($satir(0)['fatura_onerisi']['gerekce']));
+        $this->assertNull($satir(1)['fatura_onerisi']);
+
+        // Kesim tarihi girilince seçilmemiş dönemler kesim ayı olur; gerekçe bir kez, güncel ayla
+        $this->putJson("/api/v1/aile/ekstreler/{$id}", ['kesim_tarihi' => '2026-11-10'])->assertOk();
+        $this->assertSame(['2026-11', 'kesim'], $donem(0));
+        $gerekce = $satir(0)['fatura_onerisi']['gerekce'];
+        $this->assertStringContainsString('kesim ayı (Kasım 2026)', end($gerekce));
+        $this->assertCount(1, array_filter($gerekce, fn (string $g): bool => str_starts_with($g, 'Hizmet dönemi')));
+
+        // Önerisiz satırda sağlayıcı seçilince dönem kesim ayı; İSKİ'de kullanıcı "bilinmiyor" der
+        $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satir(1)['id']}", ['fatura' => ['saglayici_id' => $this->s['enerjisa'], 'secildi' => true]])->assertOk()
+            ->assertJsonPath('islem.fatura_onerisi.hizmet_donemi', '2026-11')->assertJsonPath('islem.fatura_onerisi.donem_kaynagi', 'kesim');
+        $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satir(2)['id']}", ['fatura' => ['secildi' => true, 'hizmet_donemi' => null]])->assertOk()
+            ->assertJsonPath('islem.fatura_onerisi.hizmet_donemi', null)->assertJsonPath('islem.fatura_onerisi.donem_kaynagi', 'kullanici');
+        $this->assertSame([], array_filter($satir(2)['fatura_onerisi']['gerekce'], fn (string $g): bool => str_contains($g, 'kesim ayı')));
+        $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satir(0)['id']}", ['fatura' => ['secildi' => true]])->assertOk();
+
+        // Kesim değişince seçilmemiş dönemler izler, kullanıcının kararı kalır; onayda da aynısı
+        $this->putJson("/api/v1/aile/ekstreler/{$id}", ['kesim_tarihi' => '2026-10-13'])->assertOk();
+        $this->assertSame([['2026-10', 'kesim'], ['2026-10', 'kesim'], [null, 'kullanici']], [$donem(0), $donem(1), $donem(2)]);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.fatura', 3);
+        $this->assertSame([[$this->s['igdas'], '2026-10', 'kesim'], [$this->s['enerjisa'], '2026-10', 'kesim'], [$this->s['iski'], null, null]],
+            Fatura::orderBy('id')->get()->map(fn (Fatura $f): array => [$f->saglayici_id, $f->hizmet_donemi, $f->donem_kaynagi])->all());
+    }
+
+    public function test_donemi_bilinmeyen_fatura_ekstre_satirina_baglaninca_kesim_ayini_alir(): void
+    {
+        $id = $this->ekstreYukle([['05.11.2026', 'MARKET A', '100,00'], ['06.11.2026', 'MARKET B', '200,00']], '13.11.2026');
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk();
+        [$a, $b] = KartIslemi::where('ekstre_id', $id)->orderBy('sira')->pluck('id')->all();
+        $donemsiz = fn (): int => $this->postJson('/api/v1/aile/faturalar', ['saglayici_id' => $this->s['enerjisa'], 'tutar' => 100, 'durum' => 'bekliyor'])
+            ->assertCreated()->json('fatura.id');
+
+        $this->postJson('/api/v1/aile/faturalar/'.$donemsiz().'/bagla', ['kart_islemi_id' => $a])->assertOk()
+            ->assertJsonPath('fatura.hizmet_donemi', '2026-11')->assertJsonPath('fatura.donem_kaynagi', 'kesim');
+        // Enerjisa'nın Kasım faturası artık var: ikincisi dönemsiz kalır (aynı dönem iki kez olmaz)
+        $this->postJson('/api/v1/aile/faturalar/'.$donemsiz().'/bagla', ['kart_islemi_id' => $b])->assertOk()
+            ->assertJsonPath('fatura.hizmet_donemi', null);
+    }
+
+    public function test_kural_oncesi_donemsiz_faturalar_kesim_ayini_alir(): void
+    {
+        $id = $this->ekstreYukle([['05.10.2026', 'ISKI SU FATURA', '300,00'], ['06.10.2026', 'IGDAS OTOMATIK ODEME', '800,00']]);
+        foreach ($this->getJson("/api/v1/aile/ekstreler/{$id}")->json('satirlar') as $s) {
+            $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$s['id']}", ['fatura' => ['secildi' => true]])->assertOk();
+        }
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.fatura', 2);
+        // Kural öncesindeki gibi dönemleri boş; İGDAŞ'ın Kasım faturası ayrıca elle girilmiş
+        Fatura::query()->update(['hizmet_donemi' => null, 'donem_kaynagi' => null]);
+        $elle = $this->postJson('/api/v1/aile/faturalar', ['saglayici_id' => $this->s['igdas'], 'hizmet_donemi' => '2026-11', 'tutar' => 800, 'durum' => 'bekliyor'])
+            ->assertCreated()->json('fatura.id');
+
+        (require database_path('migrations/2026_11_14_000900_fill_bill_periods_from_statement_cut.php'))->up();
+
+        $this->assertSame([[$this->s['iski'], '2026-11', 'kesim'], [$this->s['igdas'], null, null], [$this->s['igdas'], '2026-11', 'kullanici']],
+            Fatura::orderBy('id')->get()->map(fn (Fatura $f): array => [$f->saglayici_id, $f->hizmet_donemi, $f->donem_kaynagi])->all());
+        $this->assertSame($elle, Fatura::orderByDesc('id')->value('id'));
     }
 
     public function test_bekleyen_faturaya_baglanir_bag_cozulur_ve_yeniden_baglanir(): void

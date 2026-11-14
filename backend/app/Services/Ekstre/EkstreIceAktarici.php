@@ -14,7 +14,6 @@ use App\Models\User;
 use App\Services\Aile\FaturaEslestirici;
 use App\Services\Aile\KartIslemKurallari;
 use App\Services\Aile\KategoriBulucu;
-use App\Support\Donem;
 use App\Support\Kurus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -154,9 +153,8 @@ class EkstreIceAktarici
                 'okuma' => $satir['okuma'],
                 'olusturan_id' => $user->id,
             ]);
-            // Fatura adayı (dönem açıklamada yoksa ekstrenin kesim ayı); kategori kuralı yoksa sağlayıcısı belli fatura
-            // Faturalar kategorisine
-            $islem->setRelation('ekstre', $ekstre);
+            // Fatura adayı (dönem açıklamada yoksa okunurken ekstrenin kesim ayı); kategori kuralı yoksa sağlayıcısı belli
+            // fatura Faturalar kategorisine
             $islem->fatura_onerisi = $this->faturalar->oner($islem);
             if ($islem->kategori_id === null && ($islem->fatura_onerisi['saglayici_id'] ?? null) !== null) {
                 $islem->kategori_id = $faturaKategorisi;
@@ -319,17 +317,18 @@ class EkstreIceAktarici
 
     /**
      * Kullanıcının fatura kararı: işaretle / kaldır, sağlayıcı seç, hizmet dönemini seç ya da bilinmiyor bırak. Önerinin
-     * gerekçesi korunur; kullanıcının seçtiği dönemin kaynağı "kullanıcı" olur.
+     * gerekçesi korunur; dönem seçilmedikçe ekstrenin kesim ayıdır, kullanıcının seçtiği ay ya da "bilinmiyor"un kaynağı
+     * "kullanıcı" olur (kesim ayı artık izlenmez).
      *
      * @param  array{secildi?: bool, saglayici_id?: int|null, hizmet_donemi?: string|null}|null  $secim
      * @return array<string, mixed>|null
      */
     private function faturaSecimi(KartIslemi $islem, ?array $secim): ?array
     {
-        $oneri = $islem->fatura_onerisi ?? [
+        $oneri = FaturaEslestirici::guncelDonem($islem->fatura_onerisi ?? [
             'guven' => 'kullanici', 'puan' => 0, 'saglayici_id' => null, 'fatura_turu_id' => null, 'adaylar' => [],
             'gerekce' => ['Faturayı siz eşleştirdiniz.'], 'hizmet_donemi' => null, 'donem_kaynagi' => null, 'otomatik' => false, 'secildi' => false,
-        ];
+        ], $islem->ekstre?->kesim_tarihi);
         if ($secim === null) {
             return [...$oneri, 'secildi' => false];
         }
@@ -342,7 +341,8 @@ class EkstreIceAktarici
         }
         if (array_key_exists('hizmet_donemi', $secim) && $secim['hizmet_donemi'] !== $oneri['hizmet_donemi']) {
             $oneri['hizmet_donemi'] = $secim['hizmet_donemi'];
-            $oneri['donem_kaynagi'] = $secim['hizmet_donemi'] !== null ? 'kullanici' : null;
+            $oneri['donem_kaynagi'] = 'kullanici';
+            $oneri = FaturaEslestirici::guncelDonem($oneri, null); // kesim ayı gerekçesi kalkar
         }
         if (array_key_exists('secildi', $secim)) {
             $oneri['secildi'] = (bool) $secim['secildi'];
@@ -394,12 +394,8 @@ class EkstreIceAktarici
                 $this->kurallar->onayla($islem, $ekstre, $kacinci);
                 $eklenen++;
 
-                $oneri = $islem->fatura_onerisi;
-                // Dönem yüklemede belirsizdi (kesim tarihi sonradan girildi): ekstrenin kesim ayı
-                if (($oneri['secildi'] ?? false) && ($oneri['hizmet_donemi'] ?? null) === null) {
-                    $oneri['hizmet_donemi'] = Donem::tarihten($ekstre->kesim_tarihi);
-                    $oneri['donem_kaynagi'] = 'kesim';
-                }
+                // Hizmet dönemi: açıklamadaki ya da kullanıcının seçtiği; yoksa ekstrenin (şimdiki) kesim ayı
+                $oneri = FaturaEslestirici::guncelDonem($islem->fatura_onerisi, $ekstre->kesim_tarihi);
                 if (($oneri['secildi'] ?? false) && ($oneri['saglayici_id'] ?? null) !== null) {
                     $this->faturalar->bagla(
                         $islem,
