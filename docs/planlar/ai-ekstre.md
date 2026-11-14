@@ -231,3 +231,31 @@ Projede bunun yarısı zaten var. `app/Services/AIStatement/*` içinde OpenAICli
 - **Canlıda:** `.env`'ye anahtar (CANLI.md).
 - **Yayın:** bu işin parçası değil. Daha önce bekleyen iki değişiklik (fatura dönemi, gelir türleri) de onayınızla yayınlanır.
 - **Kapsam dışı:** banka hesabı hareketlerinin Bütçe'ye aktarımı (sonraki iş), OCR aracı (görsel okuma yapay zekâ ile).
+
+## Mimari analiz raporu (aşama 1, 2026-11-14)
+İsteğin bölümleri ile mevcut kod karşılaştırması. **Var:** çalışıyor ve korunur. **Değişir:** genişletilir. **Yeni:** bu işte eklenir.
+
+| İstek | Durum | Nerede |
+|---|---|---|
+| A. PDF doğrudan OpenAI'ye, görsel + metin, strict şema, model `OPENAI_MODEL` | Değişir: bugün yalnızca temizlenmiş metin gidiyor | `OpenAIClient`, `StatementAnalyzer` |
+| B. Modül dosyaları | 6'sı var, 3'ü yeni (`PdfUploadService`, `DuplicateDetector`, `EkstreAiIsleyici`) | `app/Services/AIStatement/` |
+| C. PDF yükleme: MIME, uzantıya güvenmeme, boyut, özel disk, rastgele ad, SHA-256, hata durumunda dosya kalır | Var (`EkstreIceAktarici::yukle`); boyut ayarlanabilir değil, metinsiz PDF reddediliyor | → `PdfUploadService` |
+| D. Responses API, input_file + detail=high, json_schema strict, hata türleri | Hata türlerinin çoğu var (`YapayZekaHatasi`); input_file, detail, arka plan modu yok | `OpenAIClient` |
+| E. Standart JSON (bank_name … review_required; işlem alanları) | Var (v1); direction, döviz, needs_review, ayrıntılı özet ve sayfa denetimi alanları yok | `bank_statement_schema.json` v2 |
+| F. Sayfa denetimi | Var (sayfa sayısı karşılaştırması); sayfa başına inceleme / PHP sayısı / metin var mı yok | `StatementAuditService` |
+| G. Doğrulama 1–10 | Şema, tarih, tutar, para birimi, tür, sayfa, kaynak satır: var. Tekrar (çıktı içi), özet toplamları, açılış / kapanış bakiyesi, çapraz kontrol: yok | `TransactionValidator`, `DuplicateDetector`, `EkstreMutabakati` |
+| H. Tablolar, MySQL transaction, mükerrer engeli | `ekstreler` / `kart_islemleri` / `ekstre_ai_calismalari` var; transaction ve parmak izi var. Banka hesabı tablosu yok | yeni `hesap_ekstreleri` |
+| I. Arayüz: yükleme, analiz başlatma / ilerleme, banka tanıma, önizleme, JSON, hatalı satırlar, düzeltme, kategori, tekrar uyarısı, bakiye, onaylı aktarım | Önizleme, düzeltme, kategori, tekrar, mutabakat, onay var. İlerleme, JSON görünümü, inceleme kapısı, aktarım merkezi, banka hesabı önizlemesi yok | `EkstreView`, yeni görünümler |
+| J. bonusSureyya.pdf referans testi | Yok; mutabakat 1.305,73 TL tutmuyor | `tests/Fixtures/ekstre/garanti_bonus/` |
+| K. Güvenlik | Anahtar sunucuda, log yok, yetki var, PDF içi talimat uygulanmıyor. Çıktı maskeleme kısmen | `KisiselVeriTemizleyici` |
+
+**Barındırma kısıtı:** Turhost'ta kuyruk çalışanı yok, `proc_open` kapalı, cron dakikada bir.
+- Uzun çağrı web isteğinde tutulmaz: OpenAI arka plan modu (kısa oluşturma isteği `defer()` ile, yoklama durum ucu + cron).
+- Arka plan modu `store:false` ile olmazsa analiz cron'da (CLI, süre sınırı yok) senkron yapılır.
+
+**Veritabanı planı:**
+- `ekstreler.ai_cikti` (json, maskeli).
+- `ekstre_ai_calismalari`: aşama / zaman / OpenAI yanıt kimliği / kilit / onay sürümü sütunları; `ekstre_id` boş olabilir; `hesap_ekstresi_id`.
+- Yeni `hesap_ekstreleri`.
+- `KartIslemTuru`'na `bonus` / `faiz` / `vergi` (string sütun, migration yok).
+- Hepsi geri alınabilir.

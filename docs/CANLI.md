@@ -18,8 +18,12 @@ Okul sisteminden tamamen ayrıdır: ayrı klasör, ayrı veritabanı, ayrı cron
 8. 1–2 dakika sonra `finans-app/deploy/kurulum.log`'u açın: **`KURULUM TAMAM`** ve geçici şifre yazar. https://finans.yoklm.com'da giriş yapın, **Profil → Şifre değiştir**, sonra **log dosyasını silin**.
 9. **Yönetim → Fiyat kaynakları → Şimdi güncelle**: Truncgil / Yahoo / Binance "çalışıyor" görünmeli. Sonra cron her 15 dakikada günceller.
 
-## Ekstre yapay zekâ yedeği (isteğe bağlı)
-Varsayılan **kapalı**. Açmak için cPanel Dosya Yöneticisi'nde `finans-app/.env` dosyasına `OPENAI_API_KEY=...` yazın (isteğe bağlı: `OPENAI_MODEL`, `OPENAI_TIMEOUT`); ayarlar önbelleğe alındığı için değişiklik bir sonraki yayında devreye girer. Yalnızca **kişisel satırları çıkarılmış ekstre metni** ve yalnızca kullanıcı her seferinde onay kutusunu işaretlerse gönderilir; PDF dosyası gitmez. İstekler `store: false` ile yapılır; sağlayıcının veri saklama / eğitim koşulları hesabınızın ayarlarına bağlıdır (OpenAI API verisini varsayılan olarak eğitimde kullanmaz; yine de hesabınızda kontrol edin). Anahtarı kaldırırsanız özellik kapanır.
+## Ekstre analizi: yapay zekâ (isteğe bağlı)
+Varsayılan **kapalı**. Açmak için cPanel Dosya Yöneticisi'nde `finans-app/.env` dosyasına `OPENAI_API_KEY=...` yazın. İsteğe bağlı ayarlar: `OPENAI_MODEL` (PDF görüntüsünü okuyabilen bir model), `OPENAI_PDF_DETAIL` (`high`), `OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TIMEOUT`, `EKSTRE_MAX_MB` (yükleme sınırı), `EKSTRE_AI_MAX_MB`, `EKSTRE_AI_AKTARIM` (yapay zekâ taslağının onaylanabilmesi). Ayarlar önbelleğe alındığı için değişiklik bir sonraki yayında devreye girer; anahtarı kaldırırsanız özellik kapanır.
+- **Ne gider:** kullanıcı her analizde onay kutusunu işaretlerse **PDF dosyasının kendisi** (adınız, adresiniz, maskeli kart numaranız dahil) ve kişisel satırları çıkarılmış sayfa metni. Dosya OpenAI'de saklanmaz (Files API yok), istekler `store: false`. OpenAI API verisini varsayılan olarak eğitimde kullanmaz; kötüye kullanım denetimi için sınırlı süre tutabilir (hesabınızın veri saklama ayarlarına bakın).
+- **Nasıl çalışır:** analiz arka planda yürür (OpenAI arka plan modu; dakikalık cron `ekstre:ai-isle` takılanı devralır). Sonuç PHP'de doğrulanır ve her zaman taslaktır; uygulamada onaylanmadan Bütçe'ye yazılmaz.
+- **Maliyet:** her analiz, sayfa görüntüleri ve metniyle token harcar (birkaç sayfalık ekstrede birkaç kuruş–birkaç lira; modele göre değişir).
+- Banka hesabı ekstresi yalnızca önizlenir; PDF'i analizden sonra silinir.
 
 ## Yayın (güncelleme)
 Windows'ta proje kökündeki **`yayinla.bat`**'a çift tıklayın: menüden "Yayınla" ya da "Yalnızca denetle" seçilir (`yayinla.bat yayinla` / `yayinla.bat denetle` sormadan çalışır). Laragon'daki PHP 8.3 ve Composer'ı kendisi bulur, Git Bash ile aşağıdaki betiği çalıştırır. `canli-paket/ftp.env` yoksa ya da şifre boşsa dosyayı Not Defteri'nde açar. GitHub'a gönderilmemiş commit varsa uyarır (yayından sonra `git push`).
