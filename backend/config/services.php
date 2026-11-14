@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    // Ekstre yapay zekâ yedeği (varsayılan kapalı: anahtar boşsa özellik yok). Yalnızca kişisel satırları çıkarılmış
+    // metin ve yalnızca kullanıcı onayıyla gönderilir.
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4.1'),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 120),
+        'url' => env('OPENAI_URL', 'https://api.openai.com/v1/responses'),
+    ],
+
 ];

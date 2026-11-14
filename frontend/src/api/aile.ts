@@ -187,7 +187,7 @@ export interface Ekstre {
   donem_borcu: number | null
   asgari_odeme: number | null
   /** alan => pdf | kullanici | hesaplandi (asgari ödeme: dönem borcu × kart oranı) */
-  alan_kaynaklari: Record<string, 'pdf' | 'kullanici' | 'hesaplandi'>
+  alan_kaynaklari: Record<string, 'pdf' | 'kullanici' | 'hesaplandi' | 'ai'>
   okunamayan: string[]
   odendi: boolean
   dosya_var: boolean
@@ -473,13 +473,24 @@ export const aileApi = {
   },
   ekstre: (id: number) =>
     http
-      .get<{ ekstre: Ekstre; kart: Kart; satirlar: KartIslemi[] }>(`/aile/ekstreler/${id}`)
+      .get<{ ekstre: Ekstre; kart: Kart; satirlar: KartIslemi[]; ai_acik?: boolean }>(
+        `/aile/ekstreler/${id}`,
+      )
       .then((r) => r.data),
   ekstreGuncelle: (id: number, veri: Partial<Record<string, string | number | boolean | null>>) =>
     http.put<{ ekstre: Ekstre }>(`/aile/ekstreler/${id}`, veri).then((r) => r.data),
   ekstreSatiri: (ekstreId: number, islemId: number, veri: Record<string, unknown>) =>
     http
       .put<{ islem: KartIslemi }>(`/aile/ekstreler/${ekstreId}/satirlar/${islemId}`, veri)
+      .then((r) => r.data),
+  /** Yapay zekâ yedeği: yalnızca kullanıcının açık onayıyla; satırları taslak olarak yeniler */
+  ekstreYapayZeka: (id: number) =>
+    http
+      .post<{
+        ekstre: Ekstre
+        ozet: { satir: number; reddedilen: number }
+        message: string
+      }>(`/aile/ekstreler/${id}/yapay-zeka`, { onay: true })
       .then((r) => r.data),
   ekstreOnayla: (id: number) =>
     http
@@ -560,6 +571,8 @@ export interface EkstreDenetimi {
   fark: string | null
   kontroller: EkstreKontrolu[]
   teshis?: EkstreTeshisi | null
+  /** Yapay zekâ yedeği çalıştıysa: sayfa denetimi ve doğrulamadan geçmeyen satırlar */
+  ai?: EkstreAiDenetimi | null
 }
 
 /** Tanınan banka profilleri; yoksa "genel" */
@@ -580,4 +593,26 @@ export interface EkstreTeshisi {
   okunmayan_tarihli_satir: number
   nedenler: string[]
   ornekler: string[]
+}
+
+export interface EkstreAiDenetimi {
+  model: string
+  banka: string
+  inceleme_gerekli: boolean
+  uyarilar: string[]
+  bonus_hareketi: number
+  reddedilen: { neden: string; kaynak: string; sayfa: number }[]
+  sayfa_denetimi: {
+    pdf_sayfa: number
+    analiz_edilen_sayfa: number
+    sayfa_uyusuyor: boolean
+    sayfalar: {
+      sayfa: number
+      islem_tablosu_var: boolean
+      bulunan_islem: number
+      ayristirilan_islem: number
+      inceleme_gereken: number
+      durum: string
+    }[]
+  }
 }

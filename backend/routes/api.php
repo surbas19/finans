@@ -84,6 +84,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::delete('ekstreler/{ekstre}', [EkstreController::class, 'destroy'])->name('ekstreler.destroy');
             Route::get('ekstreler/{ekstre}/dosya', [EkstreController::class, 'dosya'])->name('ekstreler.dosya');
             Route::put('ekstreler/{ekstre}/satirlar/{islem}', [EkstreController::class, 'satirGuncelle'])->name('ekstreler.satirlar.update');
+            Route::post('ekstreler/{ekstre}/yapay-zeka', [EkstreController::class, 'yapayZeka'])->middleware('throttle:ekstre')->name('ekstreler.yapay-zeka');
             Route::post('ekstreler/{ekstre}/onayla', [EkstreController::class, 'onayla'])->name('ekstreler.onayla');
 
             Route::get('fatura-turleri', [SaglayiciController::class, 'turler'])->name('fatura-turleri.index');

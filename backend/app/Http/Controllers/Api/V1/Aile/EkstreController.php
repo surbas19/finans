@@ -6,8 +6,13 @@ use App\Enums\EkstreDurumu;
 use App\Enums\KartIslemTuru;
 use App\Http\Controllers\Controller;
 use App\Models\Ekstre;
+use App\Models\EkstreAiCalismasi;
 use App\Models\Kart;
 use App\Models\KartIslemi;
+use App\Services\AIStatement\OpenAIClient;
+use App\Services\AIStatement\StatementAnalyzer;
+use App\Services\AIStatement\StatementImporter;
+use App\Services\AIStatement\YapayZekaHatasi;
 use App\Services\Ekstre\EkstreIceAktarici;
 use App\Support\Donem;
 use Illuminate\Http\JsonResponse;
@@ -72,6 +77,7 @@ class EkstreController extends Controller
         return response()->json([
             'ekstre' => $ekstre->ozet(),
             'kart' => $ekstre->kart->ozet(),
+            'ai_acik' => app(OpenAIClient::class)->acikMi(),
             'satirlar' => $islemler->map(fn (KartIslemi $i): array => [
                 ...$i->ozet(),
                 'tekrar' => $i->tekrar_islem_id && isset($tekrarlar[$i->tekrar_islem_id])
@@ -149,6 +155,41 @@ class EkstreController extends Controller
             'message' => "{$rapor['eklenen']} satır eklendi, {$rapor['atlanan']} satır dışarıda bırakıldı"
                 .($rapor['tekrar'] > 0 ? " ({$rapor['tekrar']} tekrar)" : '')
                 .($rapor['fatura'] > 0 ? ", {$rapor['fatura']} fatura bağlandı" : '').'.',
+        ]);
+    }
+
+    /**
+     * Yapay zekâ yedeği: yalnızca incelemedeki ekstre, yalnızca kullanıcının o istekteki açık onayıyla. PDF'in kendisi
+     * değil, kişisel satırları çıkarılmış metin dış servise gider. Sonuç satırları taslak olarak yeniler (finans
+     * hareketi yazılmaz); hata olursa ekstre olduğu gibi kalır. Çalışma kaydı içeriksizdir.
+     */
+    public function yapayZeka(Request $request, Ekstre $ekstre, StatementAnalyzer $analizci, StatementImporter $aktarici, OpenAIClient $istemci): JsonResponse
+    {
+        Gate::authorize('hane-kaydi', $ekstre);
+        $request->validate(['onay' => ['accepted']], ['onay.accepted' => "Ekstre metninin (kişisel satırlar çıkarılarak) OpenAI'a gönderilmesini onaylayın."]);
+        if (! $istemci->acikMi()) {
+            throw ValidationException::withMessages(['ekstre' => YapayZekaHatasi::kapali()->getMessage()]);
+        }
+        if ($ekstre->durum !== EkstreDurumu::Taslak) {
+            throw ValidationException::withMessages(['ekstre' => 'Yapay zekâ yalnızca incelemedeki (onaylanmamış) ekstrede kullanılır.']);
+        }
+
+        $baslangic = hrtime(true);
+        $kayit = ['hane_id' => $ekstre->hane_id, 'ekstre_id' => $ekstre->id, 'user_id' => $request->user()->id, 'model' => (string) config('services.openai.model'), 'sayfa_sayisi' => (int) $ekstre->sayfa_sayisi];
+        try {
+            $analiz = $analizci->analiz($ekstre);
+            $guncel = $aktarici->uygula($ekstre, $request->user(), $analiz);
+        } catch (YapayZekaHatasi $e) {
+            EkstreAiCalismasi::create([...$kayit, 'durum' => 'hata', 'hata_kodu' => $e->kod, 'sure_ms' => (int) ((hrtime(true) - $baslangic) / 1e6)]);
+
+            throw ValidationException::withMessages(['ekstre' => $e->getMessage()]);
+        }
+        EkstreAiCalismasi::create([...$kayit, 'durum' => 'basarili', 'kabul_satir' => count($analiz['kabul']), 'reddedilen_satir' => count($analiz['reddedilen']), 'sure_ms' => (int) ((hrtime(true) - $baslangic) / 1e6)]);
+
+        return response()->json([
+            'ekstre' => $guncel->ozet(),
+            'ozet' => ['satir' => count($analiz['kabul']), 'reddedilen' => count($analiz['reddedilen'])],
+            'message' => count($analiz['kabul']).' satır yapay zekâ ile okundu'.($analiz['reddedilen'] !== [] ? ', '.count($analiz['reddedilen']).' satır doğrulamadan geçmedi' : '').'; incelemeden sonra onaylayın.',
         ]);
     }
 

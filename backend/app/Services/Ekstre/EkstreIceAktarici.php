@@ -118,8 +118,22 @@ class EkstreIceAktarici
             'olusturan_id' => $user->id,
         ]);
 
+        $this->satirlariYaz($ekstre, $user, $kart, $sonuc['satirlar']);
+        $this->tekrarlariIsaretle($ekstre, disaridaBirak: true);
+
+        return $ekstre;
+    }
+
+    /**
+     * Ayrıştırılmış satırları taslak kart işlemi olarak yazar (PDF okuyucu ve yapay zekâ yedeği aynı yolu kullanır):
+     * kategori kuralı, fatura adayı (dönem açıklamada yoksa kesim ayı), kategori yoksa fatura kategorisi.
+     *
+     * @param  list<array<string, mixed>>  $satirlar
+     */
+    public function satirlariYaz(Ekstre $ekstre, User $user, Kart $kart, array $satirlar): void
+    {
         $faturaKategorisi = HarcamaKategorisi::where('hane_id', $user->hane_id)->where('fatura', true)->value('id');
-        foreach ($sonuc['satirlar'] as $sira => $satir) {
+        foreach ($satirlar as $sira => $satir) {
             $islem = new KartIslemi([
                 'hane_id' => $user->hane_id,
                 'kart_id' => $kart->id,
@@ -149,9 +163,24 @@ class EkstreIceAktarici
             }
             $islem->save();
         }
-        $this->tekrarlariIsaretle($ekstre, disaridaBirak: true);
+    }
 
-        return $ekstre;
+    /**
+     * Taslak ekstrenin satırlarını verilenlerle değiştirir (yapay zekâ yedeği). Onaylı ekstreye dokunulmaz.
+     *
+     * @param  list<array<string, mixed>>  $satirlar
+     */
+    public function satirlariYenile(Ekstre $ekstre, User $user, array $satirlar): void
+    {
+        if ($ekstre->durum !== EkstreDurumu::Taslak) {
+            throw ValidationException::withMessages(['ekstre' => 'Yalnızca incelemedeki (taslak) ekstrenin satırları yenilenir.']);
+        }
+        DB::transaction(function () use ($ekstre, $user, $satirlar): void {
+            $ekstre->islemler()->get()->each(fn (KartIslemi $i) => $this->faturalar->islemCikti($i));
+            $ekstre->islemler()->delete();
+            $this->satirlariYaz($ekstre, $user, $ekstre->kart, $satirlar);
+            $this->tekrarlariIsaretle($ekstre, disaridaBirak: true);
+        });
     }
 
     /**
@@ -199,7 +228,7 @@ class EkstreIceAktarici
      *
      * @param  list<array<string, mixed>>  $satirlar
      */
-    private function kalanTaksit(array $satirlar): ?string
+    public function kalanTaksit(array $satirlar): ?string
     {
         $tutarlar = array_filter(array_column($satirlar, 'taksit_kalan'), fn ($t): bool => $t !== null);
 

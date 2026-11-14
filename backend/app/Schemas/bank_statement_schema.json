@@ -1,0 +1,115 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bank_name", "statement_type", "account", "period", "summary", "transactions", "installments", "bonus_transactions", "page_audit", "warnings", "review_required"],
+  "properties": {
+    "bank_name": { "type": "string" },
+    "statement_type": { "type": "string", "enum": ["credit_card", "bank_account", "unknown"] },
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "currency"],
+      "properties": {
+        "label": { "type": ["string", "null"] },
+        "currency": { "type": "string" }
+      }
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_date", "cut_date", "due_date"],
+      "properties": {
+        "start_date": { "type": ["string", "null"] },
+        "cut_date": { "type": ["string", "null"] },
+        "due_date": { "type": ["string", "null"] }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["previous_balance", "total_due", "min_payment", "total_purchases", "total_payments", "total_fees_interest"],
+      "properties": {
+        "previous_balance": { "type": ["number", "null"] },
+        "total_due": { "type": ["number", "null"] },
+        "min_payment": { "type": ["number", "null"] },
+        "total_purchases": { "type": ["number", "null"] },
+        "total_payments": { "type": ["number", "null"] },
+        "total_fees_interest": { "type": ["number", "null"] }
+      }
+    },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["date", "description", "amount", "currency", "transaction_type", "balance", "source_page", "source_text", "confidence", "installment_details"],
+        "properties": {
+          "date": { "type": "string", "description": "YYYY-MM-DD" },
+          "description": { "type": "string" },
+          "amount": { "type": "number", "description": "Mutlak değer, TL" },
+          "currency": { "type": "string" },
+          "transaction_type": { "type": "string", "enum": ["purchase", "payment", "refund", "fee_interest", "cash_advance", "transfer", "bonus_redemption"] },
+          "balance": { "type": ["number", "null"] },
+          "source_page": { "type": "integer" },
+          "source_text": { "type": "string", "description": "Satırın PDF metnindeki aynen hali" },
+          "confidence": { "type": "number" },
+          "installment_details": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["number", "count", "total_amount", "remaining_amount"],
+            "properties": {
+              "number": { "type": ["integer", "null"] },
+              "count": { "type": ["integer", "null"] },
+              "total_amount": { "type": ["number", "null"] },
+              "remaining_amount": { "type": ["number", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "installments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "installment_number", "installment_count", "installment_amount", "source_page"],
+        "properties": {
+          "description": { "type": "string" },
+          "installment_number": { "type": ["integer", "null"] },
+          "installment_count": { "type": ["integer", "null"] },
+          "installment_amount": { "type": ["number", "null"] },
+          "source_page": { "type": "integer" }
+        }
+      }
+    },
+    "bonus_transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["date", "description", "bonus_amount", "source_page"],
+        "properties": {
+          "date": { "type": ["string", "null"] },
+          "description": { "type": "string" },
+          "bonus_amount": { "type": "number" },
+          "source_page": { "type": "integer" }
+        }
+      }
+    },
+    "page_audit": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "has_transaction_table", "found_transactions"],
+        "properties": {
+          "page": { "type": "integer" },
+          "has_transaction_table": { "type": "boolean" },
+          "found_transactions": { "type": "integer" }
+        }
+      }
+    },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "review_required": { "type": "boolean" }
+  }
+}
