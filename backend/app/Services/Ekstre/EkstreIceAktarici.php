@@ -43,6 +43,7 @@ class EkstreIceAktarici
         private KategoriBulucu $kategoriler,
         private FaturaEslestirici $faturalar,
         private EkstreMutabakati $mutabakat,
+        private EkstreTeshisi $teshis,
     ) {}
 
     /** Hanede aynı dosya daha önce yüklendiyse o ekstre */
@@ -73,6 +74,7 @@ class EkstreIceAktarici
             throw ValidationException::withMessages(['dosya' => $e->getMessage()]);
         }
         $sonuc = $this->ayristirici->ayristir($metin['sayfalar']);
+        $sonuc['teshis'] = $this->teshis->olustur($metin['sayfalar'], $sonuc);
 
         $yol = 'ekstreler/'.$user->hane_id.'/'.Str::uuid()->toString().'.pdf';
         Storage::disk(self::DISK)->put($yol, $icerik);
@@ -106,7 +108,7 @@ class EkstreIceAktarici
             'alan_kaynaklari' => $kaynaklar,
             'okunamayan' => $okunamayan,
             'banka_profili' => $sonuc['profil'] ?? null,
-            'denetim' => $this->mutabakat->denetle($sonuc['alanlar'], $sonuc['ozet'] ?? [], $sonuc['satirlar']),
+            'denetim' => [...$this->mutabakat->denetle($sonuc['alanlar'], $sonuc['ozet'] ?? [], $sonuc['satirlar']), ...($sonuc['teshis'] ? ['teshis' => $sonuc['teshis']] : [])],
             'kalan_taksit' => $this->kalanTaksit($sonuc['satirlar']),
             'dosya_yolu' => $yol,
             'dosya_adi' => mb_substr($dosya->getClientOriginalName(), 0, 190),

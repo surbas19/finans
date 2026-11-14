@@ -249,6 +249,38 @@ function sil(): void {
           </p>
         </div>
 
+        <!-- "Neden okunamadı?": 0 satır ya da tanınmayan banka -->
+        <div
+          v-if="ekstre.denetim?.teshis"
+          data-test="teshis"
+          class="mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-amber-900"
+        >
+          <p class="font-semibold">Okuma teşhisi</p>
+          <p class="mt-1">
+            {{ ekstre.denetim.teshis.sayfa_sayisi }} sayfa,
+            {{ ekstre.denetim.teshis.metin_satiri }} metin satırı,
+            {{ ekstre.denetim.teshis.tarihli_satir }} tarihli satır,
+            {{ ekstre.denetim.teshis.okunan_satir }} işlem okundu.
+          </p>
+          <ul class="mt-1 list-disc pl-4">
+            <li v-for="n in ekstre.denetim.teshis.nedenler" :key="n">{{ n }}</li>
+          </ul>
+          <template v-if="ekstre.denetim.teshis.ornekler.length">
+            <p class="mt-2 font-semibold">Örnek satırlar (rakamlar gizlendi)</p>
+            <p
+              v-for="o in ekstre.denetim.teshis.ornekler"
+              :key="o"
+              class="mt-0.5 truncate font-mono text-[11px]"
+            >
+              {{ o }}
+            </p>
+          </template>
+          <p class="mt-2">
+            Satırları kartın sayfasından elle ekleyebilirsiniz; bu bankanın düzeni için bu bilgiyi
+            geliştiriciye iletin.
+          </p>
+        </div>
+
         <p class="mt-3 rounded-2xl bg-surface-50 p-3 text-xs text-surface-600">
           <strong>İşlem tarihi</strong>: harcamanın yapıldığı gün (aylık özette bu aya yazılır;
           taksitler ekstrenin ayına). <strong>Kesim</strong>: ekstrenin kapandığı gün.

@@ -273,6 +273,26 @@ class EkstreTest extends TestCase
             ->assertJsonPath('ekstre.denetim.durum', 'tutmuyor')->assertJsonPath('ekstre.denetim.fark', '-100.00');
     }
 
+    public function test_sifir_satirda_teshis_nedeni_ve_maskeli_ornek_verir(): void
+    {
+        Log::spy();
+        $pdf = OrnekPdf::yaz([[
+            'ORNEK BANKA KREDI KARTI EKSTRESI',
+            [40 => 'Hesap Kesim Tarihi', 200 => '10.11.2026'],
+            [40 => '2026-10-15', 110 => 'MIGROS KADIKOY', 450 => '1.234,56'],
+        ]]);
+        $cevap = $this->yukle($pdf)->assertCreated()->assertJsonPath('ozet.satir', 0)
+            ->assertJsonPath('ekstre.denetim.teshis.banka_taninmadi', true)
+            ->assertJsonPath('ekstre.denetim.teshis.tarihli_satir', 0);
+        $teshis = $cevap->json('ekstre.denetim.teshis');
+        $this->assertStringContainsString('tarih biçimi desteklenmiyor', implode(' ', $teshis['nedenler']));
+        $this->assertNotEmpty($teshis['ornekler']);
+        $this->assertDoesNotMatchRegularExpression('/\d/', implode(' ', $teshis['ornekler']));
+        // Satır okunan, banka tanınan ekstrede teşhis yok
+        $this->yukle($this->ekimPdf('t'))->assertJsonPath('ekstre.denetim.teshis', null);
+        Log::shouldNotHaveReceived('info');
+    }
+
     public function test_baska_hane_ekstreye_ve_pdfe_erisemez(): void
     {
         $id = $this->yukle($this->ekimPdf())->json('ekstre.id');

@@ -559,6 +559,7 @@ export interface EkstreDenetimi {
   /** İlk uyuşmayan kontrolün farkı (TL, metin) */
   fark: string | null
   kontroller: EkstreKontrolu[]
+  teshis?: EkstreTeshisi | null
 }
 
 /** Tanınan banka profilleri; yoksa "genel" */
@@ -567,4 +568,16 @@ export const BANKA_PROFILLERI: Record<string, string> = {
   yapikredi: 'Yapı Kredi',
   enpara: 'Enpara',
   genel: 'Tanınmayan banka',
+}
+
+/** "Neden okunamadı?" teşhisi (0 satır ya da banka tanınmadığında); örnek satırlarda rakamlar `#` */
+export interface EkstreTeshisi {
+  banka_taninmadi: boolean
+  sayfa_sayisi: number
+  metin_satiri: number
+  tarihli_satir: number
+  okunan_satir: number
+  okunmayan_tarihli_satir: number
+  nedenler: string[]
+  ornekler: string[]
 }
