@@ -93,7 +93,7 @@ class GarantiProfili extends EkstreProfili
             }
             // Önceki TL+ harcama TL+ faiz TL- ödeme TL= borç TL asgari TL
             $t = self::TUTAR;
-            if (preg_match("/^{$t}\s*TL\+\s*{$t}\s*TL\+\s*{$t}\s*TL-\s*{$t}\s*TL=\s*{$t}\s*TL\s+{$t}\s*TL/", $satir, $e)) {
+            if (preg_match("/^{$t}\s*TL\s*\+\s*{$t}\s*TL\s*\+\s*{$t}\s*TL\s*-\s*{$t}\s*TL\s*=\s*{$t}\s*TL\s+{$t}\s*TL/", $satir, $e)) {
                 $sonuc += [
                     'onceki_borc' => self::decimal($e[1]),
                     'harcama_toplami' => self::decimal($e[2]),

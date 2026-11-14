@@ -126,4 +126,27 @@ describe('EkstreSatiri', () => {
     expect(kutu.text()).toContain('Eylül 2026')
     expect(w.find('input[type="checkbox"]').exists()).toBe(false)
   })
+
+  it('kesim ayı dönemi ve kalan taksit onaylı satırda görünür', async () => {
+    const oneri = {
+      guven: 'orta' as const,
+      puan: 60,
+      saglayici_id: 2,
+      fatura_turu_id: 2,
+      adaylar: [2],
+      gerekce: ['Açıklamada "IGDAS" geçiyor (İGDAŞ).'],
+      hizmet_donemi: '2026-11',
+      donem_kaynagi: 'kesim' as const,
+      otomatik: false,
+      secildi: true,
+    }
+    const w = await kur(
+      satir({ fatura_onerisi: oneri, taksit_no: 3, taksit_sayisi: 9, taksit_kalan: 10546.8 }),
+      false,
+    )
+    // Onaylı ekstrede (düzenleme yok) yalnızca dönem ve kalan taksit; "kesim ayından" notu düzenlenebilir modda
+    expect(w.text()).toContain('Kasım 2026')
+    expect(w.text()).toContain('taksit 3/9')
+    expect(w.text()).toContain('kalan')
+  })
 })

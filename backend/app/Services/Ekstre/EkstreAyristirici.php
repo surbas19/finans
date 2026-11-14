@@ -275,7 +275,8 @@ class EkstreAyristirici
             }
         }
         // Yalnızca tarih aralığı / sayfa no olan satırlar
-        if (! preg_match('/[A-ZÇĞİÖŞÜ]{2,}/u', $sade)) {
+        // (en az iki harf: "G.E. 0000…" gibi kısa açıklamalar da işlemdir)
+        if (preg_match_all('/[A-ZÇĞİÖŞÜ]/u', $sade) < 2) {
             return null;
         }
 

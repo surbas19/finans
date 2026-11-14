@@ -22,7 +22,7 @@ class Ekstre extends Model
 
     protected $fillable = [
         'hane_id', 'kart_id', 'durum', 'donem_baslangic', 'kesim_tarihi', 'son_odeme_tarihi', 'donem_borcu',
-        'asgari_odeme', 'alan_kaynaklari', 'okunamayan', 'odendi', 'onayli_kesim_tarihi', 'dosya_yolu', 'dosya_adi',
+        'asgari_odeme', 'alan_kaynaklari', 'okunamayan', 'banka_profili', 'denetim', 'kalan_taksit', 'odendi', 'onayli_kesim_tarihi', 'dosya_yolu', 'dosya_adi',
         'dosya_boyutu', 'sayfa_sayisi', 'dosya_ozeti', 'olusturan_id', 'onaylayan_id', 'onaylandi_at',
     ];
 
@@ -41,6 +41,8 @@ class Ekstre extends Model
             'asgari_odeme' => 'decimal:2',
             'alan_kaynaklari' => 'array',
             'okunamayan' => 'array',
+            'denetim' => 'array',
+            'kalan_taksit' => 'decimal:2',
             'odendi' => 'boolean',
             'onaylandi_at' => 'datetime',
         ];
@@ -86,6 +88,9 @@ class Ekstre extends Model
             'asgari_odeme' => $this->asgari_odeme !== null ? Kurus::tl(Kurus::kurus($this->asgari_odeme)) : null,
             'alan_kaynaklari' => $this->alan_kaynaklari ?? [],
             'okunamayan' => $this->okunamayan ?? [],
+            'banka_profili' => $this->banka_profili,
+            'denetim' => $this->denetim,
+            'kalan_taksit' => $this->kalan_taksit !== null ? Kurus::tl(Kurus::kurus($this->kalan_taksit)) : null,
             'odendi' => $this->odendi,
             'dosya_var' => $this->dosya_yolu !== null,
             'dosya_adi' => $this->dosya_adi,

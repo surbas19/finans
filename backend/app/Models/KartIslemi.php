@@ -20,7 +20,7 @@ class KartIslemi extends Model
 
     protected $fillable = [
         'hane_id', 'kart_id', 'ekstre_id', 'sira', 'durum', 'islem_tarihi', 'aciklama', 'tutar', 'tur', 'taksit_no',
-        'taksit_sayisi', 'taksit_toplam', 'iade_islem_id', 'kategori_id', 'rapor_donemi', 'parmak_izi', 'tekrar_islem_id',
+        'taksit_sayisi', 'taksit_toplam', 'taksit_kalan', 'iade_islem_id', 'kategori_id', 'rapor_donemi', 'parmak_izi', 'tekrar_islem_id',
         'ham_metin', 'sayfa', 'okuma', 'fatura_onerisi', 'olusturan_id',
     ];
 
@@ -35,6 +35,7 @@ class KartIslemi extends Model
             'islem_tarihi' => 'date',
             'tutar' => 'decimal:2',
             'taksit_toplam' => 'decimal:2',
+            'taksit_kalan' => 'decimal:2',
             'okuma' => 'array',
             'fatura_onerisi' => 'array',
         ];
@@ -90,6 +91,7 @@ class KartIslemi extends Model
             'taksit_no' => $this->taksit_no,
             'taksit_sayisi' => $this->taksit_sayisi,
             'taksit_toplam' => $this->taksit_toplam !== null ? Kurus::tl(Kurus::kurus($this->taksit_toplam)) : null,
+            'taksit_kalan' => $this->taksit_kalan !== null ? Kurus::tl(Kurus::kurus($this->taksit_kalan)) : null,
             'iade_islem_id' => $this->iade_islem_id,
             'kategori_id' => $this->kategori_id,
             'rapor_donemi' => $this->rapor_donemi,

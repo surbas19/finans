@@ -88,7 +88,10 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
               </span>
               · {{ KART_ISLEM_TURLERI[satir.tur].etiket }}
               <template v-if="satir.taksit_sayisi">
-                · taksit {{ satir.taksit_no }}/{{ satir.taksit_sayisi }}</template
+                · taksit {{ satir.taksit_no }}/{{ satir.taksit_sayisi
+                }}<template v-if="satir.taksit_kalan">
+                  (kalan {{ tl(satir.taksit_kalan) }})</template
+                ></template
               >
               <template v-if="aile.kategori(satir.kategori_id)">
                 · {{ aile.kategori(satir.kategori_id)!.ad }}</template

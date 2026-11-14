@@ -13,11 +13,11 @@ import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
 import EkstreSatiri from '@/components/aile/EkstreSatiri.vue'
 import EkstreSatirFormu from '@/components/aile/EkstreSatirFormu.vue'
-import { aileApi, type Ekstre, type Kart, type KartIslemi } from '@/api/aile'
+import { aileApi, BANKA_PROFILLERI, type Ekstre, type Kart, type KartIslemi } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAileStore } from '@/stores/aile'
-import { tarihMetni } from '@/utils/bicim'
+import { tarihMetni, tl } from '@/utils/bicim'
 
 /**
  * Ekstre incelemesi: PDF'den okunan dönem bilgileri (kaynağıyla) ve satırlar taslaktır. Kullanıcı PDF ile
@@ -208,6 +208,45 @@ function sil(): void {
               ><i class="pi pi-file-pdf" /> PDF'i aç</a
             >
           </div>
+        </div>
+
+        <!-- Banka tanıma ve mutabakat: PDF'in kendi toplamlarıyla satırlar tutuyor mu -->
+        <div
+          v-if="ekstre.denetim"
+          data-test="mutabakat"
+          class="mt-3 rounded-2xl p-3 text-xs"
+          :class="
+            ekstre.denetim.durum === 'tutuyor'
+              ? 'bg-emerald-50 text-emerald-800'
+              : ekstre.denetim.durum === 'tutmuyor'
+                ? 'bg-red-50 text-red-800'
+                : 'bg-surface-50 text-surface-600'
+          "
+        >
+          <p class="font-semibold">
+            {{ BANKA_PROFILLERI[ekstre.banka_profili ?? 'genel'] ?? 'Tanınmayan banka' }} ·
+            <template v-if="ekstre.denetim.durum === 'tutuyor'"
+              >mutabakat tutuyor (borç denklemi kuruşu kuruşuna)</template
+            >
+            <template v-else-if="ekstre.denetim.durum === 'tutmuyor'"
+              >mutabakat tutmuyor: {{ ekstre.denetim.fark }} TL fark. Satırları PDF'le
+              karşılaştırın; eksik ya da yanlış satır olabilir.</template
+            >
+            <template v-else>mutabakat kontrol edilemedi</template>
+          </p>
+          <ul v-if="ekstre.denetim.durum !== 'tutuyor'" class="mt-1 list-disc pl-4">
+            <li v-for="k in ekstre.denetim.kontroller" :key="k.ad">
+              {{ k.etiket }}:
+              <template v-if="k.durum === 'tutmuyor'"
+                >ekstre {{ k.beklenen }}, satırlar {{ k.bulunan }} (fark {{ k.fark }})</template
+              >
+              <template v-else-if="k.durum === 'kontrol_edilemedi'">{{ k.neden }}</template>
+              <template v-else>tutuyor</template>
+            </li>
+          </ul>
+          <p v-if="ekstre.kalan_taksit" class="mt-1">
+            Kalan taksit tutarı (gelecek dönemlere): {{ tl(ekstre.kalan_taksit) }}
+          </p>
         </div>
 
         <p class="mt-3 rounded-2xl bg-surface-50 p-3 text-xs text-surface-600">

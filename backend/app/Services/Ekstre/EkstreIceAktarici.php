@@ -42,6 +42,7 @@ class EkstreIceAktarici
         private KartIslemKurallari $kurallar,
         private KategoriBulucu $kategoriler,
         private FaturaEslestirici $faturalar,
+        private EkstreMutabakati $mutabakat,
     ) {}
 
     /** Hanede aynı dosya daha önce yüklendiyse o ekstre */
@@ -104,6 +105,9 @@ class EkstreIceAktarici
             ...$alanlar,
             'alan_kaynaklari' => $kaynaklar,
             'okunamayan' => $okunamayan,
+            'banka_profili' => $sonuc['profil'] ?? null,
+            'denetim' => $this->mutabakat->denetle($sonuc['alanlar'], $sonuc['ozet'] ?? [], $sonuc['satirlar']),
+            'kalan_taksit' => $this->kalanTaksit($sonuc['satirlar']),
             'dosya_yolu' => $yol,
             'dosya_adi' => mb_substr($dosya->getClientOriginalName(), 0, 190),
             'dosya_boyutu' => $dosya->getSize(),
@@ -127,6 +131,7 @@ class EkstreIceAktarici
                 'taksit_no' => $satir['taksit_no'],
                 'taksit_sayisi' => $satir['taksit_sayisi'],
                 'taksit_toplam' => $satir['taksit_toplam'],
+                'taksit_kalan' => $satir['taksit_kalan'] ?? null,
                 'kategori_id' => $this->kategoriler->bul((int) $user->hane_id, $satir['aciklama']),
                 'ham_metin' => mb_substr($satir['ham'], 0, 1000),
                 'sayfa' => $satir['sayfa'],
@@ -185,6 +190,18 @@ class EkstreIceAktarici
         }
 
         return $sonuc;
+    }
+
+    /**
+     * Satırlardaki "kalan taksit tutarı"nın toplamı (bankalar yazıyorsa); hiçbiri yazmıyorsa null.
+     *
+     * @param  list<array<string, mixed>>  $satirlar
+     */
+    private function kalanTaksit(array $satirlar): ?string
+    {
+        $tutarlar = array_filter(array_column($satirlar, 'taksit_kalan'), fn ($t): bool => $t !== null);
+
+        return $tutarlar === [] ? null : Kurus::decimal(array_sum(array_map(fn ($t): int => Kurus::kurus($t), $tutarlar)));
     }
 
     /** Dönem borcu × kartın asgari oranı (%, varsayılan 40), kuruşa yarıdan yukarı yuvarlanır */

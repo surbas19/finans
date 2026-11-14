@@ -8,10 +8,10 @@
 - [x] 1. `MetinNormalizer` (kod sayfası, ay adları) + genel profilde `+` alacak / puan sütunu
 - [x] 2. `BankaTanici` + Garanti / Yapı Kredi / Enpara profilleri
 - [x] 3. Fatura dönemi = kesim ayı; asgari = borç × `kartlar.asgari_oran` (migration, kart formu)
-- [ ] 4. `EkstreMutabakati` + migration (`banka_profili`, `denetim`, `kalan_taksit`, `taksit_kalan`) + inceleme şeridi
+- [x] 4. `EkstreMutabakati` + migration (`banka_profili`, `denetim`, `kalan_taksit`, `taksit_kalan`) + inceleme şeridi
 - [ ] 5. `EkstreTeshisi` + "0 satır — neden?" kutusu
 - [ ] 6. Tüm testler, CLAUDE.md, ILERLEME, bu kaydı sil, yayın
 
-**Sıradaki adım:** 4 (mutabakat denetimi + `banka_profili`, `denetim`, `kalan_taksit`, `taksit_kalan` kayıtları + inceleme şeridi).
+**Sıradaki adım:** 5 (`EkstreTeshisi` + "0 satır, neden?" kutusu), sonra 6 (onaylı AI yedeği), 7 (yayın). Açık: bonusSureyya.pdf mutabakatı 1.305,73 TL tutmuyor (Garanti "-" ekli bonus satırlarının yorumu ya da bankanın toplamı; PDF ile satır satır karşılaştırılmalı).
 
 Gerçek PDF'ler yalnızca bu bilgisayarda (`C:\Users\surbas\Downloads`: Garanti `bonusSureyya.pdf`, Yapı Kredi `Kredi_Karti_Hesap_Ozeti_…20261015…pdf`, Enpara `10.11.2026 tarihli Enpara…pdf`); doğrulama betiği scratchpad'de (`e2e/ekstre-altin.php`), depoya girmez. Komutlar: `cd backend && php artisan migrate && php artisan test`; `cd frontend && npm run type-check && npm run lint && npx vitest run`.

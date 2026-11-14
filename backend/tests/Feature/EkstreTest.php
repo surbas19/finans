@@ -237,6 +237,42 @@ class EkstreTest extends TestCase
         $this->yukle($this->ekimPdf('c'))->assertJsonPath('ekstre.asgari_odeme', 695.93)->assertJsonPath('ekstre.alan_kaynaklari.asgari_odeme', 'pdf');
     }
 
+    public function test_yapi_kredi_duzeni_banka_tanima_mutabakat_ve_kalan_taksit(): void
+    {
+        // Yapı Kredi düzeni (uydurma veri): ay adlı tarih, "+" alacak, sağda puan, "kalan / N" ve alt satırda taksit bilgisi
+        $pdf = OrnekPdf::yaz([[
+            'YAPI VE KREDI BANKASI A.S. WORLDPUAN',
+            [40 => 'Hesap Kesim Tarihi', 200 => ': 13 Ekim 2026'],
+            [40 => 'Son Odeme Tarihi', 200 => ': 23 Ekim 2026'],
+            [40 => 'Donem Borcu', 200 => ': 1.000,00 TL'],
+            [40 => 'Islem Tarihi Islemler', 450 => 'Tutar(TL)', 520 => 'Kalan Tutar/Taksit'],
+            [40 => 'ONCEKI DONEM HESAP OZETI BORCU', 450 => '500,00'],
+            [40 => '21 Eylul 2026 ODEME-INTERNET BANKACILIGI', 450 => '+500,00'],
+            [40 => '28 Eylul 2026 MARKET ISTANBUL TR', 450 => '400,00', 540 => '4'],
+            [40 => '11 Agustos 2026 HEPSIPAY MAGAZA TR', 450 => '600,00', 520 => '3.600,00 / 6'],
+            [40 => "6.000,00 TL'lik islemin 3 / 9 taksidi"],
+            [40 => 'TOPLAM', 450 => '1.000,00', 540 => '3'],
+        ]]);
+
+        $cevap = $this->yukle($pdf)->assertCreated()
+            ->assertJsonPath('ozet.satir', 3)
+            ->assertJsonPath('ekstre.banka_profili', 'yapikredi')
+            ->assertJsonPath('ekstre.kesim_tarihi', '2026-10-13')
+            ->assertJsonPath('ekstre.denetim.durum', 'tutuyor')
+            ->assertJsonPath('ekstre.kalan_taksit', 3600)
+            ->assertJsonPath('ekstre.asgari_odeme', 400);
+        $satirlar = collect($this->getJson('/api/v1/aile/ekstreler/'.$cevap->json('ekstre.id'))->json('satirlar'));
+        $this->assertSame(['odeme', 'harcama', 'harcama'], $satirlar->pluck('tur')->all());
+        $this->assertSame(['2026-09-21', '2026-09-28', '2026-08-11'], $satirlar->pluck('islem_tarihi')->all());
+        $this->assertSame([3, 9, 6000, 3600], [$satirlar[2]['taksit_no'], $satirlar[2]['taksit_sayisi'], $satirlar[2]['taksit_toplam'], $satirlar[2]['taksit_kalan']]);
+        $this->assertSame('MARKET ISTANBUL TR', $satirlar[1]['aciklama']);
+
+        // Aynı ekstre, borcu tutmayan: uyuşmazlık engellemez ama farkıyla görünür
+        $bozuk = str_replace('1.000,00 TL', '1.100,00 TL', $pdf);
+        $this->yukle($bozuk, 'bozuk.pdf')->assertCreated()
+            ->assertJsonPath('ekstre.denetim.durum', 'tutmuyor')->assertJsonPath('ekstre.denetim.fark', '-100.00');
+    }
+
     public function test_baska_hane_ekstreye_ve_pdfe_erisemez(): void
     {
         $id = $this->yukle($this->ekimPdf())->json('ekstre.id');

@@ -196,6 +196,11 @@ export interface Ekstre {
   onaylandi_at: string | null
   olusturuldu: string | null
   satir_sayisi?: number
+  banka_profili?: string | null
+  /** PDF okumasının mutabakatı: borç denklemi ve ekstre özet toplamları */
+  denetim?: EkstreDenetimi | null
+  /** Satırlardaki "kalan taksit" tutarlarının toplamı (gelecek dönem yükümlülüğü) */
+  kalan_taksit?: number | null
 }
 
 export interface FaturaOnerisi {
@@ -224,6 +229,7 @@ export interface KartIslemi {
   taksit_no: number | null
   taksit_sayisi: number | null
   taksit_toplam: number | null
+  taksit_kalan?: number | null
   iade_islem_id: number | null
   kategori_id: number | null
   rapor_donemi: string | null
@@ -245,6 +251,7 @@ export interface KartIslemGirdisi {
   taksit_no: number | null
   taksit_sayisi: number | null
   taksit_toplam: number | null
+  taksit_kalan?: number | null
   kategori_id: number | null
   iade_islem_id: number | null
 }
@@ -535,4 +542,29 @@ export const aileApi = {
   faturaBagla: (id: number, kartIslemiId: number) =>
     http.post<{ fatura: Fatura }>(`/aile/faturalar/${id}/bagla`, { kart_islemi_id: kartIslemiId }),
   faturaCoz: (id: number) => http.post<{ fatura: Fatura }>(`/aile/faturalar/${id}/coz`),
+}
+
+export interface EkstreKontrolu {
+  ad: string
+  etiket: string
+  durum: 'tutuyor' | 'tutmuyor' | 'kontrol_edilemedi'
+  beklenen?: string
+  bulunan?: string
+  fark?: string
+  neden?: string
+}
+
+export interface EkstreDenetimi {
+  durum: 'tutuyor' | 'tutmuyor' | 'kontrol_edilemedi'
+  /** İlk uyuşmayan kontrolün farkı (TL, metin) */
+  fark: string | null
+  kontroller: EkstreKontrolu[]
+}
+
+/** Tanınan banka profilleri; yoksa "genel" */
+export const BANKA_PROFILLERI: Record<string, string> = {
+  garanti: 'Garanti BBVA',
+  yapikredi: 'Yapı Kredi',
+  enpara: 'Enpara',
+  genel: 'Tanınmayan banka',
 }
