@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
+import KisiResmi from '@/components/KisiResmi.vue'
 import AySecici from '@/components/aile/AySecici.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import GelirKaynagiFormu from '@/components/aile/GelirKaynagiFormu.vue'
@@ -155,8 +156,10 @@ function kaynakAdi(id: number | null): string {
         class="kart p-4 sm:p-5"
         :data-test="`kisi-${k.uye.id}`"
       >
-        <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 class="text-base font-bold text-surface-900">{{ k.uye.ad }}</h2>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 class="flex items-center gap-2 text-base font-bold text-surface-900">
+            <KisiResmi :ad="k.uye.ad" :resim="k.uye.resim" :renk="k.uye.renk" />{{ k.uye.ad }}
+          </h2>
           <p class="text-sm font-semibold text-surface-900 tabular-nums">{{ tl(k.toplam) }}</p>
         </div>
         <p v-if="k.turler.length" class="mb-2 text-xs text-surface-500">
