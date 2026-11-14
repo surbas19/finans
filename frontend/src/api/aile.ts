@@ -5,25 +5,12 @@ import { http } from './http'
  * arayüz yalnızca gösterir. Tutarlar TL (sayı), dönemler "YYYY-AA".
  */
 
-export type GelirTuru =
-  'maas' | 'kira' | 'serbest' | 'ek_is' | 'prim' | 'faiz_temettu' | 'emekli' | 'diger'
 export type GelirDuzeni = 'duzenli' | 'duzensiz' | 'tek_seferlik'
 export type GelirSikligi = 'aylik' | 'iki_aylik' | 'uc_aylik' | 'alti_aylik' | 'yillik'
 export type KartIslemTuru = 'harcama' | 'iade' | 'odeme' | 'transfer' | 'ucret' | 'nakit_avans'
 export type KartIslemDurumu = 'taslak' | 'onayli' | 'atlandi'
 export type FaturaDurumu = 'bekliyor' | 'odendi'
 export type EslesmeGuveni = 'yuksek' | 'orta' | 'belirsiz' | 'dusuk' | 'kullanici'
-
-export const GELIR_TURLERI: Record<GelirTuru, string> = {
-  maas: 'Maaş',
-  kira: 'Kira geliri',
-  serbest: 'Serbest çalışma',
-  ek_is: 'Ek iş',
-  prim: 'Prim / ikramiye',
-  faiz_temettu: 'Faiz / temettü',
-  emekli: 'Emekli maaşı',
-  diger: 'Diğer',
-}
 
 export const GELIR_DUZENLERI: Record<GelirDuzeni, string> = {
   duzenli: 'Düzenli',
@@ -74,10 +61,17 @@ export interface HaneBilgisi {
   ben_uye_id: number | null
 }
 
+/** Hanenin gelir türü (Maaş, Ek ders…); kullanıcı ekler */
+export interface GelirTuru {
+  id: number
+  ad: string
+  sira: number
+}
+
 export interface GelirKaynagi {
   id: number
   uye_id: number
-  tur: GelirTuru
+  gelir_turu_id: number
   ad: string
   duzen: GelirDuzeni
   siklik: GelirSikligi | null
@@ -94,7 +88,7 @@ export interface Gelir {
   id: number
   uye_id: number
   gelir_kaynagi_id: number | null
-  tur: GelirTuru
+  gelir_turu_id: number
   duzen: GelirDuzeni
   aciklama: string | null
   tutar: number
@@ -109,7 +103,7 @@ export interface Gelir {
 export interface GelirGirdisi {
   uye_id: number | null
   gelir_kaynagi_id: number | null
-  tur: GelirTuru
+  gelir_turu_id: number | null
   duzen: GelirDuzeni
   aciklama: string | null
   tutar: number | null
@@ -120,8 +114,11 @@ export interface GelirGirdisi {
   not: string | null
 }
 
-/** Kaynak formu: kişi seçilmemiş olabilir (sunucu doğrular) */
-export type GelirKaynagiGirdisi = Omit<Partial<GelirKaynagi>, 'uye_id'> & { uye_id: number | null }
+/** Kaynak formu: kişi / tür seçilmemiş olabilir (sunucu doğrular) */
+export type GelirKaynagiGirdisi = Omit<Partial<GelirKaynagi>, 'uye_id' | 'gelir_turu_id'> & {
+  uye_id: number | null
+  gelir_turu_id: number | null
+}
 
 export interface BeklenenGelir {
   kaynak: GelirKaynagi
@@ -140,7 +137,7 @@ export interface GelirOzeti extends GelirToplamlari {
   donem: string
   kisiler: (GelirToplamlari & {
     uye: HaneUyesi
-    turler: { tur: GelirTuru; etiket: string; toplam: number }[]
+    turler: { gelir_turu_id: number; etiket: string; toplam: number }[]
     beklenen_sayisi: number
   })[]
   beklenenler: BeklenenGelir[]
@@ -395,7 +392,7 @@ export const aileApi = {
     donem?: string
     yil?: number
     uye_id?: number | null
-    tur?: GelirTuru | null
+    gelir_turu_id?: number | null
   }) =>
     http
       .get<{ gelirler: Gelir[]; ozet: GelirOzeti | null }>('/aile/gelirler', {
@@ -414,6 +411,11 @@ export const aileApi = {
   kaynakGuncelle: (id: number, veri: GelirKaynagiGirdisi) =>
     http.put<{ kaynak: GelirKaynagi }>(`/aile/gelir-kaynaklari/${id}`, veri).then((r) => r.data),
   kaynakSil: (id: number) => http.delete(`/aile/gelir-kaynaklari/${id}`),
+  gelirTurleri: () =>
+    http.get<{ turler: GelirTuru[] }>('/aile/gelir-turleri').then((r) => r.data.turler),
+  gelirTuruEkle: (ad: string) =>
+    http.post<{ tur: GelirTuru }>('/aile/gelir-turleri', { ad }).then((r) => r.data.tur),
+  gelirTuruSil: (id: number) => http.delete(`/aile/gelir-turleri/${id}`),
 
   bankalar: () => http.get<{ bankalar: Banka[] }>('/aile/bankalar').then((r) => r.data.bankalar),
   bankaEkle: (ad: string) =>

@@ -11,15 +11,14 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
+import GelirTuruSecici from '@/components/aile/GelirTuruSecici.vue'
 import {
   aileApi,
   GELIR_DUZENLERI,
   GELIR_SIKLIKLARI,
-  GELIR_TURLERI,
   type GelirDuzeni,
   type GelirKaynagi,
   type GelirSikligi,
-  type GelirTuru,
 } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
@@ -39,10 +38,6 @@ const confirm = useConfirm()
 const toast = useToast()
 const { hatalar, gonderiliyor, gonder } = useFormGonder()
 
-const TURLER = (Object.keys(GELIR_TURLERI) as GelirTuru[]).map((t) => ({
-  deger: t,
-  etiket: GELIR_TURLERI[t],
-}))
 const DUZENLER = (Object.keys(GELIR_DUZENLERI) as GelirDuzeni[]).map((d) => ({
   deger: d,
   etiket: GELIR_DUZENLERI[d],
@@ -54,7 +49,7 @@ const SIKLIKLAR = (Object.keys(GELIR_SIKLIKLARI) as GelirSikligi[]).map((s) => (
 
 interface Form {
   uye_id: number | null
-  tur: GelirTuru
+  gelir_turu_id: number | null
   ad: string
   duzen: GelirDuzeni
   siklik: GelirSikligi | null
@@ -74,7 +69,7 @@ watch(gorunur, (acik) => {
   const k = props.kaynak
   form.value = {
     uye_id: k?.uye_id ?? aile.hane?.ben_uye_id ?? null,
-    tur: k?.tur ?? 'maas',
+    gelir_turu_id: k?.gelir_turu_id ?? aile.gelirTurleri[0]?.id ?? null,
     ad: k?.ad ?? '',
     duzen: k?.duzen ?? 'duzenli',
     siklik: k?.siklik ?? 'aylik',
@@ -145,14 +140,8 @@ function sil(): void {
             placeholder="Seçin"
           />
         </FormAlani>
-        <FormAlani etiket="Tür" for="kaynak-tur" :hata="hatalar.tur" zorunlu>
-          <Select
-            id="kaynak-tur"
-            v-model="form.tur"
-            :options="TURLER"
-            option-label="etiket"
-            option-value="deger"
-          />
+        <FormAlani etiket="Tür" for="kaynak-tur" :hata="hatalar.gelir_turu_id" zorunlu>
+          <GelirTuruSecici v-model="form.gelir_turu_id" input-id="kaynak-tur" />
         </FormAlani>
       </div>
       <FormAlani

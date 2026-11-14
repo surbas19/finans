@@ -11,15 +11,14 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
+import GelirTuruSecici from '@/components/aile/GelirTuruSecici.vue'
 import {
   aileApi,
   GELIR_DUZENLERI,
-  GELIR_TURLERI,
   type Gelir,
   type GelirDuzeni,
   type GelirGirdisi,
   type GelirKaynagi,
-  type GelirTuru,
 } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
@@ -45,10 +44,6 @@ const toast = useToast()
 const { hatalar, gonderiliyor, gonder } = useFormGonder()
 
 const PARA_BIRIMLERI = ['TRY', 'USD', 'EUR', 'GBP', 'CHF']
-const TURLER = (Object.keys(GELIR_TURLERI) as GelirTuru[]).map((t) => ({
-  deger: t,
-  etiket: GELIR_TURLERI[t],
-}))
 const DUZENLER = (Object.keys(GELIR_DUZENLERI) as GelirDuzeni[]).map((d) => ({
   deger: d,
   etiket: GELIR_DUZENLERI[d],
@@ -58,7 +53,7 @@ function bos(): GelirGirdisi {
   return {
     uye_id: aile.hane?.ben_uye_id ?? null,
     gelir_kaynagi_id: null,
-    tur: 'maas',
+    gelir_turu_id: aile.gelirTurleri[0]?.id ?? null,
     duzen: 'duzenli',
     aciklama: null,
     tutar: null,
@@ -82,7 +77,7 @@ watch(gorunur, (acik) => {
     ? {
         uye_id: g.uye_id,
         gelir_kaynagi_id: g.gelir_kaynagi_id,
-        tur: g.tur,
+        gelir_turu_id: g.gelir_turu_id,
         duzen: g.duzen,
         aciklama: g.aciklama,
         tutar: g.tutar,
@@ -109,7 +104,7 @@ watch(
   (id) => {
     const k = props.kaynaklar.find((x) => x.id === id)
     if (!k) return
-    form.value.tur = k.tur
+    form.value.gelir_turu_id = k.gelir_turu_id
     form.value.duzen = k.duzen
     form.value.para_birimi = k.para_birimi
     if (form.value.tutar === null && k.beklenen_tutar !== null) form.value.tutar = k.beklenen_tutar
@@ -200,14 +195,8 @@ function sil(): void {
       </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormAlani etiket="Tür" for="gelir-tur" :hata="hatalar.tur" zorunlu>
-          <Select
-            id="gelir-tur"
-            v-model="form.tur"
-            :options="TURLER"
-            option-label="etiket"
-            option-value="deger"
-          />
+        <FormAlani etiket="Tür" for="gelir-tur" :hata="hatalar.gelir_turu_id" zorunlu>
+          <GelirTuruSecici v-model="form.gelir_turu_id" input-id="gelir-tur" />
         </FormAlani>
         <FormAlani etiket="Açıklama" for="gelir-aciklama" :hata="hatalar.aciklama">
           <InputText

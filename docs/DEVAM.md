@@ -6,10 +6,10 @@
 İstek: "ek ders" gibi gelir türünü kullanıcı kendisi ekleyebilsin. Sabit enum (`GelirTuru`) → `gelir_turleri` tablosu (hane başına, varsayılan 8 tür), `gelir_turu_id`.
 
 - [x] 1. Arka uç: migration `…001000` (veri taşıma; yerelde ileri / geri / ileri denendi, sayılar tuttu), model, `/aile/gelir-turleri`, rapor (`turler[].gelir_turu_id`, `etiket`), varsayılanlar, demo, testler (118)
-- [ ] 2. Arayüz: store, `GelirTuruSecici` (formda "Yeni tür"), Ayarlar → Gelir türleri, listeler; vitest
+- [x] 2. Arayüz: store, `GelirTuruSecici` (formda "+ Yeni tür"), Ayarlar → Gelir türleri, listeler; vitest (70)
 - [ ] 3. Tüm testler, uçtan uca 360, CLAUDE.md / ILERLEME, bu kaydı sil
 
-**Sıradaki adım:** 2 (arayüz şu an eski `tur` alanını gönderiyor: gelir formu bozuk). Ayrıca yayımlanmamış: `4c6413c` (fatura dönemi = kesim ayı düzeltmesi; kullanıcı onayı bekleniyor).
+**Sıradaki adım:** 3 (uçtan uca 360: formda "Ek ders" ekle → kaydet → Gelirler / Özet; Ayarlar'da sil engeli). Ayrıca yayımlanmamış: `4c6413c` (fatura dönemi = kesim ayı düzeltmesi; kullanıcı onayı bekleniyor).
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).

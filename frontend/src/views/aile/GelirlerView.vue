@@ -12,7 +12,6 @@ import {
   aileApi,
   GELIR_DUZENLERI,
   GELIR_SIKLIKLARI,
-  GELIR_TURLERI,
   type BeklenenGelir,
   type Gelir,
   type GelirGirdisi,
@@ -86,7 +85,7 @@ function alindi(b: BeklenenGelir): void {
   gelirEkle({
     uye_id: b.kaynak.uye_id,
     gelir_kaynagi_id: b.kaynak.id,
-    tur: b.kaynak.tur,
+    gelir_turu_id: b.kaynak.gelir_turu_id,
     duzen: b.kaynak.duzen,
     tutar: b.kaynak.beklenen_tutar,
     para_birimi: b.kaynak.para_birimi,
@@ -163,7 +162,7 @@ function kaynakAdi(id: number | null): string {
           <p class="text-sm font-semibold text-surface-900 tabular-nums">{{ tl(k.toplam) }}</p>
         </div>
         <p v-if="k.turler.length" class="mb-2 text-xs text-surface-500">
-          <span v-for="(t, i) in k.turler" :key="t.tur"
+          <span v-for="(t, i) in k.turler" :key="t.gelir_turu_id"
             >{{ i ? ' · ' : '' }}{{ t.etiket }} {{ tl(t.toplam) }}</span
           >
         </p>
@@ -176,10 +175,15 @@ function kaynakAdi(id: number | null): string {
             >
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-semibold text-surface-900">
-                  {{ g.aciklama || kaynakAdi(g.gelir_kaynagi_id) || GELIR_TURLERI[g.tur] }}
+                  {{
+                    g.aciklama ||
+                    kaynakAdi(g.gelir_kaynagi_id) ||
+                    aile.gelirTuruAdi(g.gelir_turu_id)
+                  }}
                 </span>
                 <span class="block text-xs text-surface-500">
-                  {{ GELIR_TURLERI[g.tur] }} · {{ GELIR_DUZENLERI[g.duzen] }} · {{ tarih(g.tarih) }}
+                  {{ aile.gelirTuruAdi(g.gelir_turu_id) }} · {{ GELIR_DUZENLERI[g.duzen] }} ·
+                  {{ tarih(g.tarih) }}
                   <template v-if="g.para_birimi !== 'TRY'">
                     · {{ g.tutar.toLocaleString('tr-TR') }} {{ g.para_birimi }}</template
                   >
@@ -239,7 +243,8 @@ function kaynakAdi(id: number | null): string {
                 {{ k.ad }}
               </span>
               <span class="block text-xs text-surface-500">
-                <KisiEtiketi :kisi="aile.uye(k.uye_id)" /> · {{ GELIR_TURLERI[k.tur] }} ·
+                <KisiEtiketi :kisi="aile.uye(k.uye_id)" /> ·
+                {{ aile.gelirTuruAdi(k.gelir_turu_id) }} ·
                 {{ k.siklik ? GELIR_SIKLIKLARI[k.siklik] : GELIR_DUZENLERI[k.duzen] }}
                 <template v-if="!k.aktif"> · pasif</template>
               </span>

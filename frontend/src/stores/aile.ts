@@ -4,6 +4,7 @@ import {
   aileApi,
   type Banka,
   type FaturaTuru,
+  type GelirTuru,
   type HaneBilgisi,
   type Kart,
   type Kategori,
@@ -11,8 +12,8 @@ import {
 } from '@/api/aile'
 
 /**
- * Bütçe sayfalarının ortak tanımları: hane ve üyeler, bankalar, kartlar, kategoriler, fatura türleri ve
- * sağlayıcılar. Bir kez yüklenir; değişince `yukle(true)`.
+ * Bütçe sayfalarının ortak tanımları: hane ve üyeler, gelir türleri, bankalar, kartlar, kategoriler, fatura türleri
+ * ve sağlayıcılar. Bir kez yüklenir; değişince `yukle(true)`.
  */
 export const useAileStore = defineStore('aile', () => {
   const hane = ref<HaneBilgisi | null>(null)
@@ -21,6 +22,7 @@ export const useAileStore = defineStore('aile', () => {
   const kategoriler = ref<Kategori[]>([])
   const turler = ref<FaturaTuru[]>([])
   const saglayicilar = ref<Saglayici[]>([])
+  const gelirTurleri = ref<GelirTuru[]>([])
   let yukleniyor: Promise<void> | null = null
 
   function yukle(zorla = false): Promise<void> {
@@ -33,14 +35,16 @@ export const useAileStore = defineStore('aile', () => {
       aileApi.kategoriler(),
       aileApi.faturaTurleri(),
       aileApi.saglayicilar(),
+      aileApi.gelirTurleri(),
     ])
-      .then(([h, b, k, kat, t, s]) => {
+      .then(([h, b, k, kat, t, s, g]) => {
         hane.value = h
         bankalar.value = b
         kartlar.value = k
         kategoriler.value = kat
         turler.value = t
         saglayicilar.value = s
+        gelirTurleri.value = g
       })
       .finally(() => {
         yukleniyor = null
@@ -65,6 +69,8 @@ export const useAileStore = defineStore('aile', () => {
   const kategori = (id: number | null | undefined) => kategoriler.value.find((k) => k.id === id)
   const saglayici = (id: number | null | undefined) => saglayicilar.value.find((s) => s.id === id)
   const tur = (id: number | null | undefined) => turler.value.find((t) => t.id === id)
+  const gelirTuruAdi = (id: number | null | undefined) =>
+    gelirTurleri.value.find((t) => t.id === id)?.ad ?? ''
 
   return {
     hane,
@@ -73,6 +79,7 @@ export const useAileStore = defineStore('aile', () => {
     kategoriler,
     turler,
     saglayicilar,
+    gelirTurleri,
     uyeler,
     aktifUyeler,
     yukle,
@@ -84,5 +91,6 @@ export const useAileStore = defineStore('aile', () => {
     kategori,
     saglayici,
     tur,
+    gelirTuruAdi,
   }
 })

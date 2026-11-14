@@ -12,8 +12,8 @@ import { hataMesaji } from '@/api/http'
 import { useAileStore } from '@/stores/aile'
 
 /**
- * Bütçe ayarları: hane ve üyeler (girişsiz üye, ör. çocuk), bankalar, harcama kategorileri ve kuralları, fatura
- * türleri, fatura sağlayıcıları (ekstrede görünen yazımları, otomatik kayıt).
+ * Bütçe ayarları: hane ve üyeler (girişsiz üye, ör. çocuk), gelir türleri, bankalar, harcama kategorileri ve
+ * kuralları, fatura türleri, fatura sağlayıcıları (ekstrede görünen yazımları, otomatik kayıt).
  */
 const aile = useAileStore()
 const toast = useToast()
@@ -23,6 +23,7 @@ const yeniUye = ref('')
 const yeniKategori = ref('')
 const yeniKural = ref<Record<number, string>>({})
 const yeniTur = ref('')
+const yeniGelirTuru = ref('')
 const yeniDesen = ref<Record<number, string>>({})
 const yeniSaglayici = ref({
   ad: '',
@@ -76,6 +77,11 @@ async function kuralEkle(kategoriId: number): Promise<void> {
   const desen = (yeniKural.value[kategoriId] ?? '').trim()
   if (desen.length < 2) return
   if (await yap(() => aileApi.kuralEkle(kategoriId, desen))) yeniKural.value[kategoriId] = ''
+}
+
+async function gelirTuruEkle(): Promise<void> {
+  if (await yap(() => aileApi.gelirTuruEkle(yeniGelirTuru.value.trim()), 'Gelir türü eklendi'))
+    yeniGelirTuru.value = ''
 }
 
 async function turEkle(): Promise<void> {
@@ -187,6 +193,48 @@ async function desenEkle(s: Saglayici): Promise<void> {
     </section>
 
     <!-- Fatura sağlayıcıları -->
+    <!-- Gelir türleri -->
+    <section class="kart p-4 sm:p-5" data-test="gelir-turleri">
+      <h2 class="bolum-etiketi mb-1">Gelir türleri</h2>
+      <p class="mb-2 text-xs text-surface-500">
+        Gelir girerken de "+ Yeni tür" ile eklenebilir. Gelirde kullanılan tür silinmez.
+      </p>
+      <div class="flex flex-wrap gap-1.5">
+        <span
+          v-for="t in aile.gelirTurleri"
+          :key="t.id"
+          class="inline-flex items-center gap-1.5 rounded-full bg-surface-100 px-3 py-1 text-sm"
+        >
+          {{ t.ad }}
+          <button
+            type="button"
+            class="text-surface-500 hover:text-red-600"
+            :aria-label="`${t.ad} türünü sil`"
+            @click="yap(() => aileApi.gelirTuruSil(t.id), 'Gelir türü silindi')"
+          >
+            ×
+          </button>
+        </span>
+      </div>
+      <form class="mt-2 flex gap-2" @submit.prevent="gelirTuruEkle">
+        <InputText
+          v-model="yeniGelirTuru"
+          placeholder="Yeni tür (ör. Ek ders, Burs)"
+          maxlength="40"
+          class="min-w-0 flex-1"
+          aria-label="Yeni gelir türü"
+        />
+        <Button
+          type="submit"
+          icon="pi pi-plus"
+          label="Ekle"
+          severity="secondary"
+          outlined
+          :disabled="yeniGelirTuru.trim().length < 2"
+        />
+      </form>
+    </section>
+
     <section class="kart p-4 sm:p-5">
       <h2 class="bolum-etiketi mb-1">Fatura sağlayıcıları</h2>
       <p class="mb-3 text-xs text-surface-500">

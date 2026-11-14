@@ -9,7 +9,6 @@ import GelirFormu from '@/components/aile/GelirFormu.vue'
 import VeriGrafigi from '@/components/VeriGrafigi.vue'
 import {
   aileApi,
-  GELIR_TURLERI,
   type AylikOzet,
   type BeklenenGelir,
   type GelirGirdisi,
@@ -75,7 +74,7 @@ function alindi(b: BeklenenGelir): void {
   varsayilan.value = {
     uye_id: b.kaynak.uye_id,
     gelir_kaynagi_id: b.kaynak.id,
-    tur: b.kaynak.tur,
+    gelir_turu_id: b.kaynak.gelir_turu_id,
     duzen: b.kaynak.duzen,
     tutar: b.kaynak.beklenen_tutar,
     para_birimi: b.kaynak.para_birimi,
@@ -195,8 +194,8 @@ const gunMetni = (gun: number | null | undefined) =>
             {{ tl(k.duzensiz + k.tek_seferlik) }}
           </p>
           <ul v-if="k.turler.length" class="mt-2 flex flex-col gap-1 text-sm">
-            <li v-for="t in k.turler" :key="t.tur" class="flex justify-between gap-2">
-              <span class="text-surface-600">{{ GELIR_TURLERI[t.tur] }}</span>
+            <li v-for="t in k.turler" :key="t.gelir_turu_id" class="flex justify-between gap-2">
+              <span class="text-surface-600">{{ t.etiket }}</span>
               <span class="tabular-nums">{{ tl(t.toplam) }}</span>
             </li>
           </ul>
