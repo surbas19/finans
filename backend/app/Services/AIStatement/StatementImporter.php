@@ -49,7 +49,7 @@ class StatementImporter
             $satirlar = $analiz['kabul'];
             $denetim = $this->mutabakat->denetle(
                 ['donem_borcu' => $ekstre->donem_borcu !== null ? (string) $ekstre->donem_borcu : null],
-                ['onceki_borc' => self::tutar($ai['summary']['previous_balance'] ?? null)],
+                ['onceki_borc' => self::tutar($ai['summary']['previous_balance'] ?? null, eksiOlabilir: true)],
                 $satirlar,
             );
             $ekstre->forceFill([
@@ -81,8 +81,9 @@ class StatementImporter
         return is_string($deger) && preg_match('/^(20\d{2})-(\d{2})-(\d{2})$/', $deger, $e) === 1 && checkdate((int) $e[2], (int) $e[3], (int) $e[1]) ? $deger : null;
     }
 
-    private static function tutar(mixed $deger): ?string
+    /** Önceki borç fazla ödemede eksi olabilir; diğer tutarlar değil */
+    private static function tutar(mixed $deger, bool $eksiOlabilir = false): ?string
     {
-        return is_numeric($deger) && (float) $deger >= 0 && (float) $deger <= 1e10 ? Kurus::decimal((int) round(((float) $deger) * 100)) : null;
+        return is_numeric($deger) && ($eksiOlabilir || (float) $deger >= 0) && abs((float) $deger) <= 1e10 ? Kurus::decimal((int) round(((float) $deger) * 100)) : null;
     }
 }

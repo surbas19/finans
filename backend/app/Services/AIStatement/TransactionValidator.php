@@ -12,14 +12,19 @@ use App\Support\Metin;
  */
 class TransactionValidator
 {
+    /** Kredi kartı satırı: şema türü → kart işlemi türü (null: yönüne göre harcama / iade) */
     private const TURLER = [
-        'purchase' => ['harcama', false],
-        'payment' => ['odeme', true],
-        'refund' => ['iade', true],
-        'fee_interest' => ['faiz', false],
-        'cash_advance' => ['nakit_avans', false],
-        'transfer' => ['transfer', false],
-        'bonus_redemption' => ['bonus', true],
+        'purchase' => 'harcama',
+        'installment' => 'harcama',
+        'refund' => 'iade',
+        'payment' => 'odeme',
+        'bonus_redemption' => 'bonus',
+        'interest' => 'faiz',
+        'fee' => 'ucret',
+        'tax' => 'vergi',
+        'cash_advance' => 'nakit_avans',
+        'transfer' => 'transfer',
+        'other' => null,
     ];
 
     /**
@@ -39,7 +44,8 @@ class TransactionValidator
 
                 continue;
             }
-            [$tur, $alacak] = self::TURLER[$i['transaction_type']];
+            $alacak = $i['direction'] === 'credit';
+            $tur = self::TURLER[$i['transaction_type']] ?? ($alacak ? 'iade' : 'harcama');
             $taksit = $i['installment_details'];
             $uyarilar = ['Yapay zekâ okudu; kaynak satırla karşılaştırın.'];
             if ((float) $i['confidence'] < 0.7) {
@@ -57,7 +63,7 @@ class TransactionValidator
                 'taksit_sayisi' => $taksit['count'] ?? null,
                 'taksit_toplam' => isset($taksit['total_amount']) ? Kurus::decimal((int) round(((float) $taksit['total_amount']) * 100)) : null,
                 'taksit_kalan' => isset($taksit['remaining_amount']) ? Kurus::decimal((int) round(((float) $taksit['remaining_amount']) * 100)) : null,
-                'okuma' => ['alanlar' => [], 'uyarilar' => $uyarilar, 'tutar_adaylari' => []],
+                'okuma' => ['alanlar' => $i['date'] === null ? ['islem_tarihi'] : [], 'uyarilar' => $uyarilar, 'tutar_adaylari' => []],
             ];
         }
 
@@ -70,8 +76,9 @@ class TransactionValidator
      */
     private function neden(array $i, array $sayfaSade): ?string
     {
-        $tarih = $i['date'] ?? '';
-        if (! is_string($tarih) || preg_match('/^(20\d{2})-(\d{2})-(\d{2})$/', $tarih, $e) !== 1 || ! checkdate((int) $e[2], (int) $e[3], (int) $e[1])) {
+        // Tarih okunamadıysa (null) satır alınır, "okunamadı" işaretlenir; yazılmış ama geçersizse ret
+        $tarih = $i['date'] ?? null;
+        if ($tarih !== null && (! is_string($tarih) || preg_match('/^(20\d{2})-(\d{2})-(\d{2})$/', $tarih, $e) !== 1 || ! checkdate((int) $e[2], (int) $e[3], (int) $e[1]))) {
             return 'Tarih geçersiz.';
         }
         $tutar = $i['amount'] ?? null;
@@ -81,8 +88,11 @@ class TransactionValidator
         if (! in_array(strtoupper((string) ($i['currency'] ?? '')), ['TRY', 'TL'], true)) {
             return 'Para birimi TL değil.';
         }
-        if (! isset(self::TURLER[$i['transaction_type'] ?? ''])) {
-            return 'İşlem türü geçersiz.';
+        if (in_array($i['transaction_type'] ?? '', ['deposit', 'withdrawal'], true)) {
+            return 'Banka hesabı hareketi kredi kartı ekstresinde olamaz.';
+        }
+        if (! array_key_exists($i['transaction_type'] ?? '', self::TURLER) || ! in_array($i['direction'] ?? null, ['debit', 'credit'], true)) {
+            return 'İşlem türü ya da yönü geçersiz.';
         }
         $sayfa = $i['source_page'] ?? null;
         if (! is_int($sayfa) || $sayfa < 1 || $sayfa > count($sayfaSade)) {

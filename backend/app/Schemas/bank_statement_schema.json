@@ -3,38 +3,48 @@
   "additionalProperties": false,
   "required": ["bank_name", "statement_type", "account", "period", "summary", "transactions", "installments", "bonus_transactions", "page_audit", "warnings", "review_required"],
   "properties": {
-    "bank_name": { "type": "string" },
+    "bank_name": { "type": ["string", "null"], "description": "Bankanın adı (ör. Garanti BBVA); okunamıyorsa null" },
     "statement_type": { "type": "string", "enum": ["credit_card", "bank_account", "unknown"] },
     "account": {
       "type": "object",
       "additionalProperties": false,
       "required": ["label", "currency"],
       "properties": {
-        "label": { "type": ["string", "null"] },
-        "currency": { "type": "string" }
+        "label": { "type": ["string", "null"], "description": "Kartın / hesabın türü ya da adı (ör. Bonus Classic); numara YOK" },
+        "currency": { "type": ["string", "null"], "description": "Hesap para birimi (TRY)" }
       }
     },
     "period": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["start_date", "cut_date", "due_date"],
+      "required": ["start_date", "end_date", "cut_date", "due_date"],
       "properties": {
-        "start_date": { "type": ["string", "null"] },
-        "cut_date": { "type": ["string", "null"] },
-        "due_date": { "type": ["string", "null"] }
+        "start_date": { "type": ["string", "null"], "description": "Dönem başı, YYYY-MM-DD" },
+        "end_date": { "type": ["string", "null"], "description": "Dönem sonu (banka hesabı), YYYY-MM-DD" },
+        "cut_date": { "type": ["string", "null"], "description": "Hesap kesim tarihi (kredi kartı), YYYY-MM-DD" },
+        "due_date": { "type": ["string", "null"], "description": "Son ödeme tarihi (kredi kartı), YYYY-MM-DD" }
       }
     },
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["previous_balance", "total_due", "min_payment", "total_purchases", "total_payments", "total_fees_interest"],
+      "required": ["previous_balance", "total_due", "min_payment", "total_purchases", "total_payments", "total_refunds", "total_interest", "total_fees", "total_taxes", "total_bonus_used", "remaining_installments", "opening_balance", "closing_balance", "total_credits", "total_debits"],
       "properties": {
-        "previous_balance": { "type": ["number", "null"] },
-        "total_due": { "type": ["number", "null"] },
-        "min_payment": { "type": ["number", "null"] },
-        "total_purchases": { "type": ["number", "null"] },
-        "total_payments": { "type": ["number", "null"] },
-        "total_fees_interest": { "type": ["number", "null"] }
+        "previous_balance": { "type": ["number", "null"], "description": "Kart: önceki dönem borcu (fazla ödemede eksi)" },
+        "total_due": { "type": ["number", "null"], "description": "Kart: dönem borcu" },
+        "min_payment": { "type": ["number", "null"], "description": "Kart: asgari ödeme" },
+        "total_purchases": { "type": ["number", "null"], "description": "Ekstrenin yazdığı dönem harcamaları toplamı" },
+        "total_payments": { "type": ["number", "null"], "description": "Ekstrenin yazdığı ödemeler toplamı" },
+        "total_refunds": { "type": ["number", "null"] },
+        "total_interest": { "type": ["number", "null"] },
+        "total_fees": { "type": ["number", "null"] },
+        "total_taxes": { "type": ["number", "null"] },
+        "total_bonus_used": { "type": ["number", "null"] },
+        "remaining_installments": { "type": ["number", "null"], "description": "Kalan taksitlerin toplam borcu" },
+        "opening_balance": { "type": ["number", "null"], "description": "Banka hesabı: açılış bakiyesi" },
+        "closing_balance": { "type": ["number", "null"], "description": "Banka hesabı: kapanış bakiyesi" },
+        "total_credits": { "type": ["number", "null"], "description": "Banka hesabı: giren toplam" },
+        "total_debits": { "type": ["number", "null"], "description": "Banka hesabı: çıkan toplam" }
       }
     },
     "transactions": {
@@ -42,17 +52,23 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["date", "description", "amount", "currency", "transaction_type", "balance", "source_page", "source_text", "confidence", "installment_details"],
+        "required": ["date", "description", "amount", "currency", "direction", "transaction_type", "original_currency", "original_amount", "balance", "bonus_earned", "source_page", "source_text", "confidence", "needs_review", "review_reason", "installment_details"],
         "properties": {
-          "date": { "type": "string", "description": "YYYY-MM-DD" },
+          "date": { "type": ["string", "null"], "description": "YYYY-MM-DD; okunamıyorsa null" },
           "description": { "type": "string" },
-          "amount": { "type": "number", "description": "Mutlak değer, TL" },
-          "currency": { "type": "string" },
-          "transaction_type": { "type": "string", "enum": ["purchase", "payment", "refund", "fee_interest", "cash_advance", "transfer", "bonus_redemption"] },
-          "balance": { "type": ["number", "null"] },
-          "source_page": { "type": "integer" },
-          "source_text": { "type": "string", "description": "Satırın PDF metnindeki aynen hali" },
-          "confidence": { "type": "number" },
+          "amount": { "type": "number", "description": "Pozitif, hesabın para biriminde (TL) işlem tutarı; yönü direction verir" },
+          "currency": { "type": "string", "description": "amount'un para birimi (TRY)" },
+          "direction": { "type": "string", "enum": ["debit", "credit"], "description": "debit: borç / çıkan; credit: alacak / giren" },
+          "transaction_type": { "type": "string", "enum": ["purchase", "installment", "refund", "payment", "bonus_redemption", "interest", "fee", "tax", "cash_advance", "transfer", "deposit", "withdrawal", "other"] },
+          "original_currency": { "type": ["string", "null"], "description": "Döviz işlemde asıl para birimi (USD…), değilse null" },
+          "original_amount": { "type": ["number", "null"] },
+          "balance": { "type": ["number", "null"], "description": "Banka hesabı: işlemden sonraki bakiye" },
+          "bonus_earned": { "type": ["number", "null"], "description": "Satırın bonus / puan sütunundaki kazanç (TL değil)" },
+          "source_page": { "type": "integer", "description": "Fiziksel PDF sayfası, 1'den başlar" },
+          "source_text": { "type": "string", "description": "Satırın [SAYFA n] metnindeki AYNEN hali" },
+          "confidence": { "type": "number", "description": "0..1" },
+          "needs_review": { "type": "boolean" },
+          "review_reason": { "type": ["string", "null"] },
           "installment_details": {
             "type": "object",
             "additionalProperties": false,
@@ -69,29 +85,34 @@
     },
     "installments": {
       "type": "array",
+      "description": "Ekstredeki taksit planları (bilgi; işlemler transactions'ta)",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["description", "installment_number", "installment_count", "installment_amount", "source_page"],
+        "required": ["description", "installment_number", "installment_count", "installment_amount", "total_amount", "remaining_amount", "source_page"],
         "properties": {
           "description": { "type": "string" },
           "installment_number": { "type": ["integer", "null"] },
           "installment_count": { "type": ["integer", "null"] },
           "installment_amount": { "type": ["number", "null"] },
+          "total_amount": { "type": ["number", "null"] },
+          "remaining_amount": { "type": ["number", "null"] },
           "source_page": { "type": "integer" }
         }
       }
     },
     "bonus_transactions": {
       "type": "array",
+      "description": "Bonus / puan sütunundaki hareketler (TL değil): kazanılan ve kullanılan",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["date", "description", "bonus_amount", "source_page"],
+        "required": ["date", "description", "bonus_amount", "direction", "source_page"],
         "properties": {
           "date": { "type": ["string", "null"] },
           "description": { "type": "string" },
           "bonus_amount": { "type": "number" },
+          "direction": { "type": "string", "enum": ["earned", "used"] },
           "source_page": { "type": "integer" }
         }
       }
@@ -101,11 +122,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["page", "has_transaction_table", "found_transactions"],
+        "required": ["page_number", "has_transaction_table", "found_count", "status"],
         "properties": {
-          "page": { "type": "integer" },
+          "page_number": { "type": "integer" },
           "has_transaction_table": { "type": "boolean" },
-          "found_transactions": { "type": "integer" }
+          "found_count": { "type": "integer", "description": "Bu sayfada gördüğün işlem satırı sayısı" },
+          "status": { "type": "string", "enum": ["processed", "no_transactions", "unreadable", "partial"] }
         }
       }
     },

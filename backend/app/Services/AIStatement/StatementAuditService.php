@@ -18,7 +18,7 @@ class StatementAuditService
     {
         $modelden = [];
         foreach ($modelSayfaDenetimi as $s) {
-            $modelden[(int) ($s['page'] ?? 0)] = $s;
+            $modelden[(int) ($s['page_number'] ?? 0)] = $s;
         }
         $reddedilenSayisi = array_count_values(array_column($reddedilen, 'sayfa'));
         ksort($modelden);
@@ -29,7 +29,8 @@ class StatementAuditService
             $sayfalar[] = [
                 'sayfa' => $n,
                 'islem_tablosu_var' => (bool) ($modelden[$n]['has_transaction_table'] ?? false),
-                'bulunan_islem' => (int) ($modelden[$n]['found_transactions'] ?? 0),
+                'bulunan_islem' => (int) ($modelden[$n]['found_count'] ?? 0),
+                'model_durumu' => $modelden[$n]['status'] ?? null,
                 'ayristirilan_islem' => $kabulBu,
                 'inceleme_gereken' => $inceleme + ($reddedilenSayisi[$n] ?? 0),
                 'durum' => isset($modelden[$n]) ? 'islendi' : 'modelde_yok',

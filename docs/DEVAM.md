@@ -8,7 +8,7 @@
 - [x] 1. Mimari rapor (planda) + CLAUDE.md / CANLI.md gizlilik metni
 - [x] 2. Yeni türler bonus (gider 0) / faiz / vergi: enum, mutabakat, okuyucu, AI eşlemesi, ön yüz; testler (arka uç 119, ön yüz 70)
 - [x] 3. Referans fixture (`ekstre:fixture`, tests/Fixtures/ekstre/garanti_bonus) + GarantiReferansEkstreTest (75 satır tek tek; mutabakat 100.632,22 tutuyor). Fark nedeni: Garanti "BONUS …" satırlarının rakamı Bonus (TL) sütununda (TL değil) → bonus_hareketleri; özet kontrolü birleşik (dönem hareketi); yazılı "Hesap Kesim Tarihi" türetilenden önce (10 Kasım)
-- [ ] 4. JSON şeması v2 + istem v2
+- [x] 4. JSON şeması v2 (direction, 13 tür, döviz, needs_review, ayrıntılı özet + banka hesabı alanları, bonus earned/used, page_audit page_number/found_count/status) + istem v2 (PDF + [SAYFA n] metni, bonus sütunu TL değil); TransactionValidator / StatementAuditService / StatementImporter v2 alan adlarına uyarlandı; EkstreSemasiTest (strict kuralları)
 - [ ] 5. OpenAI: input_file, detail, arka plan modu, ayarlar; yerel canlı deneme (anahtar varsa)
 - [ ] 6. Analiz motoru: migration'lar, PdfUploadService, EkstreAiIsleyici, defer + cron, uçlar, metinsiz PDF
 - [ ] 7. Doğrulama motoru: TransactionValidator v2, DuplicateDetector, denetim, çapraz kontrol, maskeleme, inceleme kapısı
@@ -16,7 +16,7 @@
 - [ ] 9. Testler + uçtan uca; EKSTRE_AI_AKTARIM varsayılanı açılır
 - [ ] 10. Rapor, ILERLEME, bu kaydı sil
 
-**Sıradaki adım:** 4 (JSON şeması v2 + istem v2, JsonValidator).
+**Sıradaki adım:** 5 (OpenAIClient: input_file + detail + arka plan modu + iptal; config / .env örnekleri; yerel canlı deneme anahtar varsa).
 
 ## Yayın bekleyenler
 `main`'de yayımlanmamış, kullanıcı onayı bekleniyor: `4c6413c` (fatura dönemi = kesim ayı; dönemsiz faturaları tamamlayan migration) ve gelir türleri (migration `…001000`, var olan gelirleri taşır).

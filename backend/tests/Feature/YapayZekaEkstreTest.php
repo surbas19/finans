@@ -78,10 +78,14 @@ class YapayZekaEkstreTest extends TestCase
         return [
             'bank_name' => 'Ornek Banka', 'statement_type' => 'credit_card',
             'account' => ['label' => 'Kart', 'currency' => 'TRY'],
-            'period' => ['start_date' => null, 'cut_date' => '2026-11-10', 'due_date' => '2026-11-20'],
-            'summary' => ['previous_balance' => 0, 'total_due' => 2079.66, 'min_payment' => 700.00, 'total_purchases' => 2079.66, 'total_payments' => 0, 'total_fees_interest' => 0],
+            'period' => ['start_date' => null, 'end_date' => null, 'cut_date' => '2026-11-10', 'due_date' => '2026-11-20'],
+            'summary' => [
+                'previous_balance' => 0, 'total_due' => 2079.66, 'min_payment' => 700.00, 'total_purchases' => 2079.66, 'total_payments' => 0,
+                'total_refunds' => null, 'total_interest' => null, 'total_fees' => null, 'total_taxes' => null, 'total_bonus_used' => null,
+                'remaining_installments' => null, 'opening_balance' => null, 'closing_balance' => null, 'total_credits' => null, 'total_debits' => null,
+            ],
             'transactions' => $islemler, 'installments' => [], 'bonus_transactions' => [],
-            'page_audit' => [['page' => 1, 'has_transaction_table' => true, 'found_transactions' => count($islemler)]],
+            'page_audit' => [['page_number' => 1, 'has_transaction_table' => true, 'found_count' => count($islemler), 'status' => 'processed']],
             'warnings' => [], 'review_required' => false,
             ...$ek,
         ];
@@ -93,8 +97,10 @@ class YapayZekaEkstreTest extends TestCase
     private function islem(string $tarih, string $aciklama, float $tutar, string $kaynak, string $tur = 'purchase'): array
     {
         return [
-            'date' => $tarih, 'description' => $aciklama, 'amount' => $tutar, 'currency' => 'TRY', 'transaction_type' => $tur, 'balance' => null,
-            'source_page' => 1, 'source_text' => $kaynak, 'confidence' => 0.95,
+            'date' => $tarih, 'description' => $aciklama, 'amount' => $tutar, 'currency' => 'TRY',
+            'direction' => in_array($tur, ['payment', 'refund', 'bonus_redemption', 'deposit'], true) ? 'credit' : 'debit',
+            'transaction_type' => $tur, 'original_currency' => null, 'original_amount' => null, 'balance' => null, 'bonus_earned' => null,
+            'source_page' => 1, 'source_text' => $kaynak, 'confidence' => 0.95, 'needs_review' => false, 'review_reason' => null,
             'installment_details' => ['number' => null, 'count' => null, 'total_amount' => null, 'remaining_amount' => null],
         ];
     }
