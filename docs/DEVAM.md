@@ -2,14 +2,8 @@
 
 > Kural: CLAUDE.md → "Kaldığın yeri kaydet". Oturum başında `git pull`'dan sonra burayı oku; dolu bir iş varsa oradan devam et.
 
-## Gelir türleri hanenin listesi ([planlar/gelir-turleri.md](planlar/gelir-turleri.md))
-İstek: "ek ders" gibi gelir türünü kullanıcı kendisi ekleyebilsin. Sabit enum (`GelirTuru`) → `gelir_turleri` tablosu (hane başına, varsayılan 8 tür), `gelir_turu_id`.
-
-- [x] 1. Arka uç: migration `…001000` (veri taşıma; yerelde ileri / geri / ileri denendi, sayılar tuttu), model, `/aile/gelir-turleri`, rapor (`turler[].gelir_turu_id`, `etiket`), varsayılanlar, demo, testler (118)
-- [x] 2. Arayüz: store, `GelirTuruSecici` (formda "+ Yeni tür"), Ayarlar → Gelir türleri, listeler; vitest (70)
-- [ ] 3. Tüm testler, uçtan uca 360, CLAUDE.md / ILERLEME, bu kaydı sil
-
-**Sıradaki adım:** 3 (uçtan uca 360: formda "Ek ders" ekle → kaydet → Gelirler / Özet; Ayarlar'da sil engeli). Ayrıca yayımlanmamış: `4c6413c` (fatura dönemi = kesim ayı düzeltmesi; kullanıcı onayı bekleniyor).
+## Yayın bekleyenler
+`main`'de yayımlanmamış, kullanıcı onayı bekleniyor: `4c6413c` (fatura dönemi = kesim ayı; dönemsiz faturaları tamamlayan migration) ve gelir türleri (migration `…001000`, var olan gelirleri taşır).
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
