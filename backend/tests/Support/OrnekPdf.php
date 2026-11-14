@@ -11,8 +11,9 @@ final class OrnekPdf
 {
     /**
      * @param  list<list<string|array<int, string>>>  $sayfalar
+     * @param  int  $satirAraligi  satırlar arası dikey boşluk (pt); sık tablolu ekstreler için küçültülür
      */
-    public static function yaz(array $sayfalar, bool $sifreli = false): string
+    public static function yaz(array $sayfalar, bool $sifreli = false, int $satirAraligi = 14): string
     {
         $icerikler = [];
         foreach ($sayfalar as $satirlar) {
@@ -23,7 +24,7 @@ final class OrnekPdf
                 foreach ($parcalar as $x => $metin) {
                     $icerik .= sprintf("BT /F1 9 Tf %d %d Td (%s) Tj ET\n", $x, $y, self::kacis($metin));
                 }
-                $y -= 14;
+                $y -= $satirAraligi;
             }
             $icerikler[] = $icerik;
         }

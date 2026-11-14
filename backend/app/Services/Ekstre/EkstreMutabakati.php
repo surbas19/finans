@@ -8,7 +8,9 @@ use App\Support\Kurus;
  * Ekstre mutabakatı (finansçının yaptığı kontroller), kuruş hassasiyetiyle:
  * - Borç denklemi: önceki dönem borcu − ödemeler − iadeler − bonus + harcamalar + faiz / ücret / vergi + nakit avans =
  *   dönem borcu.
- * - Garanti özet satırı: ekstrenin kendi toplamları (harcama, faiz, ödeme) satırlardan çıkanla aynı mı.
+ * - Ekstrenin kendi özet toplamları (varsa): dönem hareketi (harcama + faiz / ücret toplamı; bankalar iadeyi, satır
+ *   faizini farklı kalemlere yazabildiği için birlikte) = satırlarda harcama + faiz / ücret / vergi + avans − iade − bonus;
+ *   ödemeler = ödeme satırları.
  * - Taksit: toplam tutar, tutar × taksit sayısına yaklaşık eşit mi (faizli taksitte fark olabilir: uyarı değil bilgi).
  * Uyuşmazlık ekstreyi engellemez; "tutmuyor: X TL fark" olarak incelemede görünür. Okunamayan değerle kontrol yapılmaz
  * ("kontrol edilemedi"); uydurulmaz.
@@ -58,10 +60,13 @@ class EkstreMutabakati
             $kontroller[] = ['ad' => 'borc_denklemi', 'etiket' => 'Borç denklemi', 'durum' => 'kontrol_edilemedi', 'neden' => $borc === null ? 'Dönem borcu okunamadı.' : 'Önceki dönem borcu okunamadı.'];
         }
         // Ekstrenin kendi özet toplamları (varsa) satırlardan çıkanla karşılaştırılır
-        foreach ([['harcama_toplami', 'Dönem harcamaları', $t['borc']], ['faiz_toplami', 'Faiz ve ücretler', $t['ucret'] + $t['avans']], ['odeme_toplami', 'Ödemeler', $t['odeme']]] as [$anahtar, $etiket, $satirToplami]) {
-            if (($ozet[$anahtar] ?? null) !== null) {
-                $kontroller[] = $this->kontrol($anahtar, $etiket.' (ekstre özeti = satırlar)', Kurus::kurus($ozet[$anahtar]), $satirToplami);
-            }
+        if (($ozet['harcama_toplami'] ?? null) !== null || ($ozet['faiz_toplami'] ?? null) !== null) {
+            $ekstre = Kurus::kurus($ozet['harcama_toplami'] ?? '0') + Kurus::kurus($ozet['faiz_toplami'] ?? '0');
+            $satirlardan = $t['borc'] + $t['ucret'] + $t['avans'] - $t['iade'] - $t['bonus'];
+            $kontroller[] = $this->kontrol('donem_hareketi', 'Dönem harcamaları + faiz / ücretler (ekstre özeti = satırlar, iadeler düşülmüş)', $ekstre, $satirlardan);
+        }
+        if (($ozet['odeme_toplami'] ?? null) !== null) {
+            $kontroller[] = $this->kontrol('odeme_toplami', 'Ödemeler (ekstre özeti = satırlar)', Kurus::kurus($ozet['odeme_toplami']), $t['odeme']);
         }
 
         $okunamayan = array_filter($kontroller, fn (array $k): bool => $k['durum'] === 'kontrol_edilemedi');

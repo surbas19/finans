@@ -8,8 +8,11 @@ use Illuminate\Support\Carbon;
 /**
  * Garanti BBVA (Bonus). Satır: `22.10.2026 SANLI LAHMACUN \t1.440,00` (tutar sağdaki sütun; ortada bonus olabilir).
  * Taksit: `2.149,60x5=10.748,00 4.Taksit`. Satır araları kategori başlığı ("Kitap Evi & Kırtasiye"). Kesim tarihi
- * yazmaz: ekstre numarasının içinde (`910-20261111…`) ya da "Bir sonraki hesap kesiminiz" − 1 ay. Özet satırı
- * `önceki TL+ harcama TL+ faiz TL- ödeme TL= borç TL asgari TL` bütün toplamları verir.
+ * "Hesap Kesim Tarihi" etiketiyle yazılıysa o; yazılı değilse ekstre numarasının içinden (`910-20261111…`) ya da
+ * "Bir sonraki hesap kesiminiz" − 1 ay (belgede yazan türetilenden önce gelir). Özet satırı
+ * `önceki TL+ harcama TL+ faiz TL- ödeme TL= borç TL asgari TL` bütün toplamları verir ("Dönem Harcamaları" iadeleri
+ * düşülmüş, satır faizlerini ("OTOM. FATURA İŞLEM FAİZİ") içeren net tutardır). "BONUS …" satırlarının tek rakamı
+ * Bonus (TL) sütunundadır (kazanılan işaretsiz, kullanılan "-"): TL borcunu etkilemez (bonusSureyya.pdf ile doğrulandı).
  */
 class GarantiProfili extends EkstreProfili
 {
@@ -53,6 +56,11 @@ class GarantiProfili extends EkstreProfili
         return str_starts_with($sade, 'TOPLAM ') || str_starts_with($sade, 'EKSTRE OZETI');
     }
 
+    public function bonusSutunuSatiri(string $sadeAciklama, int $tutarSayisi): bool
+    {
+        return $tutarSayisi === 1 && str_starts_with($sadeAciklama, 'BONUS ');
+    }
+
     public function tutarKonumu(): string
     {
         return 'son';
@@ -83,7 +91,8 @@ class GarantiProfili extends EkstreProfili
 
     public function turetilenAlanlar(array $alanlar, array $sadeSatirlar): array
     {
-        $sonuc = [];
+        // Kesim tarihi etiketle okunduysa türetilmez
+        $sonuc = ($alanlar['kesim_tarihi'] ?? null) !== null ? ['kesim_tarihi' => $alanlar['kesim_tarihi']] : [];
         foreach ($sadeSatirlar as $satir) {
             if (! isset($sonuc['kesim_tarihi']) && preg_match('/EKSTRE NO\s*:?\s*\d{2,4}-(\d{4})(\d{2})(\d{2})\d*/', $satir, $e) && checkdate((int) $e[2], (int) $e[3], (int) $e[1])) {
                 $sonuc['kesim_tarihi'] = "{$e[1]}-{$e[2]}-{$e[3]}";

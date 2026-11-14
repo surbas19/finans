@@ -42,7 +42,9 @@ class EkstreProfilleriTest extends TestCase
             "21 Ekim 2026 ÖDEMENÝZ ÝÇÝN TEÞEKKÜR EDERÝZ \t-6.000,00",
             'Kitap Evi & Kýrtasiye',
             "22 Ekim 2026 SANLI LAHMACUN \t1.440,00",
-            "12 Ekim 2026 BONUS BEDAVA ALIÞVERÝÞ \t-301,39",
+            // Bonus sütunu: tek rakam, TL değil (kullanılan "-" sonda; kazanılan işaretsiz)
+            "12 Ekim 2026 BONUS BEDAVA ALIÞVERÝÞ \t1.301,39-",
+            "02 Kasým 2026 BONUS MARKET KAMPANYASI \t100,00",
             "03 Kasým 2026 IYZICO/SHOP.APIMAYE.COM.T 756,00x4=3.024,00 1.Taksit 2,72\t756,00",
             "26 Ekim 2026 OTOM. FATURA ÝÞLEM FAÝZÝ \t19,39",
             'DÝÐER HARCAMALARINIZ',
@@ -65,11 +67,13 @@ class EkstreProfilleriTest extends TestCase
             $sonuc['ozet']['onceki_borc'], $sonuc['ozet']['harcama_toplami'], $sonuc['ozet']['faiz_toplami'], $sonuc['ozet']['odeme_toplami'], $sonuc['ozet']['toplam_satiri'],
         ]);
         // Tablo dışındaki tarihli satır (sözleşme) işlem değil; kategori başlığı işlem değil
-        $this->assertCount(5, $sonuc['satirlar']);
-        [$odeme, $lahmacun, $bonus, $taksit, $faiz] = $sonuc['satirlar'];
+        $this->assertCount(4, $sonuc['satirlar']);
+        [$odeme, $lahmacun, $taksit, $faiz] = $sonuc['satirlar'];
         $this->assertSame(['2026-10-21', 'odeme', '6000.00', true], [$odeme['islem_tarihi'], $odeme['tur'], $odeme['tutar'], $odeme['alacak']]);
         $this->assertSame(['SANLI LAHMACUN', '1440.00', 'harcama'], [$lahmacun['aciklama'], $lahmacun['tutar'], $lahmacun['tur']]);
-        $this->assertSame(['bonus', true], [$bonus['tur'], $bonus['alacak']]);
+        // Bonus sütunu satırları işlem değil: TL borcunu etkilemez, bilgi olarak ayrı
+        $this->assertSame([['2026-10-12', '1301.39', 'kullanilan'], ['2026-11-02', '100.00', 'kazanilan']],
+            array_map(fn (array $b): array => [$b['islem_tarihi'], $b['tutar'], $b['yon']], $sonuc['bonus_hareketleri']));
         // Sağdaki tutar asıl (ortadaki 2,72 bonus); taksit A x N = T n.Taksit; açıklama temiz
         $this->assertSame(['756.00', 1, 4, '3024.00', 'IYZICO/SHOP.APIMAYE.COM.T'], [$taksit['tutar'], $taksit['taksit_no'], $taksit['taksit_sayisi'], $taksit['taksit_toplam'], $taksit['aciklama']]);
         $this->assertSame(['756.00', '2.72'], [$taksit['tutar'], $taksit['okuma']['tutar_adaylari'][0]]);

@@ -23,7 +23,7 @@ Kişisel varlık fiyat takibi ve portföy uygulaması (`https://finans.yoklm.com
 - BIST verisi gecikmeli ve resmî olmayan kaynaktandır; ekranda "gecikmeli" yazar. Uygulama başkalarına açılırken BIST veri dağıtım lisansı yeniden ele alınır.
 - Kod içi isimlendirme Türkçe alan adları (varlik, hesap, islem), İngilizce Laravel / Vue kalıpları. Arayüz mobile-first.
 - Gizli bilgiler (`.env`, `canli-paket/ftp.env`) commit edilmez; yeni ayar eklenince `.env.example` güncellenir. Canlıda `APP_KEY` değiştirilmez.
-- Demo verisi `database/seeders/DemoSeeder.php` + `AileDemoSeeder.php` (yalnızca `local`): sabit tohumlu `fake()`, gerçek kişi / hesap / kart bilgisi yok; iki demo kullanıcısı aynı hanededir. Testlerde ekstre PDF'i test içinde üretilir (`Tests\Support\OrnekPdf`), gerçek banka PDF'i depoya girmez.
+- Demo verisi `database/seeders/DemoSeeder.php` + `AileDemoSeeder.php` (yalnızca `local`): sabit tohumlu `fake()`, gerçek kişi / hesap / kart bilgisi yok; iki demo kullanıcısı aynı hanededir. Testlerde ekstre PDF'i test içinde üretilir (`Tests\Support\OrnekPdf`), gerçek banka PDF'i depoya girmez (`.gitignore`: `*.pdf`). Gerçek ekstreyle referans testi anonim fixture'dır: `php artisan ekstre:fixture <pdf> tests/Fixtures/ekstre/<ad>` (yalnızca yerel; işyeri adları yer tutucu, kişisel satırlar çıkarılır, tarih / tutar / sayfa kalır), test `GarantiReferansEkstreTest` gibi her satırı ayrı denetler.
 - Her işten sonra **tüm** testler: `php artisan test`, `npm run type-check && npm run lint && npx vitest run`. Pint / prettier yalnızca işin dosyalarına.
 
 ## Komutlar

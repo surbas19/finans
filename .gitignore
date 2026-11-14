@@ -37,3 +37,6 @@ Thumbs.db
 
 # Canlı paketleri ve FTP bilgisi (backend/deploy/yayinla.sh)
 /canli-paket/
+
+# Gerçek ekstre / belge PDF'leri depoya girmez (testler PDF'i kendisi üretir: tests/Support/OrnekPdf)
+*.pdf

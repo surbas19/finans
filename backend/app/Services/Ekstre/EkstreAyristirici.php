@@ -70,6 +70,7 @@ class EkstreAyristirici
         $kesim = ($alanlar['kesim_tarihi'] ?? null) !== null ? Carbon::parse($alanlar['kesim_tarihi']) : null;
 
         $satirlar = [];
+        $bonusHareketleri = [];
         // Profil tablo başlığı bekler; belgede hiç yoksa (biçim değişti) satırları atlamak yerine hepsi aday olur
         $sinirli = $profil->tabloSinirliMi() && array_filter($sadeSatirlar, fn (string $s): bool => $profil->tabloBasi($s)) !== [];
         $tabloIcinde = ! $sinirli;
@@ -102,7 +103,13 @@ class EkstreAyristirici
                     continue;
                 }
                 $islem = $this->islemSatiri($ham, $kesim, $profil);
-                if ($islem !== null) {
+                if ($islem !== null && ($islem['bonus_hareketi'] ?? false)) {
+                    // TL'si olmayan bonus / puan hareketi: işlem değil, bilgi
+                    $bonusHareketleri[] = [
+                        'sayfa' => $i + 1, 'islem_tarihi' => $islem['islem_tarihi'], 'aciklama' => $islem['aciklama'],
+                        'tutar' => $islem['tutar'], 'yon' => $islem['alacak'] ? 'kullanilan' : 'kazanilan', 'ham' => $islem['ham'],
+                    ];
+                } elseif ($islem !== null) {
                     $satirlar[] = ['sayfa' => $i + 1, ...$islem];
                 }
             }
@@ -117,6 +124,7 @@ class EkstreAyristirici
             'ozet' => array_diff_key($alanlar, array_flip(self::EKSTRE_ALANLARI)),
             'okunamayan' => array_values(array_filter(self::ZORUNLU_ALANLAR, fn (string $a): bool => ($alanlar[$a] ?? null) === null)),
             'satirlar' => $satirlar,
+            'bonus_hareketleri' => $bonusHareketleri,
         ];
     }
 
@@ -305,6 +313,7 @@ class EkstreAyristirici
         $taksitToplam ??= preg_match('/TOPLAM\s*:?\s*('.self::TUTAR.')/', $sade, $tt) ? self::mutlak($tt[1]) : null;
 
         return [
+            ...($profil->bonusSutunuSatiri($sade, count($tutarlar)) ? ['bonus_hareketi' => true] : []),
             'ham' => trim($ham),
             'islem_tarihi' => $tarih,
             'aciklama' => mb_substr($aciklama, 0, 255),

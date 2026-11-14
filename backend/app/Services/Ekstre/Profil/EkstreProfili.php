@@ -58,6 +58,17 @@ abstract class EkstreProfili
     }
 
     /**
+     * Tarihli satırın tek tutarı TL değil bonus / puan sütunundaysa (kazanılan ya da kullanılan bonus): işlem satırı
+     * olmaz, TL borcunu etkilemez; ayrıştırıcı `bonus_hareketleri`'ne yazar.
+     *
+     * @param  string  $sadeAciklama  tarihsiz, tutarsız sade açıklama
+     */
+    public function bonusSutunuSatiri(string $sadeAciklama, int $tutarSayisi): bool
+    {
+        return false;
+    }
+
+    /**
      * Ham satırın sağındaki, tutar olmayan sütunlar (puan, kalan taksit). Her desen uygulanır; yakalanan isimli
      * gruplar (`kalan`) işleme yazılır. Sıra: sağdan sola tekrar tekrar.
      *

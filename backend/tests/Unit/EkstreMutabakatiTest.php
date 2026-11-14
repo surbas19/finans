@@ -49,7 +49,7 @@ class EkstreMutabakatiTest extends TestCase
 
         $this->assertSame('tutmuyor', $r['durum']);
         $this->assertSame('-0.50', $r['fark']);
-        $this->assertSame(['borc_denklemi', 'harcama_toplami'], array_column($r['kontroller'], 'ad'));
+        $this->assertSame(['borc_denklemi', 'donem_hareketi'], array_column($r['kontroller'], 'ad'));
         $this->assertSame(['999.50', '1000.00', '-0.50'], [$r['kontroller'][0]['bulunan'], $r['kontroller'][0]['beklenen'], $r['kontroller'][0]['fark']]);
     }
 
