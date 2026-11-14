@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\IslemController;
 use App\Http\Controllers\Api\V1\IzlemeController;
 use App\Http\Controllers\Api\V1\OzetController;
 use App\Http\Controllers\Api\V1\PerformansController;
+use App\Http\Controllers\Api\V1\ProfilResmiController;
 use App\Http\Controllers\Api\V1\SurumController;
 use App\Http\Controllers\Api\V1\VarlikController;
 use App\Http\Controllers\Api\V1\Yonetim\HaneController as YonetimHaneController;
@@ -34,6 +35,9 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::get('ben', [GirisController::class, 'ben'])->name('ben');
         Route::post('cikis', [GirisController::class, 'cikis'])->name('cikis');
         Route::put('ben/sifre', [GirisController::class, 'sifre'])->middleware('throttle:giris')->name('ben.sifre');
+        Route::post('ben/resim', [ProfilResmiController::class, 'yukle'])->name('ben.resim');
+        Route::delete('ben/resim', [ProfilResmiController::class, 'sil'])->name('ben.resim.sil');
+        Route::get('kullanicilar/{kullanici}/resim', [ProfilResmiController::class, 'goster'])->name('kullanicilar.resim');
 
         Route::get('ozet', OzetController::class)->name('ozet');
         Route::get('ozet/gecmis', PerformansController::class)->name('ozet.gecmis');

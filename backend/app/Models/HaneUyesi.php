@@ -52,6 +52,8 @@ class HaneUyesi extends Model
             'ad' => $this->ad,
             'renk' => $this->renk,
             'user_id' => $this->user_id,
+            // Girişi olan üyenin profil resmi (yalnızca `user` yüklüyse)
+            'resim' => $this->relationLoaded('user') ? $this->user?->resimAdresi() : null,
             'aktif' => $this->aktif,
             'sira' => $this->sira,
         ];

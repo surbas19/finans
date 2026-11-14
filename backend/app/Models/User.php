@@ -79,7 +79,20 @@ class User extends Authenticatable
     }
 
     /**
-     * @return array{id: int, ad: string, soyad: string, ad_soyad: string, email: string, yonetici: bool}
+     * Profil resminin adresi (yoksa null). Dosya adı her yüklemede değiştiği için adresteki sürüm de değişir;
+     * tarayıcı eski resmi önbellekten göstermez. Adres yalnızca kendisi, hanedekiler ve yönetici için açılır.
+     */
+    public function resimAdresi(): ?string
+    {
+        if ($this->profil_resmi === null) {
+            return null;
+        }
+
+        return '/api/v1/kullanicilar/'.$this->id.'/resim?v='.substr(md5($this->profil_resmi), 0, 10);
+    }
+
+    /**
+     * @return array{id: int, ad: string, soyad: string, ad_soyad: string, email: string, yonetici: bool, resim: ?string}
      */
     public function oturumBilgisi(): array
     {
@@ -90,6 +103,7 @@ class User extends Authenticatable
             'ad_soyad' => $this->ad.' '.$this->soyad,
             'email' => $this->email,
             'yonetici' => $this->yonetici,
+            'resim' => $this->resimAdresi(),
         ];
     }
 }

@@ -25,7 +25,7 @@ class HaneController extends Controller
 
         return response()->json([
             'hane' => ['id' => $hane->id, 'ad' => $hane->ad],
-            'uyeler' => $hane->uyeler()->get()->map(fn (HaneUyesi $u): array => $u->ozet()),
+            'uyeler' => $hane->uyeler()->with('user')->get()->map(fn (HaneUyesi $u): array => $u->ozet()),
             'ben_uye_id' => HaneUyesi::where('user_id', $user->id)->value('id'),
         ]);
     }
@@ -50,7 +50,7 @@ class HaneController extends Controller
             'aktif' => true,
         ]);
 
-        return response()->json(['uye' => $uye->ozet(), 'message' => 'Üye eklendi.'], 201);
+        return response()->json(['uye' => $uye->load('user')->ozet(), 'message' => 'Üye eklendi.'], 201);
     }
 
     public function uyeGuncelle(Request $request, HaneUyesi $uye): JsonResponse
@@ -60,7 +60,7 @@ class HaneController extends Controller
         $veri += $request->validate(['aktif' => ['sometimes', 'boolean']]);
         $uye->update($veri);
 
-        return response()->json(['uye' => $uye->ozet(), 'message' => 'Üye kaydedildi.']);
+        return response()->json(['uye' => $uye->load('user')->ozet(), 'message' => 'Üye kaydedildi.']);
     }
 
     /**
@@ -75,7 +75,7 @@ class HaneController extends Controller
         if ($this->haneler->uyeninKaydiVarMi($uye)) {
             $uye->update(['aktif' => false]);
 
-            return response()->json(['uye' => $uye->ozet(), 'message' => 'Üyenin kayıtları olduğu için silinmedi, pasif yapıldı.']);
+            return response()->json(['uye' => $uye->load('user')->ozet(), 'message' => 'Üyenin kayıtları olduğu için silinmedi, pasif yapıldı.']);
         }
         $uye->delete();
 
