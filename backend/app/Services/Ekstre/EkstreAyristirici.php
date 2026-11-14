@@ -3,61 +3,119 @@
 namespace App\Services\Ekstre;
 
 use App\Enums\KartIslemTuru;
+use App\Services\Ekstre\Profil\EkstreProfili;
 use App\Support\Kurus;
 use App\Support\Metin;
 use Illuminate\Support\Carbon;
 
 /**
- * Genel ekstre ayrıştırıcı (bankaya özel değil): metin satırlarından dönem bilgileri ve işlem satırları.
+ * Ekstre ayrıştırıcı: metin satırlarından dönem bilgileri ve işlem satırları. Ortak boru hattı tek yerde; bankaya
+ * özgü yazım `Profil\*` sınıflarındaki bildirimsel kurallardan gelir (banka `BankaTanici` ile tanınır).
+ *
+ * Boru hattı: normalize (kod sayfası, ay adları) → banka → başlık alanları (etiket + aynı / alt satırdaki değer,
+ * sonra profilin türettikleri) → tablo satırları (profil tablo sınırı biliyorsa yalnızca içindekiler) → devam satırları
+ * önceki işleme → tür / taksit / alacak → kuruş.
  *
  * İşlem satırı: başta tarih (gg.aa.yyyy, gg/aa/yyyy, gg.aa.yy; yıl yoksa kesim tarihinden), sonra açıklama, sonda
- * TL tutar(lar) (1.234,56; eksi, sondaki "-", "+", CR, ALACAK alacak sayılır). Birden çok tutar varsa ilki alınır ve
- * uyarılır (ör. puan sütunu), adaylar saklanır. Okunamayan alan uydurulmaz: `okuma.alanlar`'a yazılır; dönem
- * bilgisi bulunamazsa `okunamayan`'a. Tür bir tahmindir (kullanıcı incelemede değiştirir).
+ * TL tutar(lar). Eksi, önde `+` (Yapı Kredi), boşluklu `- 2.081,00` (Enpara), sondaki `-` / CR / ALACAK alacak sayılır.
+ * Birden çok tutar varsa profilin dediği (soldaki / sağdaki) alınır ve uyarılır; adaylar saklanır. Okunamayan alan
+ * uydurulmaz: `okuma.alanlar`'a yazılır; dönem bilgisi bulunamazsa `okunamayan`'a. Tür bir tahmindir.
  */
 class EkstreAyristirici
 {
     private const TARIH = '(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{4}|\d{2}))?';
 
-    private const TUTAR = '-?\d{1,3}(?:\.\d{3})+,\d{2}|-?\d+,\d{2}';
+    private const TUTAR = '\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2}';
 
-    /** Dönem bilgisi etiketleri (sade metin), öncelik sırasıyla */
+    /** Dönem bilgisi etiketleri (sade metin), öncelik sırasıyla; profilinkiler öne eklenir */
     private const ETIKETLER = [
         'kesim_tarihi' => ['HESAP OZETI KESIM TARIHI', 'HESAP KESIM TARIHI', 'EKSTRE KESIM TARIHI', 'KESIM TARIHI', 'EKSTRE TARIHI', 'HESAP OZETI TARIHI'],
         'son_odeme_tarihi' => ['SON ODEME TARIHI'],
         'donem_baslangic' => ['DONEM BASLANGIC TARIHI', 'ONCEKI HESAP KESIM TARIHI', 'ONCEKI KESIM TARIHI', 'ONCEKI EKSTRE TARIHI'],
         'donem_borcu' => ['GUNCEL DONEM BORCU', 'HESAP OZETI BORCU', 'DONEM BORCU', 'EKSTRE BORCU', 'TOPLAM BORC', 'ODENECEK TOPLAM TUTAR'],
-        'asgari_odeme' => ['ASGARI ODEME TUTARI', 'ASGARI ODEME'],
+        'asgari_odeme' => ['ASGARI ODEME TUTARI', 'ASGARI ODEME', 'MINIMUM ODEME TUTARI', 'MIN. ODEME TUTARI'],
+        'onceki_borc' => ['ONCEKI DONEM HESAP OZETI BORCU', 'ONCEKI DONEM BORCU', 'ONCEKI EKSTRE BORCU', 'ONCEKI EKSTRE BAKIYE', 'DEVREDEN BAKIYE'],
     ];
 
+    /** "ÖNCEKİ …" ile başlayan yazımın bu dönemin değeri olmadığı alanlar */
+    private const ONCEKISIZ = ['kesim_tarihi', 'son_odeme_tarihi', 'donem_borcu', 'asgari_odeme'];
+
     /** İşlem sayılmayan satırlar (özet / başlık) */
-    private const OZET_KELIMELERI = ['SON ODEME', 'ASGARI', 'DONEM BORCU', 'KESIM TARIHI', 'HESAP OZETI', 'ONCEKI DONEM', 'TOPLAM BORC', 'KART LIMITI', 'KULLANILABILIR'];
+    private const OZET_KELIMELERI = ['SON ODEME', 'ASGARI', 'DONEM BORCU', 'KESIM TARIHI', 'HESAP OZETI', 'ONCEKI DONEM', 'TOPLAM BORC', 'KART LIMITI', 'KULLANILABILIR', 'EKSTRE BAKIYE'];
 
     /** Dönem bilgisinde zorunlu sayılanlar (bulunamazsa "okunamadı") */
     public const ZORUNLU_ALANLAR = ['kesim_tarihi', 'son_odeme_tarihi', 'donem_borcu', 'asgari_odeme'];
 
+    /** Ekstre kaydına yazılan dönem alanları (ötekiler `ozet`te) */
+    private const EKSTRE_ALANLARI = ['kesim_tarihi', 'son_odeme_tarihi', 'donem_baslangic', 'donem_borcu', 'asgari_odeme'];
+
+    public function __construct(private MetinNormalizer $normalizer, private BankaTanici $tanici) {}
+
     /**
      * @param  list<list<string>>  $sayfalar
-     * @return array{alanlar: array<string, string|null>, okunamayan: list<string>, satirlar: list<array<string, mixed>>}
+     * @return array{profil: string, profil_etiketi: string, alanlar: array<string, string|null>, ozet: array<string, string|null>, okunamayan: list<string>, satirlar: list<array<string, mixed>>}
      */
-    public function ayristir(array $sayfalar): array
+    public function ayristir(array $sayfalar, ?EkstreProfili $profil = null): array
     {
-        $alanlar = $this->alanlar($sayfalar);
-        $kesim = $alanlar['kesim_tarihi'] !== null ? Carbon::parse($alanlar['kesim_tarihi']) : null;
+        $sayfalar = $this->normalizer->normalize($sayfalar);
+        $profil ??= $this->tanici->tani($sayfalar);
+        $sadeSatirlar = array_map(fn (string $s): string => Metin::sade($s), array_merge(...($sayfalar ?: [[]])));
+
+        $alanlar = $this->alanlar($sadeSatirlar, $profil);
+        foreach ($profil->turetilenAlanlar($alanlar, $sadeSatirlar) as $alan => $deger) {
+            if ($deger !== null) {
+                $alanlar[$alan] = $deger;
+            }
+        }
+        $kesim = ($alanlar['kesim_tarihi'] ?? null) !== null ? Carbon::parse($alanlar['kesim_tarihi']) : null;
 
         $satirlar = [];
+        // Profil tablo başlığı bekler; belgede hiç yoksa (biçim değişti) satırları atlamak yerine hepsi aday olur
+        $sinirli = $profil->tabloSinirliMi() && array_filter($sadeSatirlar, fn (string $s): bool => $profil->tabloBasi($s)) !== [];
+        $tabloIcinde = ! $sinirli;
         foreach ($sayfalar as $i => $sayfa) {
-            foreach ($sayfa as $satir) {
-                $islem = $this->islemSatiri($satir, $kesim);
+            foreach ($sayfa as $ham) {
+                $sade = Metin::sade($ham);
+                if ($sinirli) {
+                    if ($profil->tabloBasi($sade)) {
+                        $tabloIcinde = true;
+
+                        continue;
+                    }
+                    if ($tabloIcinde && $profil->tabloSonu($sade)) {
+                        $toplam = $profil->toplamSatiri($sade);
+                        if ($toplam !== null) {
+                            $alanlar['toplam_satiri'] = $toplam;
+                        }
+                        $tabloIcinde = false;
+
+                        continue;
+                    }
+                    if (! $tabloIcinde || $profil->atla($sade)) {
+                        continue;
+                    }
+                }
+                if ($satirlar !== [] && ($ek = $profil->devamSatiri($sade)) !== null) {
+                    $son = array_key_last($satirlar);
+                    $satirlar[$son] = [...$satirlar[$son], ...$ek];
+
+                    continue;
+                }
+                $islem = $this->islemSatiri($ham, $kesim, $profil);
                 if ($islem !== null) {
                     $satirlar[] = ['sayfa' => $i + 1, ...$islem];
                 }
             }
         }
 
+        $ekstreAlanlari = array_intersect_key($alanlar, array_flip(self::EKSTRE_ALANLARI));
+
         return [
-            'alanlar' => $alanlar,
-            'okunamayan' => array_values(array_filter(self::ZORUNLU_ALANLAR, fn (string $a): bool => $alanlar[$a] === null)),
+            'profil' => $profil->ad(),
+            'profil_etiketi' => $profil->etiket(),
+            'alanlar' => $ekstreAlanlari + array_fill_keys(self::EKSTRE_ALANLARI, null),
+            'ozet' => array_diff_key($alanlar, array_flip(self::EKSTRE_ALANLARI)),
+            'okunamayan' => array_values(array_filter(self::ZORUNLU_ALANLAR, fn (string $a): bool => ($alanlar[$a] ?? null) === null)),
             'satirlar' => $satirlar,
         ];
     }
@@ -66,24 +124,26 @@ class EkstreAyristirici
      * Dönem bilgileri: etiketin geçtiği satırda etiketten sonraki ilk tarih / tutar; satırda yoksa bir sonraki satırda
      * (etiketler bir satırda, değerler altında olan tablolarda sırayla eşlenir).
      *
-     * @param  list<list<string>>  $sayfalar
+     * @param  list<string>  $satirlar  sade
      * @return array<string, string|null>
      */
-    private function alanlar(array $sayfalar): array
+    private function alanlar(array $satirlar, EkstreProfili $profil): array
     {
-        $sonuc = array_fill_keys(array_keys(self::ETIKETLER), null);
-        $satirlar = array_map(fn (string $s): string => Metin::sade($s), array_merge(...($sayfalar ?: [[]])));
+        $etiketler = self::ETIKETLER;
+        foreach ($profil->alanEtiketleri() as $alan => $liste) {
+            $etiketler[$alan] = [...$liste, ...($etiketler[$alan] ?? [])];
+        }
+        $sonuc = array_fill_keys(array_keys($etiketler), null);
 
         foreach ($satirlar as $no => $satir) {
             // Bu satırdaki etiketler (konumuyla). "ÖNCEKİ DÖNEM BORCU", "ÖNCEKİ HESAP KESİM TARİHİ" bu dönemin değil
-            // (yalnızca dönem başlangıcı ÖNCEKİ etiketini arar)
             $bulunan = [];
-            foreach (self::ETIKETLER as $alan => $etiketler) {
+            foreach ($etiketler as $alan => $liste) {
                 if ($sonuc[$alan] !== null) {
                     continue;
                 }
-                foreach ($etiketler as $etiket) {
-                    $konum = $this->etiketKonumu($satir, $etiket, $alan !== 'donem_baslangic');
+                foreach ($liste as $etiket) {
+                    $konum = $this->etiketKonumu($satir, $etiket, in_array($alan, self::ONCEKISIZ, true));
                     if ($konum !== null && ! isset($bulunan[$konum])) {
                         $bulunan[$konum] = [$alan, $konum + strlen($etiket)];
                         break;
@@ -107,14 +167,17 @@ class EkstreAyristirici
                 $tarihler = $this->tumTarihler($satirlar[$no + 1]);
                 $tutarlar = $this->tumTutarlar($satirlar[$no + 1]);
                 foreach ($eksik as [$alan]) {
-                    $sonuc[$alan] = str_ends_with($alan, 'tarihi') || $alan === 'donem_baslangic'
-                        ? array_shift($tarihler)
-                        : (($t = array_shift($tutarlar)) !== null ? $t : null);
+                    $sonuc[$alan] = self::tarihAlani($alan) ? array_shift($tarihler) : array_shift($tutarlar);
                 }
             }
         }
 
         return $sonuc;
+    }
+
+    private static function tarihAlani(string $alan): bool
+    {
+        return str_ends_with($alan, 'tarihi') || $alan === 'donem_baslangic';
     }
 
     /** Etiketin ilk geçtiği yer; `$oncekisiz` ise hemen önünde "ÖNCEKİ" olanlar atlanır */
@@ -133,11 +196,7 @@ class EkstreAyristirici
 
     private function deger(string $alan, string $metin): ?string
     {
-        if (str_ends_with($alan, 'tarihi') || $alan === 'donem_baslangic') {
-            return $this->tumTarihler($metin)[0] ?? null;
-        }
-
-        return $this->tumTutarlar($metin)[0] ?? null;
+        return self::tarihAlani($alan) ? ($this->tumTarihler($metin)[0] ?? null) : ($this->tumTutarlar($metin)[0] ?? null);
     }
 
     /**
@@ -157,14 +216,31 @@ class EkstreAyristirici
     {
         preg_match_all('/(?<![\d.,])('.self::TUTAR.')(?![\d,])/', $metin, $e);
 
-        return array_map(fn (string $t): string => Kurus::decimal(abs(Kurus::kurus($this->sayi($t)))), $e[1]);
+        return array_map(fn (string $t): string => self::mutlak($t), $e[1]);
     }
 
     /**
      * @return array<string, mixed>|null
      */
-    private function islemSatiri(string $ham, ?Carbon $kesim): ?array
+    private function islemSatiri(string $ham, ?Carbon $kesim, EkstreProfili $profil): ?array
     {
+        $ham = rtrim($ham);
+        $ek = [];
+        // Sağdaki tutar olmayan sütunlar (puan, kalan taksit)
+        $degisti = true;
+        while ($degisti) {
+            $degisti = false;
+            foreach ($profil->sondakiSutunlar() as $desen) {
+                if (preg_match($desen, $ham, $e)) {
+                    if (isset($e['kalan'])) {
+                        $ek['taksit_kalan'] = self::mutlak($e['kalan']);
+                    }
+                    $ham = rtrim(substr($ham, 0, -strlen($e[0])));
+                    $degisti = true;
+                }
+            }
+        }
+
         $satir = trim(str_replace("\t", '  ', $ham));
         if (! preg_match('/^'.self::TARIH.'\s+(.+)$/u', $satir, $e)) {
             return null;
@@ -173,20 +249,25 @@ class EkstreAyristirici
         // İkinci tarih (valör / kayıt tarihi) açıklama değildir
         $kalan = (string) preg_replace('/^'.self::TARIH.'\s+/', '', $kalan);
 
-        // Sondaki tutarlar (sağdan sola); her birinin alacak işareti ayrı
+        // Sondaki tutarlar (sağdan sola); her birinin alacak işareti ayrı (önde -, önde +, sonda -, +, CR, ALACAK)
         $adaylar = [];
-        while (preg_match('/(?:^|\s)('.self::TUTAR.')\s*(?:TL|TRY)?\s*(-|\+|CR|ALACAK)?\s*$/u', $kalan, $t, PREG_OFFSET_CAPTURE)) {
-            $isaret = isset($t[2]) && $t[2][1] >= 0 && $t[2][0] !== '';
-            array_unshift($adaylar, [$t[1][0], str_starts_with($t[1][0], '-') || $isaret]);
+        while (preg_match('/(?:^|\s)([-+])?\s?('.self::TUTAR.')\s*(?:TL|TRY)?\s*(-|\+|CR|ALACAK)?\s*$/u', $kalan, $t, PREG_OFFSET_CAPTURE)) {
+            $alacakMi = ($t[1][0] ?? '') !== '' || (isset($t[3]) && $t[3][1] >= 0 && $t[3][0] !== '');
+            array_unshift($adaylar, [$t[2][0], $alacakMi]);
             $kalan = rtrim(substr($kalan, 0, $t[0][1]));
         }
-        $tutarlar = array_column($adaylar, 0);
-        // Asıl tutar soldaki (sonrakiler puan / döviz sütunu olabilir)
-        $alacak = $adaylar[0][1] ?? false;
-        $aciklama = trim((string) preg_replace('/\s{2,}/', ' ', $kalan));
-        if ($tutarlar === [] || $aciklama === '') {
+        if ($adaylar === []) {
             return null;
         }
+        $secilen = $profil->tutarKonumu() === 'son' ? array_key_last($adaylar) : 0;
+        $tutarlar = array_column($adaylar, 0);
+        $alacak = $adaylar[$secilen][1];
+        $aciklama = trim((string) preg_replace('/\s{2,}/', ' ', $kalan));
+        $aciklama = $profil->aciklamaTemizle($aciklama);
+        if ($aciklama === '') {
+            return null;
+        }
+        $sadeTam = Metin::sade($e[4]);
         $sade = Metin::sade($aciklama);
         foreach (self::OZET_KELIMELERI as $kelime) {
             if (str_contains($sade, $kelime)) {
@@ -215,11 +296,12 @@ class EkstreAyristirici
             $okunamayan[] = 'islem_tarihi';
         }
 
-        $tutar = Kurus::decimal(abs(Kurus::kurus($this->sayi($tutarlar[0]))));
+        $tutar = self::mutlak($tutarlar[$secilen]);
         if (count($tutarlar) > 1) {
-            $uyarilar[] = 'Satırda birden çok tutar var ('.implode(' · ', $tutarlar).'); ilki alındı, doğru olanı seçin.';
+            $uyarilar[] = 'Satırda birden çok tutar var ('.implode(' · ', $tutarlar).'); '.($secilen === 0 ? 'soldaki' : 'sağdaki').' alındı, doğru olanı seçin.';
         }
-        [$taksitNo, $taksitSayisi] = $this->taksit($sade);
+        [$taksitNo, $taksitSayisi, $taksitToplam] = $profil->taksit($sadeTam) ?? [...$this->taksit($sadeTam), null];
+        $taksitToplam ??= preg_match('/TOPLAM\s*:?\s*('.self::TUTAR.')/', $sade, $tt) ? self::mutlak($tt[1]) : null;
 
         return [
             'ham' => trim($ham),
@@ -230,11 +312,12 @@ class EkstreAyristirici
             'tur' => $this->tur($sade, $alacak)->value,
             'taksit_no' => $taksitNo,
             'taksit_sayisi' => $taksitSayisi,
-            'taksit_toplam' => preg_match('/TOPLAM\s*:?\s*('.self::TUTAR.')/', $sade, $tt) ? Kurus::decimal(abs(Kurus::kurus($this->sayi($tt[1])))) : null,
+            'taksit_toplam' => $taksitToplam,
+            'taksit_kalan' => $ek['taksit_kalan'] ?? null,
             'okuma' => [
                 'alanlar' => Kurus::kurus($tutar) > 0 ? $okunamayan : [...$okunamayan, 'tutar'],
                 'uyarilar' => $uyarilar,
-                'tutar_adaylari' => count($tutarlar) > 1 ? array_map(fn (string $t): string => Kurus::decimal(abs(Kurus::kurus($this->sayi($t)))), $tutarlar) : [],
+                'tutar_adaylari' => count($tutarlar) > 1 ? array_map(fn (string $t): string => self::mutlak($t), $tutarlar) : [],
             ],
         ];
     }
@@ -290,17 +373,18 @@ class EkstreAyristirici
         if ($var(['IADE', 'IPTAL'])) {
             return KartIslemTuru::Iade;
         }
-        if ($var(['FAIZ', 'KKDF', 'BSMV', 'UCRET', 'KART AIDATI', 'YILLIK UYELIK', 'GECIKME'])) {
+        // "FAİZİ", "ÜCRETİ", "AİDATI" gibi ekli yazımlar da (kelime başı)
+        if ($var(['KKDF', 'BSMV', 'KART AIDATI', 'YILLIK UYELIK']) || preg_match('/(^|[^A-Z0-9])(FAIZ|UCRET|AIDAT|GECIKME)(I|SI|LERI|LERIN|I)?(?![A-Z0-9])/', $sade)) {
             return KartIslemTuru::Ucret;
         }
 
         return KartIslemTuru::Harcama;
     }
 
-    /** "1.234,56" / "-12,50" → "1234.56" / "-12.50" */
-    private function sayi(string $tutar): string
+    /** "1.234,56" / "-12,50" → mutlak decimal "1234.56" */
+    private static function mutlak(string $tutar): string
     {
-        return str_replace(['.', ',', ' '], ['', '.', ''], trim($tutar));
+        return Kurus::decimal(abs(Kurus::kurus(str_replace(['.', ',', ' ', '+', '-'], ['', '.', '', '', ''], trim($tutar)))));
     }
 
     private function tarih(int $gun, int $ay, int $yil): ?string

@@ -4,6 +4,7 @@ namespace App\Services\Ekstre;
 
 use Smalot\PdfParser\Config;
 use Smalot\PdfParser\Parser;
+use Smalot\PdfParser\XObject\Form;
 use Throwable;
 
 /**
@@ -32,7 +33,25 @@ class PdfMetinOkuyucu
             $belge = (new Parser([], $ayar))->parseContent($icerik);
             $sayfalar = [];
             foreach ($belge->getPages() as $sayfa) {
-                $sayfalar[] = $this->satirlar($sayfa);
+                // Sayfanın kendi konumlu metni + içine çizilen formların konumlu metni (aynı form iki adla geçebilir:
+                // bir kez). İkisi de yoksa smalot'un düz metni (formları da içerir; o yüzden yalnızca yedek).
+                $satirlar = $this->satirlar($this->parcalar($sayfa));
+                $okunan = [];
+                foreach ($sayfa->getXObjects() as $nesne) {
+                    if (! $nesne instanceof Form) {
+                        continue;
+                    }
+                    $form = FormSayfasi::formdan($nesne, $belge, $ayar);
+                    if (isset($okunan[$form->ozet()])) {
+                        continue;
+                    }
+                    $okunan[$form->ozet()] = true;
+                    $satirlar = [...$satirlar, ...$this->satirlar($this->parcalar($form))];
+                }
+                if ($satirlar === []) {
+                    $satirlar = array_values(array_filter(array_map('trim', explode("\n", (string) $sayfa->getText())), fn (string $s): bool => $s !== ''));
+                }
+                $sayfalar[] = $satirlar;
             }
         } catch (Throwable $e) {
             throw str_contains($e->getMessage(), 'Secured pdf') ? EkstreOkunamadi::sifreli() : EkstreOkunamadi::bozuk();
@@ -47,21 +66,17 @@ class PdfMetinOkuyucu
     }
 
     /**
-     * @return list<string>
+     * Konumlu metin parçaları: [x, y, metin]; okunamazsa boş.
+     *
+     * @return list<array{0: float, 1: float, 2: string}>
      */
-    private function satirlar(object $sayfa): array
+    private function parcalar(object $sayfa): array
     {
         try {
             $parcalar = $sayfa->getDataTm();
         } catch (Throwable) {
-            $parcalar = [];
+            return [];
         }
-        if ($parcalar === []) {
-            // Konum yoksa düz metin (sekme ayrımı smalot'tan)
-            return array_values(array_filter(array_map('trim', explode("\n", (string) $sayfa->getText())), fn (string $s): bool => $s !== ''));
-        }
-
-        // [x, y, metin]; yukarıdan aşağı, soldan sağa
         $ogeler = [];
         foreach ($parcalar as [$matris, $metin]) {
             $metin = trim((string) $metin);
@@ -69,6 +84,18 @@ class PdfMetinOkuyucu
                 $ogeler[] = [(float) $matris[4], (float) $matris[5], $metin];
             }
         }
+
+        return $ogeler;
+    }
+
+    /**
+     * Parçaları satırlara toplar: yukarıdan aşağı, soldan sağa.
+     *
+     * @param  list<array{0: float, 1: float, 2: string}>  $ogeler
+     * @return list<string>
+     */
+    private function satirlar(array $ogeler): array
+    {
         usort($ogeler, fn (array $a, array $b): int => abs($a[1] - $b[1]) > self::SATIR_PAYI ? $b[1] <=> $a[1] : $a[0] <=> $b[0]);
 
         $satirlar = [];

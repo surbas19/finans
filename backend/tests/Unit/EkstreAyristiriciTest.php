@@ -2,23 +2,26 @@
 
 namespace Tests\Unit;
 
+use App\Services\Ekstre\BankaTanici;
 use App\Services\Ekstre\EkstreAyristirici;
+use App\Services\Ekstre\MetinNormalizer;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Genel ayrıştırıcı: farklı satır biçimleri, dönem bilgileri, taksit, alacak, okunamayan alan (uydurulmaz).
+ * Banka profilleri `EkstreProfilleriTest`'te.
  */
 class EkstreAyristiriciTest extends TestCase
 {
     private function ayristir(array ...$sayfalar): array
     {
-        return (new EkstreAyristirici)->ayristir($sayfalar);
+        return (new EkstreAyristirici(new MetinNormalizer, new BankaTanici))->ayristir($sayfalar);
     }
 
     public function test_donem_bilgileri_ve_islem_satirlari(): void
     {
         $sonuc = $this->ayristir([
-            'GARANTI BBVA - Kredi Kartı Hesap Özeti',
+            'ORNEK BANKA - Kredi Kartı Hesap Özeti',
             'Önceki Hesap Kesim Tarihi: 10.10.2026',
             "Hesap Kesim Tarihi: 10.11.2026\tSon Ödeme Tarihi: 20.11.2026",
             'Önceki Dönem Borcu 3.000,00 TL',
@@ -35,6 +38,7 @@ class EkstreAyristiriciTest extends TestCase
             'Sayfa 1 / 2',
         ]);
 
+        $this->assertSame('genel', $sonuc['profil']);
         $this->assertSame([
             'kesim_tarihi' => '2026-11-10',
             'son_odeme_tarihi' => '2026-11-20',
@@ -42,6 +46,7 @@ class EkstreAyristiriciTest extends TestCase
             'donem_borcu' => '12345.67',
             'asgari_odeme' => '2469.13',
         ], $sonuc['alanlar']);
+        $this->assertSame('3000.00', $sonuc['ozet']['onceki_borc']);
         $this->assertSame([], $sonuc['okunamayan']);
 
         $satirlar = $sonuc['satirlar'];
@@ -54,12 +59,28 @@ class EkstreAyristiriciTest extends TestCase
         // İkinci tarih (valör) açıklamaya girmez; "+" alacak → iade
         $this->assertSame(['ZARA IADE', 'iade', true], [$satirlar[4]['aciklama'], $satirlar[4]['tur'], $satirlar[4]['alacak']]);
         $this->assertSame('ucret', $satirlar[5]['tur']);
-        // İki tutar: ilki alınır, uyarılır, adaylar saklanır
+        // İki tutar: genel profilde soldaki alınır, uyarılır, adaylar saklanır
         $this->assertSame('1500.00', $satirlar[6]['tutar']);
         $this->assertSame(['1500.00', '15.00'], $satirlar[6]['okuma']['tutar_adaylari']);
         $this->assertStringContainsString('birden çok tutar', $satirlar[6]['okuma']['uyarilar'][0]);
         $this->assertSame(1, $satirlar[0]['sayfa']);
         $this->assertSame("15.10.2026\tMİGROS KADIKÖY İSTANBUL\t1.234,56", $satirlar[0]['ham']);
+    }
+
+    public function test_onde_arti_ve_bosluklu_eksi_alacak_ay_adli_tarih(): void
+    {
+        $sonuc = $this->ayristir([
+            'Hesap Kesim Tarihi 13 Ekim 2026',
+            "21 Eylül 2026 ÖDEME-İNTERNET BANKACILIĞI\t+8.085,68",
+            "21/10/2026\tÖdeme - Cep Şubesi\t- 2.081,00 TL",
+            "10/11/2026\tAlışveriş faizi\t23,90 TL",
+            "26 Ekim 2026 OTOM. FATURA İŞLEM FAİZİ\t19,39",
+        ]);
+
+        $this->assertSame('2026-10-13', $sonuc['alanlar']['kesim_tarihi']);
+        $this->assertSame(['2026-09-21', 'odeme', '8085.68', true], [$sonuc['satirlar'][0]['islem_tarihi'], $sonuc['satirlar'][0]['tur'], $sonuc['satirlar'][0]['tutar'], $sonuc['satirlar'][0]['alacak']]);
+        $this->assertSame(['odeme', '2081.00', true], [$sonuc['satirlar'][1]['tur'], $sonuc['satirlar'][1]['tutar'], $sonuc['satirlar'][1]['alacak']]);
+        $this->assertSame(['ucret', 'ucret'], [$sonuc['satirlar'][2]['tur'], $sonuc['satirlar'][3]['tur']]);
     }
 
     public function test_bulunamayan_alan_ve_tarih_uydurulmaz(): void
@@ -93,7 +114,7 @@ class EkstreAyristiriciTest extends TestCase
 
     public function test_taksit_ve_tur_tahminleri(): void
     {
-        $a = new EkstreAyristirici;
+        $a = new EkstreAyristirici(new MetinNormalizer, new BankaTanici);
         $this->assertSame([2, 6], $a->taksit('XYZ MAGAZA (2/6)'));
         $this->assertSame([3, 9], $a->taksit('TAKSIT 3/9 ABC'));
         $this->assertSame([4, 12], $a->taksit('ABC 4. TAKSIT / 12'));
@@ -104,5 +125,8 @@ class EkstreAyristiriciTest extends TestCase
         $this->assertSame('transfer', $a->tur('INTERNET HAVALE', false)->value);
         $this->assertSame('iade', $a->tur('ABC MAGAZA', true)->value);
         $this->assertSame('odeme', $a->tur('HESAPTAN ODEME', true)->value);
+        $this->assertSame('ucret', $a->tur('ALISVERIS FAIZI', false)->value);
+        $this->assertSame('ucret', $a->tur('KART AIDATI', false)->value);
+        $this->assertSame('harcama', $a->tur('FAIZSIZ MARKET', false)->value);
     }
 }
