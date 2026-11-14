@@ -12,6 +12,7 @@ use App\Models\FaturaSaglayicisi;
 use App\Models\FaturaTuru;
 use App\Models\Gelir;
 use App\Models\GelirKaynagi;
+use App\Models\GelirTuru;
 use App\Models\HaneUyesi;
 use App\Models\Kart;
 use App\Models\KartIslemi;
@@ -49,27 +50,28 @@ class AileDemoSeeder extends Seeder
         $ay = fn (int $once): string => Donem::ekle($buAy, -$once);
         $gun = fn (string $donem, int $g): string => Donem::ilkGun($donem)->day(min($g, Donem::sonGun($donem)->day))->toDateString();
 
-        // Gelirler: benim maaşım bu ay henüz yatmadı (beklenen), eşimin yattı
+        // Gelirler: benim maaşım bu ay henüz yatmadı (beklenen), eşimin yattı. Türler hanenin varsayılanlarından
+        $turler = GelirTuru::where('hane_id', $hane->id)->pluck('id', 'ad');
         $kaynak = fn (HaneUyesi $u, string $tur, string $ad, int $tutar, int $g): GelirKaynagi => GelirKaynagi::create([
-            'hane_id' => $hane->id, 'uye_id' => $u->id, 'tur' => $tur, 'ad' => $ad, 'duzen' => 'duzenli', 'siklik' => 'aylik',
+            'hane_id' => $hane->id, 'uye_id' => $u->id, 'gelir_turu_id' => $turler[$tur], 'ad' => $ad, 'duzen' => 'duzenli', 'siklik' => 'aylik',
             'beklenen_tutar' => $tutar, 'para_birimi' => 'TRY', 'gun' => $g, 'baslangic' => Donem::ilkGun($ay(6))->toDateString(),
         ]);
-        $benMaas = $kaynak($benUye, 'maas', 'ABC Teknoloji A.Ş.', 85000, 28);
-        $esMaas = $kaynak($esUye, 'maas', 'XYZ Danışmanlık Ltd.', 72000, 1);
-        $kira = $kaynak($esUye, 'kira', 'Kiradaki daire', 25000, 5);
+        $benMaas = $kaynak($benUye, 'Maaş', 'ABC Teknoloji A.Ş.', 85000, 28);
+        $esMaas = $kaynak($esUye, 'Maaş', 'XYZ Danışmanlık Ltd.', 72000, 1);
+        $kira = $kaynak($esUye, 'Kira geliri', 'Kiradaki daire', 25000, 5);
         $gelir = fn (?GelirKaynagi $k, HaneUyesi $u, string $tur, string $duzen, int $tutar, string $donem, int $g, ?string $aciklama = null) => Gelir::create([
-            'hane_id' => $hane->id, 'uye_id' => $u->id, 'gelir_kaynagi_id' => $k?->id, 'tur' => $tur, 'duzen' => $duzen,
+            'hane_id' => $hane->id, 'uye_id' => $u->id, 'gelir_kaynagi_id' => $k?->id, 'gelir_turu_id' => $turler[$tur], 'duzen' => $duzen,
             'aciklama' => $aciklama, 'tutar' => $tutar, 'para_birimi' => 'TRY', 'tl_tutar' => $tutar,
             'tarih' => min($gun($donem, $g), now()->toDateString()), 'donem' => $donem, 'olusturan_id' => $ben->id,
         ]);
         foreach ([3, 2, 1] as $once) {
-            $gelir($benMaas, $benUye, 'maas', 'duzenli', 85000, $ay($once), 28);
-            $gelir($esMaas, $esUye, 'maas', 'duzenli', 72000, $ay($once), 1);
-            $gelir($kira, $esUye, 'kira', 'duzenli', 25000, $ay($once), 5);
+            $gelir($benMaas, $benUye, 'Maaş', 'duzenli', 85000, $ay($once), 28);
+            $gelir($esMaas, $esUye, 'Maaş', 'duzenli', 72000, $ay($once), 1);
+            $gelir($kira, $esUye, 'Kira geliri', 'duzenli', 25000, $ay($once), 5);
         }
-        $gelir($esMaas, $esUye, 'maas', 'duzenli', 72000, $buAy, 1);
-        $gelir(null, $benUye, 'serbest', 'duzensiz', 7500, $ay(1), 18, 'Çeviri işi');
-        $gelir(null, $esUye, 'prim', 'tek_seferlik', 15000, $ay(1), 20, 'Yıl ortası primi');
+        $gelir($esMaas, $esUye, 'Maaş', 'duzenli', 72000, $buAy, 1);
+        $gelir(null, $benUye, 'Serbest çalışma', 'duzensiz', 7500, $ay(1), 18, 'Çeviri işi');
+        $gelir(null, $esUye, 'Prim / ikramiye', 'tek_seferlik', 15000, $ay(1), 20, 'Yıl ortası primi');
 
         // Bankalar, kartlar, fatura sağlayıcıları
         $garanti = Banka::create(['hane_id' => $hane->id, 'ad' => 'Garanti BBVA']);

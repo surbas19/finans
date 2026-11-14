@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\GelirDuzeni;
-use App\Enums\GelirTuru;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +18,7 @@ class Gelir extends Model
 
     protected $table = 'gelirler';
 
-    protected $fillable = ['hane_id', 'uye_id', 'gelir_kaynagi_id', 'tur', 'duzen', 'aciklama', 'tutar', 'para_birimi', 'tl_tutar', 'kur', 'tarih', 'donem', 'not', 'olusturan_id'];
+    protected $fillable = ['hane_id', 'uye_id', 'gelir_kaynagi_id', 'gelir_turu_id', 'duzen', 'aciklama', 'tutar', 'para_birimi', 'tl_tutar', 'kur', 'tarih', 'donem', 'not', 'olusturan_id'];
 
     /**
      * @return array<string, string>
@@ -27,7 +26,6 @@ class Gelir extends Model
     protected function casts(): array
     {
         return [
-            'tur' => GelirTuru::class,
             'duzen' => GelirDuzeni::class,
             'tutar' => 'decimal:2',
             'tl_tutar' => 'decimal:2',
@@ -61,7 +59,7 @@ class Gelir extends Model
             'id' => $this->id,
             'uye_id' => $this->uye_id,
             'gelir_kaynagi_id' => $this->gelir_kaynagi_id,
-            'tur' => $this->tur->value,
+            'gelir_turu_id' => $this->gelir_turu_id,
             'duzen' => $this->duzen->value,
             'aciklama' => $this->aciklama,
             'tutar' => Kurus::tl(Kurus::kurus($this->tutar)),

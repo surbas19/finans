@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Aile\EkstreController;
 use App\Http\Controllers\Api\V1\Aile\FaturaController;
 use App\Http\Controllers\Api\V1\Aile\GelirController;
 use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
+use App\Http\Controllers\Api\V1\Aile\GelirTuruController;
 use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
 use App\Http\Controllers\Api\V1\Aile\KartController;
 use App\Http\Controllers\Api\V1\Aile\KartIslemiController;
@@ -70,6 +71,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
 
             Route::apiResource('gelir-kaynaklari', GelirKaynagiController::class)->except('show')->parameters(['gelir-kaynaklari' => 'kaynak']);
             Route::apiResource('gelirler', GelirController::class)->except('show')->parameters(['gelirler' => 'gelir']);
+            Route::apiResource('gelir-turleri', GelirTuruController::class)->except('show')->parameters(['gelir-turleri' => 'tur']);
 
             Route::apiResource('bankalar', BankaController::class)->except('show')->parameters(['bankalar' => 'banka']);
             Route::apiResource('kartlar', KartController::class)->parameters(['kartlar' => 'kart']);

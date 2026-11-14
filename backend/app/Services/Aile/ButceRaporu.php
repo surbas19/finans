@@ -5,13 +5,13 @@ namespace App\Services\Aile;
 use App\Enums\EkstreDurumu;
 use App\Enums\FaturaDurumu;
 use App\Enums\GelirDuzeni;
-use App\Enums\GelirTuru;
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
 use App\Models\Ekstre;
 use App\Models\Fatura;
 use App\Models\FaturaTuru;
 use App\Models\Gelir;
+use App\Models\GelirTuru;
 use App\Models\HaneUyesi;
 use App\Models\HarcamaKategorisi;
 use App\Models\Kart;
@@ -38,18 +38,19 @@ class ButceRaporu
         $gelirler = Gelir::where('hane_id', $haneId)->where('donem', $donem)->get();
         $uyeler = HaneUyesi::where('hane_id', $haneId)->orderBy('sira')->orderBy('id')->get();
         $beklenenler = $this->takvim->beklenenler($haneId, $donem);
+        $turAdlari = GelirTuru::where('hane_id', $haneId)->pluck('ad', 'id');
 
         $kisiler = $uyeler
-            ->map(function (HaneUyesi $uye) use ($gelirler, $beklenenler): array {
+            ->map(function (HaneUyesi $uye) use ($gelirler, $beklenenler, $turAdlari): array {
                 $kendi = $gelirler->where('uye_id', $uye->id);
 
                 return [
                     'uye' => $uye->ozet(),
                     ...$this->toplamlar($kendi),
-                    'turler' => $kendi->groupBy(fn (Gelir $g): string => $g->tur->value)
-                        ->map(fn (Collection $grup, string $tur): array => [
-                            'tur' => $tur,
-                            'etiket' => GelirTuru::from($tur)->etiket(),
+                    'turler' => $kendi->groupBy('gelir_turu_id')
+                        ->map(fn (Collection $grup, int $tur): array => [
+                            'gelir_turu_id' => $tur,
+                            'etiket' => $turAdlari[$tur] ?? '',
                             'toplam' => Kurus::tl($this->topla($grup)),
                         ])->sortByDesc('toplam')->values(),
                     'beklenen_sayisi' => $beklenenler->where('kaynak.uye_id', $uye->id)->count(),

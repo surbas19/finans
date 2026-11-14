@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\GelirDuzeni;
 use App\Enums\GelirSikligi;
-use App\Enums\GelirTuru;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +18,7 @@ class GelirKaynagi extends Model
 
     protected $table = 'gelir_kaynaklari';
 
-    protected $fillable = ['hane_id', 'uye_id', 'tur', 'ad', 'duzen', 'siklik', 'beklenen_tutar', 'para_birimi', 'gun', 'baslangic', 'bitis', 'aktif', 'not'];
+    protected $fillable = ['hane_id', 'uye_id', 'gelir_turu_id', 'ad', 'duzen', 'siklik', 'beklenen_tutar', 'para_birimi', 'gun', 'baslangic', 'bitis', 'aktif', 'not'];
 
     /**
      * @return array<string, string>
@@ -27,7 +26,6 @@ class GelirKaynagi extends Model
     protected function casts(): array
     {
         return [
-            'tur' => GelirTuru::class,
             'duzen' => GelirDuzeni::class,
             'siklik' => GelirSikligi::class,
             'beklenen_tutar' => 'decimal:2',
@@ -53,7 +51,7 @@ class GelirKaynagi extends Model
         return [
             'id' => $this->id,
             'uye_id' => $this->uye_id,
-            'tur' => $this->tur->value,
+            'gelir_turu_id' => $this->gelir_turu_id,
             'ad' => $this->ad,
             'duzen' => $this->duzen->value,
             'siklik' => $this->siklik?->value,

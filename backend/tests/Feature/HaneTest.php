@@ -125,7 +125,8 @@ class HaneTest extends TestCase
     public function test_yonetici_kullaniciyi_haneye_baglar_kayitlar_sahipsiz_kalmaz(): void
     {
         $yonetici = User::factory()->yonetici()->create();
-        [$ben, $es] = User::factory()->count(2)->create()->all();
+        // Adlar sabit: rastgele aynı ad gelirse üye adı "ad soyad" olur (HaneYonetimi) ve son denetim tutmaz
+        [$ben, $es] = User::factory()->count(2)->sequence(['ad' => 'Ali'], ['ad' => 'Ayşe'])->create()->all();
         $haneler = app(HaneYonetimi::class);
         $hane = $haneler->hazirla($ben);
         $haneler->hazirla($es);

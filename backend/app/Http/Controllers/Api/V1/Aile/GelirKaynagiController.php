@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\Aile;
 
 use App\Enums\GelirDuzeni;
 use App\Enums\GelirSikligi;
-use App\Enums\GelirTuru;
 use App\Http\Controllers\Controller;
 use App\Models\GelirKaynagi;
 use App\Services\Aile\DovizKuru;
@@ -57,7 +56,7 @@ class GelirKaynagiController extends Controller
         $haneId = $request->user()->hane_id;
         $veri = $request->validate([
             'uye_id' => ['required', 'integer', Rule::exists('hane_uyeleri', 'id')->where('hane_id', $haneId)],
-            'tur' => ['required', Rule::enum(GelirTuru::class)],
+            'gelir_turu_id' => ['required', 'integer', Rule::exists('gelir_turleri', 'id')->where('hane_id', $haneId)],
             'ad' => ['required', 'string', 'max:80'],
             'duzen' => ['required', Rule::enum(GelirDuzeni::class)],
             'siklik' => ['nullable', 'required_if:duzen,duzenli', Rule::enum(GelirSikligi::class)],
@@ -69,7 +68,7 @@ class GelirKaynagiController extends Controller
             'aktif' => ['sometimes', 'boolean'],
             'not' => ['nullable', 'string', 'max:500'],
         ], ['siklik.required_if' => 'Düzenli gelirde sıklık gerekir.'], [
-            'uye_id' => 'kişi', 'tur' => 'gelir türü', 'ad' => 'kaynak', 'duzen' => 'düzen', 'siklik' => 'sıklık',
+            'uye_id' => 'kişi', 'gelir_turu_id' => 'gelir türü', 'ad' => 'kaynak', 'duzen' => 'düzen', 'siklik' => 'sıklık',
             'beklenen_tutar' => 'beklenen tutar', 'gun' => 'gün', 'baslangic' => 'başlangıç', 'bitis' => 'bitiş',
         ]);
         $veri['ad'] = trim($veri['ad']);

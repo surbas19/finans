@@ -19,7 +19,10 @@ use Illuminate\Validation\ValidationException;
  */
 class HaneYonetimi
 {
-    /** `hane_id` taşıyan aile tabloları (üyeler hariç); yeni tablo eklenince buraya da yazılır */
+    /**
+     * `hane_id` taşıyan aile tabloları (üyeler hariç); yeni tablo eklenince buraya da yazılır. Varsayılanla gelen
+     * tanımlar (harcama kategorileri, gelir türleri) kayıt sayılmaz.
+     */
     public const AILE_TABLOLARI = ['gelir_kaynaklari', 'gelirler', 'bankalar', 'kartlar', 'ekstreler', 'kart_islemleri', 'fatura_turleri', 'fatura_saglayicilari', 'faturalar'];
 
     /** Üyeye bağlı kayıtlar (tablo => sütun); kaydı olan üye silinmez, pasif olur */

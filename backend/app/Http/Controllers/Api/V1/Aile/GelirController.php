@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1\Aile;
 
 use App\Enums\GelirDuzeni;
-use App\Enums\GelirTuru;
 use App\Http\Controllers\Controller;
 use App\Models\Gelir;
 use App\Models\GelirKaynagi;
@@ -29,7 +28,7 @@ class GelirController extends Controller
             'donem' => ['nullable', 'regex:'.Donem::DESEN],
             'yil' => ['nullable', 'integer', 'between:2000,2100'],
             'uye_id' => ['nullable', 'integer'],
-            'tur' => ['nullable', Rule::enum(GelirTuru::class)],
+            'gelir_turu_id' => ['nullable', 'integer'],
             'duzen' => ['nullable', Rule::enum(GelirDuzeni::class)],
         ]);
         $donem = $veri['donem'] ?? (isset($veri['yil']) ? null : Donem::buAy());
@@ -37,7 +36,7 @@ class GelirController extends Controller
             ->when($donem, fn ($q, $d) => $q->where('donem', $d))
             ->when($veri['yil'] ?? null, fn ($q, $y) => $q->where('donem', 'like', $y.'-%'))
             ->when($veri['uye_id'] ?? null, fn ($q, $id) => $q->where('uye_id', $id))
-            ->when($veri['tur'] ?? null, fn ($q, $t) => $q->where('tur', $t))
+            ->when($veri['gelir_turu_id'] ?? null, fn ($q, $t) => $q->where('gelir_turu_id', $t))
             ->when($veri['duzen'] ?? null, fn ($q, $d) => $q->where('duzen', $d))
             ->orderByDesc('donem')->orderByDesc('tarih')->orderByDesc('id')->limit(1000)->get();
 
@@ -80,7 +79,7 @@ class GelirController extends Controller
         $veri = $request->validate([
             'uye_id' => ['required', 'integer', Rule::exists('hane_uyeleri', 'id')->where('hane_id', $haneId)],
             'gelir_kaynagi_id' => ['nullable', 'integer', Rule::exists('gelir_kaynaklari', 'id')->where('hane_id', $haneId)],
-            'tur' => ['required', Rule::enum(GelirTuru::class)],
+            'gelir_turu_id' => ['required', 'integer', Rule::exists('gelir_turleri', 'id')->where('hane_id', $haneId)],
             'duzen' => ['required', Rule::enum(GelirDuzeni::class)],
             'aciklama' => ['nullable', 'string', 'max:120'],
             'tutar' => ['required', 'numeric', 'gt:0', 'max:1000000000', 'decimal:0,2'],
@@ -98,7 +97,7 @@ class GelirController extends Controller
             'tarih.before_or_equal' => 'Gelecek tarihli gelir girilmez; beklenen gelirler düzenli kaynaktan gelir.',
             'donem.regex' => 'Dönem YYYY-AA biçiminde olmalı.',
         ], [
-            'uye_id' => 'kişi', 'gelir_kaynagi_id' => 'kaynak', 'tur' => 'gelir türü', 'duzen' => 'düzen',
+            'uye_id' => 'kişi', 'gelir_kaynagi_id' => 'kaynak', 'gelir_turu_id' => 'gelir türü', 'duzen' => 'düzen',
             'tutar' => 'tutar', 'para_birimi' => 'para birimi', 'tl_tutar' => 'TL karşılığı', 'tarih' => 'tarih', 'donem' => 'dönem',
         ]);
 
