@@ -37,6 +37,7 @@ watch(gorunur, (acik) => {
         ad: '',
         kesim_gunu: null,
         son_odeme_gunu: null,
+        asgari_oran: 40,
         aktif: true,
       }
 })
@@ -150,6 +151,21 @@ async function kaydet(): Promise<void> {
           />
         </FormAlani>
       </div>
+      <FormAlani
+        etiket="Asgari ödeme oranı (%)"
+        for="kart-asgari"
+        :hata="hatalar.asgari_oran"
+        ipucu="Ekstrede asgari ödeme yazmıyorsa dönem borcunun bu kadarı hesaplanır (varsayılan 40)"
+      >
+        <InputNumber
+          v-model="form.asgari_oran"
+          input-id="kart-asgari"
+          :min="1"
+          :max="100"
+          :use-grouping="false"
+          suffix="%"
+        />
+      </FormAlani>
       <label v-if="kart" class="flex items-center gap-2 text-sm text-surface-700">
         <ToggleSwitch v-model="form.aktif" /> Kullanımda
       </label>

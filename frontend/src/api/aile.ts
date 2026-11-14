@@ -159,6 +159,8 @@ export interface Kart {
   sahip_uye_id: number
   kesim_gunu: number | null
   son_odeme_gunu: number | null
+  /** Ekstreden okunamazsa asgari ödeme = dönem borcu × oran (%) */
+  asgari_oran: number
   renk: string | null
   aktif: boolean
 }
@@ -184,8 +186,8 @@ export interface Ekstre {
   son_odeme_tarihi: string | null
   donem_borcu: number | null
   asgari_odeme: number | null
-  /** alan => pdf | kullanici */
-  alan_kaynaklari: Record<string, 'pdf' | 'kullanici'>
+  /** alan => pdf | kullanici | hesaplandi (asgari ödeme: dönem borcu × kart oranı) */
+  alan_kaynaklari: Record<string, 'pdf' | 'kullanici' | 'hesaplandi'>
   okunamayan: string[]
   odendi: boolean
   dosya_var: boolean
@@ -204,7 +206,7 @@ export interface FaturaOnerisi {
   adaylar: number[]
   gerekce: string[]
   hizmet_donemi: string | null
-  donem_kaynagi: 'aciklama' | 'kullanici' | null
+  donem_kaynagi: 'aciklama' | 'kullanici' | 'kesim' | null
   otomatik: boolean
   secildi: boolean
 }
@@ -270,7 +272,7 @@ export interface Fatura {
   fatura_turu_id: number
   hizmet_donemi: string | null
   hizmet_donemi_etiketi: string | null
-  donem_kaynagi: 'aciklama' | 'kullanici' | null
+  donem_kaynagi: 'aciklama' | 'kullanici' | 'kesim' | null
   tutar: number
   son_odeme_tarihi: string | null
   durum: FaturaDurumu

@@ -180,6 +180,7 @@ async function coz(f: Fatura): Promise<void> {
             <span class="block text-xs text-surface-500">
               Hizmet: {{ f.hizmet_donemi_etiketi ?? 'bilinmiyor' }}
               <template v-if="f.donem_kaynagi === 'aciklama'"> (ekstreden)</template>
+              <template v-else-if="f.donem_kaynagi === 'kesim'"> (kesim ayından)</template>
               <template v-if="f.son_odeme_tarihi">
                 · son ödeme {{ tarih(f.son_odeme_tarihi) }}</template
               >

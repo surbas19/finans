@@ -83,16 +83,16 @@ class FaturaTest extends TestCase
         ]);
         $this->assertStringContainsString('"ISKI SU" geçiyor (İSKİ)', $iski['fatura_onerisi']['gerekce'][0]);
         $this->assertStringContainsString('Eylül 2026', $iski['fatura_onerisi']['gerekce'][1]);
-        // Dönem açıklamada yok: tahmin edilmez
-        $this->assertSame(['orta', null, false], [$igdas['fatura_onerisi']['guven'], $igdas['fatura_onerisi']['hizmet_donemi'], $igdas['fatura_onerisi']['secildi']]);
-        $this->assertStringContainsString('dönemi seçin ya da bilinmiyor', end($igdas['fatura_onerisi']['gerekce']));
+        // Dönem açıklamada yok: ekstrenin kesim ayı (10.11.2026 → Kasım 2026), kaynağı "kesim"
+        $this->assertSame(['orta', '2026-11', 'kesim', false], [$igdas['fatura_onerisi']['guven'], $igdas['fatura_onerisi']['hizmet_donemi'], $igdas['fatura_onerisi']['donem_kaynagi'], $igdas['fatura_onerisi']['secildi']]);
+        $this->assertStringContainsString('kesim ayı (Kasım 2026)', end($igdas['fatura_onerisi']['gerekce']));
         $this->assertSame('belirsiz', $enerji['fatura_onerisi']['guven']);
         $this->assertEqualsCanonicalizing([$this->s['enerjisa'], $this->s['ayedas']], $enerji['fatura_onerisi']['adaylar']);
         $this->assertNull($enerji['fatura_onerisi']['saglayici_id']);
         $this->assertSame(['dusuk', [$this->s['igdas']]], [$dogalgaz['fatura_onerisi']['guven'], $dogalgaz['fatura_onerisi']['adaylar']]);
         $this->assertNull($market['fatura_onerisi']);
 
-        // Kullanıcı: İGDAŞ'ı Ekim'e işaretler; belirsizde Enerjisa'yı seçer (dönem bilinmiyor kalır)
+        // Kullanıcı: İGDAŞ'ı Eylül'e işaretler; belirsizde Enerjisa'yı seçer (dönem kesim ayı kalır)
         $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$igdas['id']}", ['fatura' => ['secildi' => true, 'hizmet_donemi' => '2026-09']])->assertOk()
             ->assertJsonPath('islem.fatura_onerisi.donem_kaynagi', 'kullanici');
         $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$enerji['id']}", ['fatura' => ['secildi' => true]])->assertJsonValidationErrors('fatura');
@@ -100,7 +100,7 @@ class FaturaTest extends TestCase
 
         $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.fatura', 3);
         $faturalar = Fatura::orderBy('id')->get();
-        $this->assertSame([[$this->s['iski'], '2026-09', 'aciklama'], [$this->s['igdas'], '2026-09', 'kullanici'], [$this->s['enerjisa'], null, null]],
+        $this->assertSame([[$this->s['iski'], '2026-09', 'aciklama'], [$this->s['igdas'], '2026-09', 'kullanici'], [$this->s['enerjisa'], '2026-11', 'kesim']],
             $faturalar->map(fn (Fatura $f): array => [$f->saglayici_id, $f->hizmet_donemi, $f->donem_kaynagi])->all());
         $this->assertSame(['odendi'], $faturalar->pluck('durum')->map->value->unique()->values()->all());
         $this->assertSame('2026-10-05', $faturalar[0]->odeme_tarihi->toDateString());
@@ -114,7 +114,9 @@ class FaturaTest extends TestCase
         $eylul->assertJsonPath('faturalar.toplam', 1157.4)->assertJsonPath('faturalar.kartla_odenen', 1157.4)->assertJsonPath('gider.toplam', 0);
         $this->getJson('/api/v1/aile/ozet?ay=2026-10')->assertJsonPath('gider.toplam', 2707.5)->assertJsonPath('gider.kartsiz_faturalar', 0);
         $this->getJson('/api/v1/aile/faturalar?donem=2026-09')->assertJsonCount(2, 'faturalar')->assertJsonPath('toplam', 1157.4);
-        $this->getJson('/api/v1/aile/faturalar?bilinmeyen=1')->assertJsonCount(1, 'faturalar');
+        // Dönemi açıklamada olmayan fatura kesim ayına yazıldığı için "dönemi bilinmeyen" kalmaz; Kasım'da Enerjisa var
+        $this->getJson('/api/v1/aile/faturalar?bilinmeyen=1')->assertJsonCount(0, 'faturalar');
+        $this->getJson('/api/v1/aile/faturalar?donem=2026-11')->assertJsonCount(1, 'faturalar');
         $this->getJson("/api/v1/aile/faturalar?kart_id={$this->kart}")->assertJsonCount(3, 'faturalar');
     }
 

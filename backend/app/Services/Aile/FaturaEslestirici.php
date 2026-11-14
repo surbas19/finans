@@ -23,7 +23,8 @@ use Illuminate\Validation\ValidationException;
  * günü önceki ödemelerine yakın (10), açıklamada hizmet dönemi yazıyor (10), fatura türünün kelimesi geçiyor (10).
  * Güven: tek sağlayıcı + desen + en az bir kanıt daha → yüksek; yalnızca desen → orta; birden çok sağlayıcı →
  * belirsiz; yalnızca tür kelimesi (sağlayıcı tanımsız) → düşük. Otomatik kayıt yalnızca sağlayıcıda açıksa ve güven
- * yüksekse. Hizmet dönemi açıklamada açıkça yazmıyorsa tahmin edilmez (boş = bilinmiyor).
+ * yüksekse. Hizmet dönemi: açıklamada yazıyorsa o; yazmıyorsa ekstrenin kesim ayı (kaynağı "kesim"); kesim tarihi de yoksa boş
+ * (bilinmiyor).
  */
 class FaturaEslestirici
 {
@@ -41,6 +42,8 @@ class FaturaEslestirici
         ['saglayicilar' => $saglayicilar, 'turler' => $turler] = $this->tanimlar((int) $islem->hane_id);
         $sade = Metin::sade($islem->aciklama);
         $donem = $this->aciklamadakiDonem($sade);
+        // Açıklamada dönem yoksa ekstrenin kesim ayı (kaynağı "kesim"); açıklama ve kullanıcı seçimi önce gelir
+        $kesimDonemi = $islem->ekstre?->kesim_tarihi ? Donem::tarihten($islem->ekstre->kesim_tarihi) : null;
 
         $eslesenler = [];
         foreach ($saglayicilar as $s) {
@@ -60,7 +63,7 @@ class FaturaEslestirici
                 'fatura_turu_id' => null,
                 'adaylar' => array_map(fn (array $e): int => $e[0]->id, $eslesenler),
                 'gerekce' => ['Birden çok sağlayıcı eşleşti: '.implode(', ', array_map(fn (array $e): string => $e[0]->ad, $eslesenler)).'. Doğru olanı seçin.'],
-                ...$this->donemAlanlari($donem),
+                ...$this->donemAlanlari($donem, $kesimDonemi),
                 'otomatik' => false,
                 'secildi' => false,
             ];
@@ -78,7 +81,7 @@ class FaturaEslestirici
                 'fatura_turu_id' => $tur->id,
                 'adaylar' => $saglayicilar->where('fatura_turu_id', $tur->id)->pluck('id')->values()->all(),
                 'gerekce' => ["Açıklamada \"{$kelime}\" geçiyor ({$tur->ad}); bu yazım bir sağlayıcıya bağlı değil."],
-                ...$this->donemAlanlari($donem),
+                ...$this->donemAlanlari($donem, $kesimDonemi),
                 'otomatik' => false,
                 'secildi' => false,
             ];
@@ -115,7 +118,9 @@ class FaturaEslestirici
         $guven = $puan >= 70 ? 'yuksek' : 'orta';
         $otomatik = $guven === 'yuksek' && $saglayici->otomatik_kayit;
         if ($donem === null) {
-            $gerekce[] = 'Hizmet dönemi açıklamada yok: dönemi seçin ya da bilinmiyor bırakın.';
+            $gerekce[] = $kesimDonemi !== null
+                ? 'Hizmet dönemi açıklamada yok: ekstrenin kesim ayı ('.Donem::etiket($kesimDonemi).') alındı; farklıysa dönemi değiştirin.'
+                : 'Hizmet dönemi açıklamada yok: dönemi seçin ya da bilinmiyor bırakın.';
         }
 
         return [
@@ -125,7 +130,7 @@ class FaturaEslestirici
             'fatura_turu_id' => $saglayici->fatura_turu_id,
             'adaylar' => [$saglayici->id],
             'gerekce' => $gerekce,
-            ...$this->donemAlanlari($donem),
+            ...$this->donemAlanlari($donem, $kesimDonemi),
             'otomatik' => $otomatik,
             'secildi' => $otomatik,
         ];
@@ -211,8 +216,12 @@ class FaturaEslestirici
     /**
      * @return array{hizmet_donemi: string|null, donem_kaynagi: string|null}
      */
-    private function donemAlanlari(?string $donem): array
+    private function donemAlanlari(?string $donem, ?string $kesimDonemi = null): array
     {
+        if ($donem === null && $kesimDonemi !== null) {
+            return ['hizmet_donemi' => $kesimDonemi, 'donem_kaynagi' => 'kesim'];
+        }
+
         return ['hizmet_donemi' => $donem, 'donem_kaynagi' => $donem !== null ? 'aciklama' : null];
     }
 

@@ -89,7 +89,12 @@ const gorunenSatirlar = computed(() =>
 function kaynak(alanAdi: string): string {
   if (ekstre.value?.okunamayan.includes(alanAdi)) return 'okunamadı'
 
-  return ekstre.value?.alan_kaynaklari[alanAdi] === 'kullanici' ? 'siz girdiniz' : "PDF'den"
+  const k = ekstre.value?.alan_kaynaklari[alanAdi]
+  if (k === 'hesaplandi') {
+    return `hesaplandı: dönem borcu × %${kart.value?.asgari_oran ?? 40} (kart ayarındaki oran)`
+  }
+
+  return k === 'kullanici' ? 'siz girdiniz' : "PDF'den"
 }
 
 async function alanlariKaydet(): Promise<void> {

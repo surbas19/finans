@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\KartIslemDurumu;
 use App\Models\Ekstre;
 use App\Models\HaneUyesi;
+use App\Models\Kart;
 use App\Models\KartIslemi;
 use App\Models\User;
 use App\Services\Aile\HaneYonetimi;
@@ -199,6 +200,41 @@ class EkstreTest extends TestCase
             ->assertJsonPath('ekstre.alan_kaynaklari.kesim_tarihi', 'kullanici')
             ->assertJsonPath('ekstre.okunamayan', ['son_odeme_tarihi', 'donem_borcu', 'asgari_odeme']);
         $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk();
+    }
+
+    public function test_asgari_odeme_okunamazsa_borc_carpi_kart_orani(): void
+    {
+        // Asgari ödeme PDF'te yok; borç 3.479,66 → varsayılan %40 = 1.391,86 (kuruşa yarıdan yukarı)
+        $pdf = fn (string $ek): string => OrnekPdf::yaz([[
+            'ORNEK BANKA EKSTRE '.$ek,
+            [40 => 'Hesap Kesim Tarihi', 200 => '10.11.2026'],
+            [40 => 'Son Odeme Tarihi', 200 => '20.11.2026'],
+            [40 => 'Donem Borcu', 200 => '3.479,66 TL'],
+            [40 => '15.10.2026', 110 => 'MIGROS KADIKOY', 450 => '100,00'],
+        ]]);
+        $id = $this->yukle($pdf('a'))->assertCreated()
+            ->assertJsonPath('ekstre.asgari_odeme', 1391.86)
+            ->assertJsonPath('ekstre.alan_kaynaklari.asgari_odeme', 'hesaplandi')
+            ->assertJsonPath('ekstre.okunamayan', [])->json('ekstre.id');
+
+        // Dönem borcu düzeltilince hesaplanan asgari yenilenir
+        $this->putJson("/api/v1/aile/ekstreler/{$id}", ['donem_borcu' => 1000])->assertOk()
+            ->assertJsonPath('ekstre.asgari_odeme', 400)->assertJsonPath('ekstre.alan_kaynaklari.asgari_odeme', 'hesaplandi');
+        // Kullanıcı elle girerse dokunulmaz (borç değişse de)
+        $this->putJson("/api/v1/aile/ekstreler/{$id}", ['asgari_odeme' => 450])->assertOk()
+            ->assertJsonPath('ekstre.alan_kaynaklari.asgari_odeme', 'kullanici');
+        $this->putJson("/api/v1/aile/ekstreler/{$id}", ['donem_borcu' => 2000])->assertOk()
+            ->assertJsonPath('ekstre.asgari_odeme', 450)->assertJsonPath('ekstre.alan_kaynaklari.asgari_odeme', 'kullanici');
+
+        // Kartın oranı %30: yeni ekstre ona göre; oran 1–100 dışı reddedilir
+        $this->putJson("/api/v1/aile/kartlar/{$this->kart}", ['banka_id' => Kart::find($this->kart)->banka_id, 'sahip_uye_id' => Kart::find($this->kart)->sahip_uye_id, 'ad' => 'Bonus', 'asgari_oran' => 101])
+            ->assertJsonValidationErrors('asgari_oran');
+        $this->putJson("/api/v1/aile/kartlar/{$this->kart}", ['banka_id' => Kart::find($this->kart)->banka_id, 'sahip_uye_id' => Kart::find($this->kart)->sahip_uye_id, 'ad' => 'Bonus', 'asgari_oran' => 30])
+            ->assertOk()->assertJsonPath('kart.asgari_oran', 30);
+        $this->yukle($pdf('b'))->assertCreated()->assertJsonPath('ekstre.asgari_odeme', 1043.90);
+
+        // PDF'te asgari yazıyorsa o kullanılır
+        $this->yukle($this->ekimPdf('c'))->assertJsonPath('ekstre.asgari_odeme', 695.93)->assertJsonPath('ekstre.alan_kaynaklari.asgari_odeme', 'pdf');
     }
 
     public function test_baska_hane_ekstreye_ve_pdfe_erisemez(): void

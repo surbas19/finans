@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\Aile\FaturaEslestirici;
 use App\Services\Aile\KartIslemKurallari;
 use App\Services\Aile\KategoriBulucu;
+use App\Support\Donem;
 use App\Support\Kurus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -88,13 +89,21 @@ class EkstreIceAktarici
     private function taslakYaz(User $user, Kart $kart, UploadedFile $dosya, string $yol, string $ozet, int $sayfaSayisi, array $sonuc): Ekstre
     {
         $alanlar = $sonuc['alanlar'];
+        $kaynaklar = collect($alanlar)->filter()->map(fn (): string => 'pdf')->all();
+        $okunamayan = $sonuc['okunamayan'];
+        // Asgari ödeme PDF'ten okunamadıysa: dönem borcu × kartın asgari oranı (kaynağı "hesaplandi")
+        if (($alanlar['asgari_odeme'] ?? null) === null && ($alanlar['donem_borcu'] ?? null) !== null) {
+            $alanlar['asgari_odeme'] = self::asgariHesapla($kart, $alanlar['donem_borcu']);
+            $kaynaklar['asgari_odeme'] = 'hesaplandi';
+            $okunamayan = array_values(array_diff($okunamayan, ['asgari_odeme']));
+        }
         $ekstre = Ekstre::create([
             'hane_id' => $user->hane_id,
             'kart_id' => $kart->id,
             'durum' => EkstreDurumu::Taslak,
             ...$alanlar,
-            'alan_kaynaklari' => collect($alanlar)->filter()->map(fn (): string => 'pdf')->all(),
-            'okunamayan' => $sonuc['okunamayan'],
+            'alan_kaynaklari' => $kaynaklar,
+            'okunamayan' => $okunamayan,
             'dosya_yolu' => $yol,
             'dosya_adi' => mb_substr($dosya->getClientOriginalName(), 0, 190),
             'dosya_boyutu' => $dosya->getSize(),
@@ -124,7 +133,9 @@ class EkstreIceAktarici
                 'okuma' => $satir['okuma'],
                 'olusturan_id' => $user->id,
             ]);
-            // Fatura adayı; kategori kuralı yoksa sağlayıcısı belli fatura Faturalar kategorisine
+            // Fatura adayı (dönem açıklamada yoksa ekstrenin kesim ayı); kategori kuralı yoksa sağlayıcısı belli fatura
+            // Faturalar kategorisine
+            $islem->setRelation('ekstre', $ekstre);
             $islem->fatura_onerisi = $this->faturalar->oner($islem);
             if ($islem->kategori_id === null && ($islem->fatura_onerisi['saglayici_id'] ?? null) !== null) {
                 $islem->kategori_id = $faturaKategorisi;
@@ -176,6 +187,14 @@ class EkstreIceAktarici
         return $sonuc;
     }
 
+    /** Dönem borcu × kartın asgari oranı (%, varsayılan 40), kuruşa yarıdan yukarı yuvarlanır */
+    public static function asgariHesapla(Kart $kart, string $donemBorcu): string
+    {
+        $oran = (int) ($kart->asgari_oran ?? 40);
+
+        return Kurus::decimal(intdiv(Kurus::kurus($donemBorcu) * $oran + 50, 100));
+    }
+
     /**
      * Dönem bilgilerini kullanıcı düzeltir; kaynağı "kullanıcı" olur, okunamayan listesinden çıkar.
      *
@@ -202,6 +221,14 @@ class EkstreIceAktarici
             if ($deger !== null) {
                 $okunamayan = array_values(array_diff($okunamayan, [$alan]));
             }
+        }
+        // Hesaplanan asgari ödeme dönem borcuyla birlikte yenilenir; kullanıcının elle girdiğine dokunulmaz
+        $asgariGirildi = array_key_exists('asgari_odeme', $veri) && $veri['asgari_odeme'] !== null;
+        if (! $asgariGirildi && $ekstre->donem_borcu !== null
+            && (($kaynaklar['asgari_odeme'] ?? null) === 'hesaplandi' || $ekstre->asgari_odeme === null)) {
+            $ekstre->asgari_odeme = self::asgariHesapla($ekstre->kart, (string) $ekstre->donem_borcu);
+            $kaynaklar['asgari_odeme'] = 'hesaplandi';
+            $okunamayan = array_values(array_diff($okunamayan, ['asgari_odeme']));
         }
         $ekstre->alan_kaynaklari = $kaynaklar;
         $ekstre->okunamayan = $okunamayan;
@@ -320,6 +347,11 @@ class EkstreIceAktarici
                 $eklenen++;
 
                 $oneri = $islem->fatura_onerisi;
+                // Dönem yüklemede belirsizdi (kesim tarihi sonradan girildi): ekstrenin kesim ayı
+                if (($oneri['secildi'] ?? false) && ($oneri['hizmet_donemi'] ?? null) === null) {
+                    $oneri['hizmet_donemi'] = Donem::tarihten($ekstre->kesim_tarihi);
+                    $oneri['donem_kaynagi'] = 'kesim';
+                }
                 if (($oneri['secildi'] ?? false) && ($oneri['saglayici_id'] ?? null) !== null) {
                     $this->faturalar->bagla(
                         $islem,

@@ -76,10 +76,11 @@ class KartController extends Controller
             'ad' => ['required', 'string', 'max:60', Rule::unique('kartlar', 'ad')->where('hane_id', $haneId)->ignore($kart?->id)],
             'kesim_gunu' => ['nullable', 'integer', 'between:1,31'],
             'son_odeme_gunu' => ['nullable', 'integer', 'between:1,31'],
+            'asgari_oran' => ['sometimes', 'integer', 'between:1,100'],
             'renk' => ['nullable', 'string', 'max:20', 'regex:/^[a-z0-9#-]+$/i'],
             'aktif' => ['sometimes', 'boolean'],
         ], ['ad.unique' => 'Bu adla bir kart zaten var.'], [
-            'banka_id' => 'banka', 'sahip_uye_id' => 'kart sahibi', 'ad' => 'kart adı', 'kesim_gunu' => 'kesim günü', 'son_odeme_gunu' => 'son ödeme günü',
+            'banka_id' => 'banka', 'sahip_uye_id' => 'kart sahibi', 'ad' => 'kart adı', 'kesim_gunu' => 'kesim günü', 'son_odeme_gunu' => 'son ödeme günü', 'asgari_oran' => 'asgari ödeme oranı',
         ]);
         // Kart adında uzun rakam dizisi (kart numarası) kabul edilmez
         if (preg_match('/\d[\d\s-]{10,}\d/', $veri['ad'])) {

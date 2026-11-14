@@ -16,7 +16,7 @@ class Kart extends Model
 
     protected $table = 'kartlar';
 
-    protected $fillable = ['hane_id', 'banka_id', 'sahip_uye_id', 'ad', 'kesim_gunu', 'son_odeme_gunu', 'renk', 'aktif'];
+    protected $fillable = ['hane_id', 'banka_id', 'sahip_uye_id', 'ad', 'kesim_gunu', 'son_odeme_gunu', 'asgari_oran', 'renk', 'aktif'];
 
     /**
      * @return array<string, string>
@@ -62,6 +62,7 @@ class Kart extends Model
             'sahip_uye_id' => $this->sahip_uye_id,
             'kesim_gunu' => $this->kesim_gunu,
             'son_odeme_gunu' => $this->son_odeme_gunu,
+            'asgari_oran' => (int) ($this->asgari_oran ?? 40),
             'renk' => $this->renk,
             'aktif' => $this->aktif,
         ];

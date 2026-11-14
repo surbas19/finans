@@ -222,7 +222,11 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
       <p v-if="oneri && oneri.hizmet_donemi && duzenlenebilir" class="text-[11px] text-surface-500">
         Dönem
         {{
-          oneri.donem_kaynagi === 'aciklama' ? 'ekstre açıklamasından okundu' : 'sizin seçiminiz'
+          oneri.donem_kaynagi === 'aciklama'
+            ? 'ekstre açıklamasından okundu'
+            : oneri.donem_kaynagi === 'kesim'
+              ? 'ekstrenin kesim ayından alındı'
+              : 'sizin seçiminiz'
         }}.
       </p>
     </div>
