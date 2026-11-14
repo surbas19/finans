@@ -6,7 +6,8 @@ use App\Support\Kurus;
 
 /**
  * Ekstre mutabakatı (finansçının yaptığı kontroller), kuruş hassasiyetiyle:
- * - Borç denklemi: önceki dönem borcu − ödemeler − iadeler + harcamalar + faiz / ücretler + nakit avans = dönem borcu.
+ * - Borç denklemi: önceki dönem borcu − ödemeler − iadeler − bonus + harcamalar + faiz / ücret / vergi + nakit avans =
+ *   dönem borcu.
  * - Garanti özet satırı: ekstrenin kendi toplamları (harcama, faiz, ödeme) satırlardan çıkanla aynı mı.
  * - Taksit: toplam tutar, tutar × taksit sayısına yaklaşık eşit mi (faizli taksitte fark olabilir: uyarı değil bilgi).
  * Uyuşmazlık ekstreyi engellemez; "tutmuyor: X TL fark" olarak incelemede görünür. Okunamayan değerle kontrol yapılmaz
@@ -22,7 +23,7 @@ class EkstreMutabakati
      */
     public function denetle(array $alanlar, array $ozet, array $satirlar): array
     {
-        $t = ['borc' => 0, 'ucret' => 0, 'avans' => 0, 'odeme' => 0, 'iade' => 0];
+        $t = ['borc' => 0, 'ucret' => 0, 'avans' => 0, 'odeme' => 0, 'iade' => 0, 'bonus' => 0];
         foreach ($satirlar as $s) {
             if (($s['tutar'] ?? null) === null) {
                 continue;
@@ -31,7 +32,8 @@ class EkstreMutabakati
             match ($s['tur']) {
                 'odeme' => $t['odeme'] += $kurus,
                 'iade' => $t['iade'] += $kurus,
-                'ucret' => $t['ucret'] += $kurus,
+                'bonus' => $t['bonus'] += $kurus,
+                'ucret', 'faiz', 'vergi' => $t['ucret'] += $kurus,
                 'nakit_avans' => $t['avans'] += $kurus,
                 default => $t['borc'] += $kurus, // harcama, transfer
             };
@@ -42,6 +44,7 @@ class EkstreMutabakati
             'nakit_avans' => Kurus::decimal($t['avans']),
             'odeme' => Kurus::decimal($t['odeme']),
             'iade' => Kurus::decimal($t['iade']),
+            'bonus' => Kurus::decimal($t['bonus']),
         ];
 
         $kontroller = [];
@@ -49,8 +52,8 @@ class EkstreMutabakati
         $onceki = $ozet['onceki_borc'] ?? null;
         if ($borc !== null && $onceki !== null) {
             $beklenen = Kurus::kurus($borc);
-            $bulunan = Kurus::kurus($onceki) - $t['odeme'] - $t['iade'] + $t['borc'] + $t['ucret'] + $t['avans'];
-            $kontroller[] = $this->kontrol('borc_denklemi', 'Önceki borç − ödemeler − iadeler + harcamalar + faiz / ücretler = dönem borcu', $beklenen, $bulunan);
+            $bulunan = Kurus::kurus($onceki) - $t['odeme'] - $t['iade'] - $t['bonus'] + $t['borc'] + $t['ucret'] + $t['avans'];
+            $kontroller[] = $this->kontrol('borc_denklemi', 'Önceki borç − ödemeler − iadeler − bonus + harcamalar + faiz / ücret / vergi = dönem borcu', $beklenen, $bulunan);
         } else {
             $kontroller[] = ['ad' => 'borc_denklemi', 'etiket' => 'Borç denklemi', 'durum' => 'kontrol_edilemedi', 'neden' => $borc === null ? 'Dönem borcu okunamadı.' : 'Önceki dönem borcu okunamadı.'];
         }

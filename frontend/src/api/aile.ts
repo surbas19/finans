@@ -7,7 +7,8 @@ import { http } from './http'
 
 export type GelirDuzeni = 'duzenli' | 'duzensiz' | 'tek_seferlik'
 export type GelirSikligi = 'aylik' | 'iki_aylik' | 'uc_aylik' | 'alti_aylik' | 'yillik'
-export type KartIslemTuru = 'harcama' | 'iade' | 'odeme' | 'transfer' | 'ucret' | 'nakit_avans'
+export type KartIslemTuru =
+  'harcama' | 'iade' | 'odeme' | 'transfer' | 'ucret' | 'nakit_avans' | 'faiz' | 'vergi' | 'bonus'
 export type KartIslemDurumu = 'taslak' | 'onayli' | 'atlandi'
 export type FaturaDurumu = 'bekliyor' | 'odendi'
 export type EslesmeGuveni = 'yuksek' | 'orta' | 'belirsiz' | 'dusuk' | 'kullanici'
@@ -32,8 +33,11 @@ export const KART_ISLEM_TURLERI: Record<KartIslemTuru, { etiket: string; gider: 
   iade: { etiket: 'İade / iptal', gider: -1 },
   odeme: { etiket: 'Kart borcu ödemesi', gider: 0 },
   transfer: { etiket: 'Transfer', gider: 0 },
-  ucret: { etiket: 'Faiz / ücret', gider: 1 },
+  ucret: { etiket: 'Ücret / aidat', gider: 1 },
+  faiz: { etiket: 'Faiz', gider: 1 },
+  vergi: { etiket: 'Vergi (KKDF / BSMV)', gider: 1 },
   nakit_avans: { etiket: 'Nakit avans', gider: 0 },
+  bonus: { etiket: 'Bonus / puanla ödenen', gider: 0 },
 }
 
 export const GUVEN_ETIKETLERI: Record<EslesmeGuveni, { etiket: string; renk: string }> = {

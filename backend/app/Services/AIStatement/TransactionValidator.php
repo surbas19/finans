@@ -16,10 +16,10 @@ class TransactionValidator
         'purchase' => ['harcama', false],
         'payment' => ['odeme', true],
         'refund' => ['iade', true],
-        'fee_interest' => ['ucret', false],
+        'fee_interest' => ['faiz', false],
         'cash_advance' => ['nakit_avans', false],
         'transfer' => ['transfer', false],
-        'bonus_redemption' => ['iade', true],
+        'bonus_redemption' => ['bonus', true],
     ];
 
     /**

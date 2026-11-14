@@ -69,11 +69,11 @@ class EkstreProfilleriTest extends TestCase
         [$odeme, $lahmacun, $bonus, $taksit, $faiz] = $sonuc['satirlar'];
         $this->assertSame(['2026-10-21', 'odeme', '6000.00', true], [$odeme['islem_tarihi'], $odeme['tur'], $odeme['tutar'], $odeme['alacak']]);
         $this->assertSame(['SANLI LAHMACUN', '1440.00', 'harcama'], [$lahmacun['aciklama'], $lahmacun['tutar'], $lahmacun['tur']]);
-        $this->assertSame(['iade', true], [$bonus['tur'], $bonus['alacak']]);
+        $this->assertSame(['bonus', true], [$bonus['tur'], $bonus['alacak']]);
         // Sağdaki tutar asıl (ortadaki 2,72 bonus); taksit A x N = T n.Taksit; açıklama temiz
         $this->assertSame(['756.00', 1, 4, '3024.00', 'IYZICO/SHOP.APIMAYE.COM.T'], [$taksit['tutar'], $taksit['taksit_no'], $taksit['taksit_sayisi'], $taksit['taksit_toplam'], $taksit['aciklama']]);
         $this->assertSame(['756.00', '2.72'], [$taksit['tutar'], $taksit['okuma']['tutar_adaylari'][0]]);
-        $this->assertSame('ucret', $faiz['tur']);
+        $this->assertSame('faiz', $faiz['tur']);
     }
 
     public function test_yapi_kredi(): void
@@ -135,7 +135,7 @@ class EkstreProfilleriTest extends TestCase
             $sonuc['alanlar']['kesim_tarihi'], $sonuc['alanlar']['son_odeme_tarihi'], $sonuc['alanlar']['donem_borcu'], $sonuc['alanlar']['asgari_odeme'],
         ]);
         $this->assertSame('2081.00', $sonuc['ozet']['onceki_borc']);
-        $this->assertSame(['odeme', 'harcama', 'ucret'], array_column($sonuc['satirlar'], 'tur'));
+        $this->assertSame(['odeme', 'harcama', 'vergi'], array_column($sonuc['satirlar'], 'tur'));
         $this->assertSame(['2081.00', true], [$sonuc['satirlar'][0]['tutar'], $sonuc['satirlar'][0]['alacak']]);
     }
 }

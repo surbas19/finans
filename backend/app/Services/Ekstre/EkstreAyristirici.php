@@ -366,16 +366,27 @@ class EkstreAyristirici
             return KartIslemTuru::Transfer;
         }
         if ($alacak) {
-            // Alacak: kart borcu ödemesi ya da iade. "ISKI OTOMATIK ODEME" gibi borç satırı faturadır, burada değil.
-            return $var(['ODEME', 'ODEMENIZ', 'HESAPTAN ODEME', 'BORC ODEME', 'KART ODEME', 'TAHSILAT', 'ODEMENIZ ICIN TESEKKURLER'])
-                ? KartIslemTuru::Odeme
+            // Alacak: kart borcu ödemesi, bonus / puanla ödeme ya da iade. "ISKI OTOMATIK ODEME" gibi borç satırı
+            // faturadır, burada değil.
+            if ($var(['ODEME', 'ODEMENIZ', 'HESAPTAN ODEME', 'BORC ODEME', 'KART ODEME', 'TAHSILAT', 'ODEMENIZ ICIN TESEKKURLER'])) {
+                return KartIslemTuru::Odeme;
+            }
+
+            return $var(['BONUS', 'BEDAVA', 'PUAN', 'WORLDPUAN', 'MAXIPUAN', 'CHIP PARA', 'PARAPUAN'])
+                ? KartIslemTuru::Bonus
                 : KartIslemTuru::Iade;
         }
         if ($var(['IADE', 'IPTAL'])) {
             return KartIslemTuru::Iade;
         }
-        // "FAİZİ", "ÜCRETİ", "AİDATI" gibi ekli yazımlar da (kelime başı)
-        if ($var(['KKDF', 'BSMV', 'KART AIDATI', 'YILLIK UYELIK']) || preg_match('/(^|[^A-Z0-9])(FAIZ|UCRET|AIDAT|GECIKME)(I|SI|LERI|LERIN|I)?(?![A-Z0-9])/', $sade)) {
+        // Vergi, faiz ("GECİKME FAİZİ" faizdir), ücret / aidat; "FAİZİ", "ÜCRETİ", "AİDATI" gibi ekli yazımlar da
+        if ($var(['KKDF', 'BSMV'])) {
+            return KartIslemTuru::Vergi;
+        }
+        if (preg_match('/(^|[^A-Z0-9])FAIZ(I|LERI|LERIN)?(?![A-Z0-9])/', $sade)) {
+            return KartIslemTuru::Faiz;
+        }
+        if ($var(['KART AIDATI', 'YILLIK UYELIK']) || preg_match('/(^|[^A-Z0-9])(UCRET|AIDAT|GECIKME)(I|SI|LERI|LERIN)?(?![A-Z0-9])/', $sade)) {
             return KartIslemTuru::Ucret;
         }
 

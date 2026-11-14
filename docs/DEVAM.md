@@ -5,8 +5,8 @@
 ## Yapay zekâ ile ekstre analizi ([planlar/ai-ekstre.md](planlar/ai-ekstre.md))
 İstek: PDF → OpenAI Responses API (input_file) → standart JSON → PHP doğrulama → önizleme → onaylı aktarım. Kararlar: PDF gider (her seferinde onay, store:false); yapay zekâ ana yol, PHP okuyucu yedek + çapraz kontrol; banka hesabı yalnız önizleme (hesap_ekstreleri); bonusSureyya.pdf anonim fixture depoya (PDF girmez). Bonus gider sayılmaz (puanla ödenen).
 
-- [ ] 1. Mimari rapor + CLAUDE.md / CANLI.md gizlilik metni
-- [ ] 2. Yeni türler bonus / faiz / vergi
+- [x] 1. Mimari rapor (planda) + CLAUDE.md / CANLI.md gizlilik metni
+- [x] 2. Yeni türler bonus (gider 0) / faiz / vergi: enum, mutabakat, okuyucu, AI eşlemesi, ön yüz; testler (arka uç 119, ön yüz 70)
 - [ ] 3. Referans fixture (metin) + PHP satır satır testi, 100.632,22 mutabakatı
 - [ ] 4. JSON şeması v2 + istem v2
 - [ ] 5. OpenAI: input_file, detail, arka plan modu, ayarlar; yerel canlı deneme (anahtar varsa)
@@ -16,7 +16,7 @@
 - [ ] 9. Testler + uçtan uca; EKSTRE_AI_AKTARIM varsayılanı açılır
 - [ ] 10. Rapor, ILERLEME, bu kaydı sil
 
-**Sıradaki adım:** 1.
+**Sıradaki adım:** 3 (bonusSureyya.pdf: beklenen satırlar, anonimleştirme komutu, fixture, PHP satır satır testi, 1.305,73 farkı).
 
 ## Yayın bekleyenler
 `main`'de yayımlanmamış, kullanıcı onayı bekleniyor: `4c6413c` (fatura dönemi = kesim ayı; dönemsiz faturaları tamamlayan migration) ve gelir türleri (migration `…001000`, var olan gelirleri taşır).

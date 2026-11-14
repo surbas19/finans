@@ -57,6 +57,9 @@ class KartIslemiTest extends TestCase
         $this->islem(['aciklama' => 'NAKIT AVANS', 'tutar' => 1000, 'tur' => 'nakit_avans']);
         $this->islem(['aciklama' => 'KKDF', 'tutar' => 50.1, 'tur' => 'ucret']);
         $this->islem(['aciklama' => 'TEKNOSA', 'tutar' => 250.25, 'tur' => 'harcama', 'taksit_no' => 1, 'taksit_sayisi' => 6]);
+        // Faiz gider; bonus / puanla ödeme borcu düşürür ama gider değil (harcama zaten sayıldı)
+        $this->islem(['aciklama' => 'ALISVERIS FAIZI', 'tutar' => 20, 'tur' => 'faiz']);
+        $this->islem(['aciklama' => 'BONUS BEDAVA ALISVERIS', 'tutar' => 60, 'tur' => 'bonus']);
 
         // Market kuralıyla kategori; iade asıl harcamaya bağlanır
         $marketKategori = HarcamaKategorisi::where('ad', 'Market')->value('id');
@@ -64,22 +67,23 @@ class KartIslemiTest extends TestCase
         $this->assertSame($market['id'], $iade['iade_islem_id']);
 
         $ozet = $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertOk();
-        // 500 − 100 + 50,10 + 250,25 (ödeme 2000, transfer 300, avans 1000 sayılmaz)
-        $ozet->assertJsonPath('gider.toplam', 700.35)->assertJsonPath('fark', -700.35);
+        // 500 − 100 + 50,10 + 250,25 + 20 faiz (ödeme 2000, transfer 300, avans 1000, bonus 60 sayılmaz)
+        $ozet->assertJsonPath('gider.toplam', 720.35)->assertJsonPath('fark', -720.35);
         $kategoriler = collect($ozet->json('gider.kategoriler'))->keyBy('ad');
         $this->assertSame(400, $kategoriler['Market']['toplam']); // iade kendi kategorisi yoksa asıl harcamanınkinden düşer
-        $this->assertSame(300.35, $kategoriler['Kategorisiz']['toplam']);
+        $this->assertSame(320.35, $kategoriler['Kategorisiz']['toplam']);
         $haric = collect($ozet->json('gider.haric'))->pluck('toplam', 'tur');
-        $this->assertSame(['odeme' => 2000, 'transfer' => 300, 'nakit_avans' => 1000], $haric->all());
+        $this->assertSame(['bonus' => 60, 'nakit_avans' => 1000, 'odeme' => 2000, 'transfer' => 300], $haric->sortKeys()->all());
+        $this->assertSame('Bonus / puanla ödenen', collect($ozet->json('gider.haric'))->firstWhere('tur', 'bonus')['etiket']);
         $ozet->assertJsonPath('gider.taksitler.0.aya_dusen', 250.25)
             ->assertJsonPath('gider.taksitler.0.toplam_borc', 1501.5)
             ->assertJsonPath('gider.taksitler.0.toplam_tahmini', true);
 
         // Liste toplamı aynı kuralla
         $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-11')->assertOk()
-            ->assertJsonPath('toplam.gider', 700.35)->assertJsonPath('toplam.gidere_girmeyen', 3300)->assertJsonPath('toplam.adet', 7);
+            ->assertJsonPath('toplam.gider', 720.35)->assertJsonPath('toplam.gidere_girmeyen', 3360)->assertJsonPath('toplam.adet', 9);
         $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-11&tur=iade')->assertJsonPath('toplam.gider', -100);
-        $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-11&kategori_id=yok')->assertJsonCount(5, 'islemler');
+        $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-11&kategori_id=yok')->assertJsonCount(7, 'islemler');
         // İade de "MIGROS" geçtiği için kuralla Market'e girdi: alış + iade
         $this->getJson("/api/v1/aile/kart-islemleri?ay=2026-11&kategori_id={$marketKategori}")->assertJsonCount(2, 'islemler')
             ->assertJsonPath('toplam.gider', 400);

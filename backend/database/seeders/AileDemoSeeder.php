@@ -110,7 +110,7 @@ class AileDemoSeeder extends Seeder
             [$once(10), 'HESAPTAN ODEME', '7500.00', 'odeme', null, null],
             [Carbon::parse($once(60))->toDateString(), 'TEKNOSA ISTANBUL', '1500.00', 'harcama', 2, 6],
             [$once(5), 'A101 MAGAZA', '612.90', 'harcama', null, null],
-            [$once(2), 'KKDF', '35.00', 'ucret', null, null],
+            [$once(2), 'KKDF', '35.00', 'vergi', null, null],
         ];
         foreach ($satirlar as $i => [$tarih, $aciklama, $tutar, $islemTuru, $taksitNo, $taksitSayisi]) {
             $islem = new KartIslemi([

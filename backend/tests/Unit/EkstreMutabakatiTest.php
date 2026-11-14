@@ -23,7 +23,20 @@ class EkstreMutabakatiTest extends TestCase
 
         $this->assertSame(['tutuyor', null], [$r['durum'], $r['fark']]);
         $this->assertSame('tutuyor', $r['kontroller'][0]['durum']);
-        $this->assertSame(['harcama' => '524.50', 'faiz_ucret' => '25.50', 'nakit_avans' => '0.00', 'odeme' => '500.00', 'iade' => '50.00'], $r['toplamlar']);
+        $this->assertSame(['harcama' => '524.50', 'faiz_ucret' => '25.50', 'nakit_avans' => '0.00', 'odeme' => '500.00', 'iade' => '50.00', 'bonus' => '0.00'], $r['toplamlar']);
+    }
+
+    public function test_bonus_borcu_duser_faiz_ve_vergi_ucretlerle(): void
+    {
+        // 1000 önceki − 1000 ödeme − 60 bonus + 900 harcama + 40 faiz + 6 vergi + 4 ücret = 890
+        $r = (new EkstreMutabakati)->denetle(
+            ['donem_borcu' => '890.00'],
+            ['onceki_borc' => '1000.00'],
+            [$this->satir('odeme', '1000.00'), $this->satir('bonus', '60.00'), $this->satir('harcama', '900.00'), $this->satir('faiz', '40.00'), $this->satir('vergi', '6.00'), $this->satir('ucret', '4.00')],
+        );
+
+        $this->assertSame('tutuyor', $r['durum']);
+        $this->assertSame(['50.00', '60.00'], [$r['toplamlar']['faiz_ucret'], $r['toplamlar']['bonus']]);
     }
 
     public function test_tutmuyorsa_fark_kurusuna_gorunur(): void

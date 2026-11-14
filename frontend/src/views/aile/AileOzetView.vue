@@ -292,7 +292,11 @@ const gunMetni = (gun: number | null | undefined) =>
           </li>
           <li v-for="h in ozet.gider.haric" :key="h.tur">
             {{ h.etiket }} {{ tl(h.toplam) }}: gidere sayılmadı{{
-              h.tur === 'odeme' ? ' (ekstredeki harcamalar zaten sayıldı)' : ''
+              h.tur === 'odeme'
+                ? ' (ekstredeki harcamalar zaten sayıldı)'
+                : h.tur === 'bonus'
+                  ? ' (puanla ödenen harcama, harcama olarak sayıldı)'
+                  : ''
             }}.
           </li>
         </ul>

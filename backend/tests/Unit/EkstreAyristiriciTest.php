@@ -58,7 +58,7 @@ class EkstreAyristiriciTest extends TestCase
         $this->assertSame([3, 6, 'harcama'], [$satirlar[3]['taksit_no'], $satirlar[3]['taksit_sayisi'], $satirlar[3]['tur']]);
         // İkinci tarih (valör) açıklamaya girmez; "+" alacak → iade
         $this->assertSame(['ZARA IADE', 'iade', true], [$satirlar[4]['aciklama'], $satirlar[4]['tur'], $satirlar[4]['alacak']]);
-        $this->assertSame('ucret', $satirlar[5]['tur']);
+        $this->assertSame('vergi', $satirlar[5]['tur']);
         // İki tutar: genel profilde soldaki alınır, uyarılır, adaylar saklanır
         $this->assertSame('1500.00', $satirlar[6]['tutar']);
         $this->assertSame(['1500.00', '15.00'], $satirlar[6]['okuma']['tutar_adaylari']);
@@ -80,7 +80,7 @@ class EkstreAyristiriciTest extends TestCase
         $this->assertSame('2026-10-13', $sonuc['alanlar']['kesim_tarihi']);
         $this->assertSame(['2026-09-21', 'odeme', '8085.68', true], [$sonuc['satirlar'][0]['islem_tarihi'], $sonuc['satirlar'][0]['tur'], $sonuc['satirlar'][0]['tutar'], $sonuc['satirlar'][0]['alacak']]);
         $this->assertSame(['odeme', '2081.00', true], [$sonuc['satirlar'][1]['tur'], $sonuc['satirlar'][1]['tutar'], $sonuc['satirlar'][1]['alacak']]);
-        $this->assertSame(['ucret', 'ucret'], [$sonuc['satirlar'][2]['tur'], $sonuc['satirlar'][3]['tur']]);
+        $this->assertSame(['faiz', 'faiz'], [$sonuc['satirlar'][2]['tur'], $sonuc['satirlar'][3]['tur']]);
     }
 
     public function test_bulunamayan_alan_ve_tarih_uydurulmaz(): void
@@ -125,8 +125,15 @@ class EkstreAyristiriciTest extends TestCase
         $this->assertSame('transfer', $a->tur('INTERNET HAVALE', false)->value);
         $this->assertSame('iade', $a->tur('ABC MAGAZA', true)->value);
         $this->assertSame('odeme', $a->tur('HESAPTAN ODEME', true)->value);
-        $this->assertSame('ucret', $a->tur('ALISVERIS FAIZI', false)->value);
+        $this->assertSame('faiz', $a->tur('ALISVERIS FAIZI', false)->value);
+        $this->assertSame('faiz', $a->tur('GECIKME FAIZI', false)->value);
+        $this->assertSame('vergi', $a->tur('KKDF', false)->value);
+        $this->assertSame('vergi', $a->tur('BSMV TUTARI', false)->value);
         $this->assertSame('ucret', $a->tur('KART AIDATI', false)->value);
+        $this->assertSame('ucret', $a->tur('GECIKME UCRETI', false)->value);
+        // Alacak bonus / puan kullanımı iade değil, bonus (borcu düşürür, gider sayılmaz)
+        $this->assertSame('bonus', $a->tur('BONUS BEDAVA ALISVERIS', true)->value);
+        $this->assertSame('bonus', $a->tur('WORLDPUAN KULLANIMI', true)->value);
         $this->assertSame('harcama', $a->tur('FAIZSIZ MARKET', false)->value);
     }
 }
