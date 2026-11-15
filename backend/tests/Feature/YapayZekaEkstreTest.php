@@ -233,7 +233,10 @@ class YapayZekaEkstreTest extends TestCase
         Log::shouldNotHaveReceived('error');
         Log::shouldNotHaveReceived('warning');
 
-        // Onay: yalnızca incelemeden sonra, mevcut akışla
+        // Onay: yapay zekâ taslağının aktarımı açık değilse yok (önizleme); açılınca mevcut akışla
+        config(['ekstre.ai_aktarim' => false]);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertJsonValidationErrors('ekstre');
+        config(['ekstre.ai_aktarim' => true]);
         $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.eklenen', 2);
     }
 
@@ -388,6 +391,90 @@ class YapayZekaEkstreTest extends TestCase
         $this->assertSame(['calisiyor', 'resp_5'], [EkstreAiCalismasi::first()->durum, EkstreAiCalismasi::first()->openai_yanit_id]);
         // Sayfa metni boş gider; PDF görüntüsünden okunur
         Http::assertSent(fn (IstemciIstegi $i): bool => str_contains($i->data()['input'][1]['content'][1]['text'], "[SAYFA 1]\n\n"));
+    }
+
+    public function test_inceleme_kapisi_kesim_teyidi_ve_kart_disi_belge(): void
+    {
+        config(['ekstre.ai_aktarim' => true]);
+        // Yapay zekâ kesimi 11.11 okudu (PDF okuyucu 10.11), bir satır "inceleme gerekli"
+        $ai = $this->ai([
+            $this->islem('2026-10-15', 'MIGROS KADIKOY', 1234.56, '15.10.2026 MIGROS KADIKOY 1.234,56'),
+            [...$this->islem('2026-10-16', 'ENERJISA BASKENT EDAS', 845.10, '16.10.2026 ENERJISA BASKENT EDAS 845,10'), 'needs_review' => true, 'review_reason' => 'Satır silik'],
+        ]);
+        $ai['period']['cut_date'] = '2026-11-11';
+        Http::fake(['*' => $this->cevap($ai)]);
+        $id = $this->yukle()->assertCreated()->json('ekstre.id');
+        $this->calistir($id)->assertStatus(202);
+        $ekstre = $this->getJson("/api/v1/aile/ekstreler/{$id}")
+            ->assertJsonPath('ekstre.denetim.kesim_teyit_gerekli', true)
+            ->assertJsonPath('ekstre.denetim.capraz.kesim_farkli', true)
+            ->assertJsonPath('ekstre.kesim_tarihi', '2026-11-10'); // dolu alan değişmez
+        $this->assertContains('Kesim tarihi: PDF okuyucu 2026-11-10, yapay zekâ 2026-11-11; kontrol edip kaydedin.', $ekstre->json('ekstre.denetim.capraz.farklar'));
+
+        // 1) Kesim farkı teyit edilmeden onay yok; kullanıcı kaydedince teyit edilmiş sayılır
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertJsonValidationErrors('kesim_tarihi');
+        $this->putJson("/api/v1/aile/ekstreler/{$id}", ['kesim_tarihi' => '2026-11-10'])->assertOk()->assertJsonPath('ekstre.denetim.kesim_teyit_gerekli', false);
+        // 2) İnceleme gereken satır "Kontrol ettim" denmeden onay yok; düzeltmek kontrol saymaz
+        $satir = collect($ekstre->json('satirlar'))->firstWhere('aciklama', 'ENERJISA BASKENT EDAS');
+        $this->assertSame([true, false], [$satir['okuma']['inceleme'], $satir['okuma']['incelendi']]);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertJsonValidationErrors('ekstre')
+            ->assertJsonPath('errors.ekstre.0', '1 satır inceleme bekliyor: kontrol edip "Kontrol ettim" deyin ya da dışarıda bırakın.');
+        $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satir['id']}", ['aciklama' => 'ENERJISA'])->assertOk()->assertJsonPath('islem.okuma.incelendi', false);
+        $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satir['id']}", ['incelendi' => true])->assertOk()->assertJsonPath('islem.okuma.incelendi', true);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.eklenen', 2);
+
+        // 3) Yapay zekâ belgeyi kart ekstresi olarak tanımazsa onay yok
+        $banka = $this->gecerli();
+        $banka['statement_type'] = 'bank_account';
+        Http::swap(new HttpFabrikasi);
+        Http::fake(['*' => $this->cevap($banka)]);
+        $ikinci = $this->yukle(OrnekPdf::yaz([['ORNEK BANKA 2', [40 => 'Hesap Kesim Tarihi', 200 => '10.12.2026'], [40 => '15.11.2026', 110 => 'MIGROS KADIKOY', 450 => '1.234,56']]]))->assertCreated()->json('ekstre.id');
+        $this->calistir($ikinci)->assertStatus(202);
+        $this->postJson("/api/v1/aile/ekstreler/{$ikinci}/onayla")->assertJsonValidationErrors('ekstre')
+            ->assertJsonPath('errors.ekstre.0', 'Yapay zekâ bu belgeyi kredi kartı ekstresi olarak tanımadı; banka hesabı ekstresiyse "Banka hesabı (önizleme)" olarak yükleyin.');
+    }
+
+    public function test_pdf_okuyucu_tutuyor_yapay_zeka_tutmuyorsa_pdf_satirlari_kalir(): void
+    {
+        // PDF okuyucu: önceki 0 + 1.234,56 + 845,10 = 2.079,66 tutuyor; yapay zekâ bir satırı kaçırdı (tutmuyor)
+        $pdf = OrnekPdf::yaz([[
+            'ORNEK BANKA KREDI KARTI EKSTRESI',
+            [40 => 'Hesap Kesim Tarihi', 200 => '10.11.2026'],
+            [40 => 'Onceki Donem Borcu', 200 => '0,00 TL'],
+            [40 => 'Donem Borcu', 200 => '2.079,66 TL'],
+            [40 => '15.10.2026', 110 => 'MIGROS KADIKOY', 450 => '1.234,56'],
+            [40 => '16.10.2026', 110 => 'ENERJISA BASKENT EDAS', 450 => '845,10'],
+        ]]);
+        Http::fake(['*' => $this->cevap($this->ai([$this->islem('2026-10-15', 'MIGROS KADIKOY', 1234.56, '15.10.2026 MIGROS KADIKOY 1.234,56')]))]);
+        $id = $this->yukle($pdf)->assertCreated()->json('ekstre.id');
+        $this->assertSame('tutuyor', Ekstre::find($id)->denetim['durum']);
+        $this->calistir($id)->assertStatus(202);
+
+        $ekstre = $this->getJson("/api/v1/aile/ekstreler/{$id}")
+            ->assertJsonPath('ekstre.banka_profili', 'genel')
+            ->assertJsonPath('ekstre.denetim.durum', 'tutuyor')
+            ->assertJsonPath('ekstre.denetim.capraz.secilen', 'php')
+            ->assertJsonPath('ekstre.denetim.capraz.durum', 'farkli')
+            ->assertJsonPath('ekstre.denetim.ai.oneri', true)
+            ->assertJsonPath('ekstre.denetim.ai.mutabakat.durum', 'tutmuyor');
+        $this->assertSame(['MIGROS KADIKOY', 'ENERJISA BASKENT EDAS'], array_column($ekstre->json('satirlar'), 'aciklama'));
+        $this->assertContains('Satır sayısı: PDF okuyucu 2, yapay zekâ 1.', $ekstre->json('ekstre.denetim.capraz.farklar'));
+        // PDF okuyucunun taslağı: yapay zekâ aktarımı kapalıyken de onaylanır
+        config(['ekstre.ai_aktarim' => false]);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.eklenen', 2);
+    }
+
+    public function test_baska_ekstredeki_ayni_tarih_ve_tutar_olasi_tekrar_isaretlenir(): void
+    {
+        // Aynı kartta elle girilmiş, açıklaması farklı onaylı işlem
+        $this->postJson('/api/v1/aile/kart-islemleri', ['kart_id' => $this->kart, 'islem_tarihi' => '2026-10-15', 'aciklama' => 'MIGROS', 'tutar' => 1234.56, 'tur' => 'harcama'])->assertCreated();
+        Http::fake(['*' => $this->cevap($this->gecerli())]);
+        $id = $this->yukle()->assertCreated()->json('ekstre.id');
+        $this->calistir($id)->assertStatus(202);
+
+        $migros = collect($this->getJson("/api/v1/aile/ekstreler/{$id}")->json('satirlar'))->firstWhere('aciklama', 'MIGROS KADIKOY');
+        $this->assertTrue($migros['okuma']['inceleme']);
+        $this->assertContains('Olası tekrar: elle girilen işlemlerde aynı tarih ve tutarlı işlem var.', $migros['okuma']['uyarilar']);
     }
 
     public function test_baska_hane_yapay_zekayi_calistiramaz_goremez(): void

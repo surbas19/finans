@@ -277,6 +277,10 @@ class EkstreIceAktarici
         }
         $ekstre->alan_kaynaklari = $kaynaklar;
         $ekstre->okunamayan = $okunamayan;
+        // Kesim tarihi PDF okuyucu ile yapay zekâda farklıydı: kullanıcı kaydedince teyit edilmiş sayılır
+        if (array_key_exists('kesim_tarihi', $veri) && ($ekstre->denetim['kesim_teyit_gerekli'] ?? false)) {
+            $ekstre->denetim = [...$ekstre->denetim, 'kesim_teyit_gerekli' => false];
+        }
         if (array_key_exists('odendi', $veri)) {
             $ekstre->odendi = (bool) $veri['odendi'];
         }
@@ -294,6 +298,9 @@ class EkstreIceAktarici
             $islem->durum = $veri['dahil'] ? KartIslemDurumu::Taslak : KartIslemDurumu::Atlandi;
             unset($veri['dahil']);
         }
+        // "Kontrol ettim": inceleme gereken satırı kullanıcı onayladı (düzeltmek kontrol saymaz)
+        $incelendi = array_key_exists('incelendi', $veri) ? (bool) $veri['incelendi'] : null;
+        unset($veri['incelendi']);
         if (array_key_exists('fatura', $veri)) {
             $islem->fatura_onerisi = $this->faturaSecimi($islem, $veri['fatura']);
             unset($veri['fatura']);
@@ -307,6 +314,9 @@ class EkstreIceAktarici
         // Kullanıcının düzelttiği alan artık "okunamadı" değildir
         $okuma = $islem->okuma ?? ['alanlar' => [], 'uyarilar' => [], 'tutar_adaylari' => []];
         $okuma['alanlar'] = array_values(array_filter($okuma['alanlar'] ?? [], fn (string $a): bool => $islem->getAttribute($a) === null));
+        if ($incelendi !== null) {
+            $okuma['incelendi'] = $incelendi;
+        }
         $islem->okuma = $okuma;
         $islem->save();
         if ($islem->ekstre) {
@@ -361,6 +371,31 @@ class EkstreIceAktarici
      *
      * @throws ValidationException
      */
+    /**
+     * Yapay zekâ taslağının onay koşulları: aktarım açık (EKSTRE_AI_AKTARIM), belge kredi kartı ekstresi, kesim tarihi
+     * farkı teyit edilmiş, inceleme gereken her dahil satır için kullanıcı "Kontrol ettim" demiş.
+     *
+     * @throws ValidationException
+     */
+    private function incelemeKapisi(Ekstre $ekstre): void
+    {
+        $denetim = $ekstre->denetim ?? [];
+        if ($ekstre->banka_profili === 'ai' && ! config('ekstre.ai_aktarim')) {
+            throw ValidationException::withMessages(['ekstre' => 'Yapay zekâ taslağının Bütçe\'ye aktarımı henüz açılmadı (EKSTRE_AI_AKTARIM): satırları önizleyebilirsiniz.']);
+        }
+        if (isset($denetim['ai']) && ! ($denetim['ai']['oneri'] ?? false) && ($denetim['ai']['tur'] ?? 'credit_card') !== 'credit_card') {
+            throw ValidationException::withMessages(['ekstre' => 'Yapay zekâ bu belgeyi kredi kartı ekstresi olarak tanımadı; banka hesabı ekstresiyse "Banka hesabı (önizleme)" olarak yükleyin.']);
+        }
+        if ($denetim['kesim_teyit_gerekli'] ?? false) {
+            throw ValidationException::withMessages(['kesim_tarihi' => 'Kesim tarihi PDF okuyucuda ve yapay zekâda farklı okundu: dönem bilgilerinden kesim tarihini kontrol edip kaydedin.']);
+        }
+        $bekleyen = $ekstre->islemler()->where('durum', '!=', KartIslemDurumu::Atlandi->value)->get()
+            ->filter(fn (KartIslemi $i): bool => ($i->okuma['inceleme'] ?? false) && ! ($i->okuma['incelendi'] ?? false))->count();
+        if ($bekleyen > 0) {
+            throw ValidationException::withMessages(['ekstre' => "{$bekleyen} satır inceleme bekliyor: kontrol edip \"Kontrol ettim\" deyin ya da dışarıda bırakın."]);
+        }
+    }
+
     public function onayla(Ekstre $ekstre, User $user): array
     {
         if ($ekstre->durum === EkstreDurumu::Onaylandi) {
@@ -374,6 +409,7 @@ class EkstreIceAktarici
             throw ValidationException::withMessages(['kesim_tarihi' => 'Bu kartın '.$ekstre->kesim_tarihi->format('d.m.Y').' kesimli ekstresi zaten onaylı ('
                 .$ayniDonem->created_at->format('d.m.Y').' yüklendi). Aynı dönem ikinci kez eklenmez.']);
         }
+        $this->incelemeKapisi($ekstre);
 
         return DB::transaction(function () use ($ekstre, $user): array {
             $eklenen = 0;

@@ -113,6 +113,25 @@ class HesapEkstresiTest extends TestCase
         $this->assertSame(0, HesapEkstresi::count());
     }
 
+    public function test_bakiye_ve_satir_denetimi(): void
+    {
+        $ai = $this->ai();
+        $ai['transactions'][1]['balance'] = 36500; // 51.000 − 15.000 = 36.000 olmalı
+        $ai['transactions'][] = [...$ai['transactions'][0], 'description' => 'HAYALI', 'source_text' => '07.10.2026 HAYALI +1,00 36.501,00', 'amount' => 1, 'balance' => 36501];
+        Http::fake(['*' => Http::response(['id' => 'r', 'status' => 'completed', 'output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode($ai)]]]]])]);
+        $id = $this->yukle()->assertCreated()->json('hesap_ekstresi.id');
+
+        $cevap = $this->getJson("/api/v1/aile/hesap-ekstreleri/{$id}")->assertOk()
+            ->assertJsonPath('calisma.kabul_satir', 2)->assertJsonPath('calisma.reddedilen_satir', 1)
+            ->assertJsonPath('hesap_ekstresi.denetim.bakiye.durum', 'tutmuyor')
+            ->assertJsonPath('hesap_ekstresi.denetim.bakiye.satir_hatalari.0.sira', 1)
+            ->assertJsonPath('hesap_ekstresi.denetim.bakiye.satir_hatalari.0.fark', '500.00')
+            ->assertJsonPath('hesap_ekstresi.denetim.satirlar.2.durum', 'red');
+        $kontroller = collect($cevap->json('hesap_ekstresi.denetim.bakiye.kontroller'))->keyBy('ad');
+        // Açılış + girenler − çıkanlar = kapanış (reddedilen satır sayılmaz)
+        $this->assertSame(['tutuyor', 'tutuyor', 'tutuyor', 'tutmuyor'], [$kontroller['acilis_kapanis']['durum'], $kontroller['total_credits']['durum'], $kontroller['total_debits']['durum'], $kontroller['yuruyen_bakiye']['durum']]);
+    }
+
     public function test_baska_hane_goremez_silemez(): void
     {
         Http::fake(['*' => Http::response(['id' => 'r', 'status' => 'queued'])]);

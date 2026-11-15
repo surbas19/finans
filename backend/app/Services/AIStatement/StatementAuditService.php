@@ -3,8 +3,10 @@
 namespace App\Services\AIStatement;
 
 /**
- * Sayfa denetimi: her PDF sayfası için işlem tablosu var mı, yapay zekâ kaç işlem buldu, kaçı doğrulamadan geçti,
- * kaçı inceleme gerektiriyor; PDF sayfa sayısıyla analiz edilen sayfa sayısı karşılaştırılır.
+ * Sayfa denetimi: PDF'in her sayfası için modelin bulduğu işlem sayısı, sunucunun doğrulayıp aldığı, incelemesi
+ * gereken, reddedilen ve (varsa) PHP okuyucunun bulduğu satır sayısı, sayfada metin olup olmadığı ve durum:
+ * tamam · eksik (model daha çok satır gördü) · fazla · metinsiz (taranmış; görüntüden okundu) · modelde_yok (model o
+ * sayfayı raporlamadı). PDF sayfa sayısı ile analiz edilen sayfa sayısı karşılaştırılır.
  */
 class StatementAuditService
 {
@@ -12,9 +14,11 @@ class StatementAuditService
      * @param  list<array<string, mixed>>  $modelSayfaDenetimi  yapay zekânın page_audit'i
      * @param  list<array<string, mixed>>  $kabul  doğrulamadan geçen satırlar
      * @param  list<array{neden: string, kaynak: string, sayfa: int}>  $reddedilen
-     * @return array{sayfalar: list<array<string, mixed>>, pdf_sayfa: int, analiz_edilen_sayfa: int, sayfa_uyusuyor: bool}
+     * @param  list<string>  $sayfaMetinleri  sunucunun okuduğu sayfa metni (boş: taranmış)
+     * @param  array<int, int>  $phpSayfalari  PHP okuyucunun sayfa başına satır sayısı (1 tabanlı)
+     * @return array{sayfalar: list<array<string, mixed>>, pdf_sayfa: int, analiz_edilen_sayfa: int, sayfa_uyusuyor: bool, sorunlu_sayfa: int}
      */
-    public function denetle(int $pdfSayfa, array $modelSayfaDenetimi, array $kabul, array $reddedilen): array
+    public function denetle(int $pdfSayfa, array $modelSayfaDenetimi, array $kabul, array $reddedilen, array $sayfaMetinleri = [], array $phpSayfalari = []): array
     {
         $modelden = [];
         foreach ($modelSayfaDenetimi as $s) {
@@ -24,24 +28,37 @@ class StatementAuditService
         ksort($modelden);
         $sayfalar = [];
         for ($n = 1; $n <= $pdfSayfa; $n++) {
-            $kabulBu = count(array_filter($kabul, fn (array $s): bool => $s['sayfa'] === $n));
-            $inceleme = count(array_filter($kabul, fn (array $s): bool => $s['sayfa'] === $n && count($s['okuma']['uyarilar']) > 1));
+            $bu = array_filter($kabul, fn (array $s): bool => $s['sayfa'] === $n);
+            $inceleme = count(array_filter($bu, fn (array $s): bool => (bool) ($s['okuma']['inceleme'] ?? false)));
+            $bulunan = (int) ($modelden[$n]['found_count'] ?? 0);
+            $metinVar = trim($sayfaMetinleri[$n - 1] ?? 'x') !== '';
+            $durum = match (true) {
+                ! isset($modelden[$n]) => 'modelde_yok',
+                ! $metinVar => 'metinsiz',
+                count($bu) < $bulunan => 'eksik',
+                count($bu) > $bulunan => 'fazla',
+                default => 'tamam',
+            };
             $sayfalar[] = [
                 'sayfa' => $n,
                 'islem_tablosu_var' => (bool) ($modelden[$n]['has_transaction_table'] ?? false),
-                'bulunan_islem' => (int) ($modelden[$n]['found_count'] ?? 0),
-                'model_durumu' => $modelden[$n]['status'] ?? null,
-                'ayristirilan_islem' => $kabulBu,
+                'bulunan_islem' => $bulunan,
+                'ayristirilan_islem' => count($bu),
                 'inceleme_gereken' => $inceleme + ($reddedilenSayisi[$n] ?? 0),
-                'durum' => isset($modelden[$n]) ? 'islendi' : 'modelde_yok',
+                'reddedilen' => $reddedilenSayisi[$n] ?? 0,
+                'php_islem' => $phpSayfalari[$n] ?? null,
+                'metin_var' => $metinVar,
+                'model_durumu' => $modelden[$n]['status'] ?? null,
+                'durum' => $durum,
             ];
         }
 
         return [
             'sayfalar' => $sayfalar,
             'pdf_sayfa' => $pdfSayfa,
-            'analiz_edilen_sayfa' => count(array_filter($sayfalar, fn (array $s): bool => $s['durum'] === 'islendi')),
+            'analiz_edilen_sayfa' => count(array_filter($sayfalar, fn (array $s): bool => $s['durum'] !== 'modelde_yok')),
             'sayfa_uyusuyor' => count($modelden) >= $pdfSayfa && array_keys($modelden) === range(1, $pdfSayfa),
+            'sorunlu_sayfa' => count(array_filter($sayfalar, fn (array $s): bool => ! in_array($s['durum'], ['tamam'], true) || $s['inceleme_gereken'] > 0)),
         ];
     }
 }

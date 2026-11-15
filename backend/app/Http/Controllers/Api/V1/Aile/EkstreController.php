@@ -151,6 +151,8 @@ class EkstreController extends Controller
             'fatura.secildi' => ['sometimes', 'boolean'],
             'fatura.saglayici_id' => ['sometimes', 'nullable', 'integer', Rule::exists('fatura_saglayicilari', 'id')->where('hane_id', $ekstre->hane_id)],
             'fatura.hizmet_donemi' => ['sometimes', 'nullable', 'regex:'.Donem::DESEN],
+            // İnceleme gereken satır: "Kontrol ettim"
+            'incelendi' => ['sometimes', 'boolean'],
         ], ['fatura.hizmet_donemi.regex' => 'Hizmet dönemi YYYY-AA olmalı.'], [
             'islem_tarihi' => 'işlem tarihi', 'aciklama' => 'açıklama', 'tutar' => 'tutar', 'tur' => 'tür', 'fatura.saglayici_id' => 'sağlayıcı',
         ]);

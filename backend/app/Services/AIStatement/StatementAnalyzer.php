@@ -89,13 +89,14 @@ class StatementAnalyzer
         if ($this->jsonDogrulayici->dogrula($veri, $this->sema()) !== []) {
             throw YapayZekaHatasi::semaHatasi();
         }
-        ['kabul' => $kabul, 'reddedilen' => $reddedilen] = $this->islemDogrulayici->dogrula($veri['transactions'], $sayfaMetinleri);
+        ['kabul' => $kabul, 'reddedilen' => $reddedilen] = $this->islemDogrulayici->dogrula($veri['transactions'], $sayfaMetinleri, $sayfaSayisi);
 
         return [
             'ai' => $veri,
             'kabul' => $kabul,
             'reddedilen' => $reddedilen,
-            'sayfa_denetimi' => $this->denetim->denetle($sayfaSayisi, $veri['page_audit'], $kabul, $reddedilen),
+            'sayfa_denetimi' => $this->denetim->denetle($sayfaSayisi, $veri['page_audit'], $kabul, $reddedilen, $sayfaMetinleri),
+            'sayfa_metinleri' => $sayfaMetinleri,
             'model' => (string) config('services.openai.model'),
         ];
     }
