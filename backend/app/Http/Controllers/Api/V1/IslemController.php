@@ -140,7 +140,7 @@ class IslemController extends Controller
         }
         $ciftler = $silinecek->map(fn (Islem $s): array => [$s->hesap_id, $s->varlik_id])->unique(fn (array $c): string => implode('-', $c));
         foreach ($ciftler as [$hesapId, $varlikId]) {
-            $kalan = Islem::where('hesap_id', $hesapId)->where('varlik_id', $varlikId)->whereNotIn('id', $silinecek->modelKeys())->get();
+            $kalan = Islem::where('hesap_id', $hesapId)->where('varlik_id', $varlikId)->whereNotIn('id', $silinecek->pluck('id')->all())->get();
             try {
                 $this->portfoy->dogrula($kalan);
             } catch (YetersizMiktar $e) {
