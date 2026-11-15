@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import BosDurum from '@/components/BosDurum.vue'
+import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import { aileApi, type AiCalisma, type Ekstre, type HesapEkstresi } from '@/api/aile'
 import { useAileStore } from '@/stores/aile'
@@ -17,6 +18,7 @@ const aile = useAileStore()
 const ekstreler = ref<Ekstre[] | null>(null)
 const hesaplar = ref<(HesapEkstresi & { ai_calisma: AiCalisma | null })[]>([])
 const yukleAcik = ref(false)
+const elleAcik = ref(false)
 const yukleTuru = ref<'kart' | 'banka'>('kart')
 
 async function yukle(): Promise<void> {
@@ -55,6 +57,15 @@ function hesapDurumu(h: HesapEkstresi & { ai_calisma: AiCalisma | null }): {
         icon="pi pi-upload"
         :disabled="!aile.kartlar.length"
         @click="ac('kart')"
+      />
+      <Button
+        label="Tutarla ekstre gir"
+        icon="pi pi-pencil"
+        severity="secondary"
+        outlined
+        :disabled="!aile.kartlar.length"
+        data-test="elle-ekstre"
+        @click="elleAcik = true"
       />
       <Button
         v-if="aiAcik"
@@ -145,5 +156,6 @@ function hesapDurumu(h: HesapEkstresi & { ai_calisma: AiCalisma | null }): {
     </template>
 
     <EkstreYukleDialog v-model:visible="yukleAcik" :baslangic-turu="yukleTuru" />
+    <ElleEkstreDialog v-model:visible="elleAcik" />
   </div>
 </template>

@@ -77,6 +77,12 @@ export const rotalar: RouteRecordRaw[] = [
             meta: { baslik: 'Gelirler' },
           },
           {
+            path: 'giderler',
+            name: 'aile-giderler',
+            component: () => import('@/views/aile/GiderlerView.vue'),
+            meta: { baslik: 'Giderler' },
+          },
+          {
             path: 'kartlar',
             name: 'aile-kartlar',
             component: () => import('@/views/aile/KartlarView.vue'),

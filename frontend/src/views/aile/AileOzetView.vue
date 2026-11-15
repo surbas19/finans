@@ -2,18 +2,26 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import Skeleton from 'primevue/skeleton'
 import AySecici from '@/components/aile/AySecici.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
+import GiderFormu from '@/components/aile/GiderFormu.vue'
+import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
 import VeriGrafigi from '@/components/VeriGrafigi.vue'
 import {
   aileApi,
   type AylikOzet,
   type BeklenenGelir,
+  type BeklenenGider,
+  type DuzenliGiderGirdisi,
   type GelirGirdisi,
   type GelirKaynagi,
+  type GiderKaynagi,
 } from '@/api/aile'
+import { hataMesaji } from '@/api/http'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAileStore } from '@/stores/aile'
 import { bugun, tarih, tl } from '@/utils/bicim'
@@ -31,12 +39,21 @@ const ozet = ref<AylikOzet | null>(null)
 const kaynaklar = ref<GelirKaynagi[]>([])
 const gelirFormuAcik = ref(false)
 const varsayilan = ref<Partial<GelirGirdisi> | undefined>()
+const giderKaynaklari = ref<GiderKaynagi[]>([])
+const giderFormuAcik = ref(false)
+const giderVarsayilan = ref<Partial<DuzenliGiderGirdisi> | undefined>()
+const tasarrufAcik = ref(false)
+const confirm = useConfirm()
+const toast = useToast()
 
 async function yukle(): Promise<void> {
-  const veri = await sonIstek(() => Promise.all([aileApi.ozet(donem.value), aileApi.kaynaklar()]))
+  const veri = await sonIstek(() =>
+    Promise.all([aileApi.ozet(donem.value), aileApi.kaynaklar(), aileApi.giderKaynaklari()]),
+  )
   if (veri === undefined) return
   ozet.value = veri[0]
   kaynaklar.value = veri[1]
+  giderKaynaklari.value = veri[2]
 }
 onMounted(async () => {
   await aile.yukle()
@@ -82,6 +99,37 @@ function alindi(b: BeklenenGelir): void {
     ...(b.tarih && b.tarih <= bugun() ? { tarih: b.tarih } : {}),
   }
   gelirFormuAcik.value = true
+}
+
+/** Beklenen düzenli gider ödendi: kaynağın tutarıyla, o dönem için gider formu açılır */
+function odendi(b: BeklenenGider): void {
+  giderVarsayilan.value = {
+    gider_kaynagi_id: b.kaynak.id,
+    kategori_id: b.kaynak.kategori_id,
+    aciklama: b.kaynak.ad,
+    tutar: b.kaynak.beklenen_tutar,
+    donem: b.donem,
+    ...(b.tarih && b.tarih <= bugun() ? { tarih: b.tarih } : {}),
+  }
+  giderFormuAcik.value = true
+}
+
+function tasarrufSil(id: number, ad: string): void {
+  confirm.require({
+    header: 'Tasarrufu sil',
+    message: `"${ad}" tasarrufu silinsin mi? Portföydeki alış işlemi de silinir.`,
+    acceptProps: { label: 'Sil', severity: 'danger' },
+    rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
+    accept: async () => {
+      try {
+        await aileApi.tasarrufSil(id)
+        toast.add({ severity: 'success', summary: 'Tasarruf silindi', life: 3000 })
+        await yukle()
+      } catch (e) {
+        toast.add({ severity: 'error', summary: 'Silinemedi', detail: hataMesaji(e), life: 6000 })
+      }
+    },
+  })
 }
 
 const gunMetni = (gun: number | null | undefined) =>
@@ -150,8 +198,8 @@ const gunMetni = (gun: number | null | undefined) =>
         </RouterLink>
       </section>
 
-      <!-- Gelir / gider / fark -->
-      <section class="kart grid grid-cols-3 gap-2 p-4 sm:p-5">
+      <!-- Gelir / gider / tasarruf / kalan -->
+      <section class="kart grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 sm:p-5">
         <div>
           <p class="text-xs text-surface-500">Gelir</p>
           <p
@@ -171,15 +219,27 @@ const gunMetni = (gun: number | null | undefined) =>
           </p>
         </div>
         <div>
-          <p class="text-xs text-surface-500">Fark</p>
+          <p class="text-xs text-surface-500">Tasarruf</p>
           <p
-            class="text-base font-bold tabular-nums min-[400px]:text-lg"
-            :class="ozet.fark >= 0 ? 'text-emerald-700' : 'text-red-600'"
-            data-test="ozet-fark"
+            class="text-base font-bold text-sky-700 tabular-nums min-[400px]:text-lg"
+            data-test="ozet-tasarruf"
           >
-            {{ tl(ozet.fark) }}
+            {{ tl(ozet.tasarruf.toplam) }}
           </p>
         </div>
+        <div>
+          <p class="text-xs text-surface-500">Kalan</p>
+          <p
+            class="text-base font-bold tabular-nums min-[400px]:text-lg"
+            :class="ozet.kalan >= 0 ? 'text-emerald-700' : 'text-red-600'"
+            data-test="ozet-kalan"
+          >
+            {{ tl(ozet.kalan) }}
+          </p>
+        </div>
+        <p class="col-span-2 text-xs text-surface-500 sm:col-span-4" data-test="ozet-fark">
+          Kalan = gelir − gider − tasarruf (tasarruf öncesi fark {{ tl(ozet.fark) }}).
+        </p>
       </section>
 
       <!-- Kişiler -->
@@ -228,6 +288,78 @@ const gunMetni = (gun: number | null | undefined) =>
               tl(b.kaynak.beklenen_tutar)
             }}</span>
             <Button label="Alındı" size="small" outlined @click="alindi(b)" />
+          </li>
+        </ul>
+      </section>
+
+      <section v-if="ozet.gider.beklenenler.length" class="kart p-4">
+        <div class="mb-1 flex items-baseline justify-between">
+          <h2 class="bolum-etiketi">Beklenen giderler</h2>
+          <RouterLink :to="{ name: 'aile-giderler' }" class="text-sm font-semibold text-primary-600"
+            >Giderler</RouterLink
+          >
+        </div>
+        <p class="mb-2 text-xs text-surface-500">
+          Düzenli ödemelerden (eğitim, bakıcı…); ödenene kadar gider toplamına katılmaz.
+        </p>
+        <ul class="divide-y divide-surface-100">
+          <li
+            v-for="b in ozet.gider.beklenenler"
+            :key="b.kaynak.id"
+            class="flex items-center gap-3 py-2.5"
+          >
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-semibold">{{ b.kaynak.ad }}</span>
+              <span v-if="b.tarih" class="block text-xs text-surface-500">{{
+                tarih(b.tarih)
+              }}</span>
+            </span>
+            <span class="text-sm text-surface-500 tabular-nums">{{
+              tl(b.kaynak.beklenen_tutar)
+            }}</span>
+            <Button label="Ödendi" size="small" outlined @click="odendi(b)" />
+          </li>
+        </ul>
+      </section>
+
+      <!-- Tasarruf -->
+      <section class="kart p-4 sm:p-5" data-test="tasarruf-bolumu">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="bolum-etiketi">Tasarruf</h2>
+          <Button
+            label="Tasarruf yap"
+            icon="pi pi-wallet"
+            size="small"
+            data-test="tasarruf-yap"
+            @click="tasarrufAcik = true"
+          />
+        </div>
+        <p v-if="!ozet.tasarruf.kalemler.length" class="py-1 text-sm text-surface-500">
+          Bu ay tasarruf yok. Altın, döviz, hisse ya da fon alarak bir portföy hesabına
+          ayırabilirsiniz.
+        </p>
+        <ul v-else class="divide-y divide-surface-100">
+          <li
+            v-for="t in ozet.tasarruf.kalemler"
+            :key="t.id"
+            class="flex items-center gap-3 py-2.5"
+          >
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-semibold">{{ t.varlik_ad }}</span>
+              <span class="block text-xs text-surface-500"
+                >{{ t.hesap_ad }} · {{ tarih(t.tarih) }}</span
+              >
+            </span>
+            <span class="font-semibold text-sky-700 tabular-nums">{{ tl(t.tutar) }}</span>
+            <Button
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              rounded
+              size="small"
+              :aria-label="`${t.varlik_ad} tasarrufunu sil`"
+              @click="tasarrufSil(t.id, t.varlik_ad ?? 'Tasarruf')"
+            />
           </li>
         </ul>
       </section>
@@ -284,9 +416,17 @@ const gunMetni = (gun: number | null | undefined) =>
           </ul>
         </div>
         <ul
-          v-if="ozet.gider.haric.length || ozet.gider.kartsiz_faturalar > 0"
+          v-if="
+            ozet.gider.haric.length ||
+            ozet.gider.kartsiz_faturalar > 0 ||
+            ozet.gider.duzenli.toplam > 0
+          "
           class="mt-3 flex flex-col gap-1 rounded-2xl bg-surface-50 p-3 text-xs text-surface-600"
         >
+          <li v-if="ozet.gider.duzenli.toplam > 0">
+            Düzenli ödemeler ve tek seferlik giderler {{ tl(ozet.gider.duzenli.toplam) }} giderde
+            (Giderler).
+          </li>
           <li v-if="ozet.gider.kartsiz_faturalar > 0">
             Kartsız ödenen faturalar {{ tl(ozet.gider.kartsiz_faturalar) }} giderde (Faturalar).
           </li>
@@ -388,12 +528,27 @@ const gunMetni = (gun: number | null | undefined) =>
             ödendiği ayın gideridir.
           </li>
           <li>
+            Düzenli ödemeler (Giderler) ödendi diye girildiği ayın gideridir; kartla ödenenler kart
+            ekstresinden gelir, ayrıca girilmez.
+          </li>
+          <li>
+            Tasarruf gider değildir: seçilen portföy hesabına alış olarak yazılır, kalan paradan
+            düşülür (kalan = gelir − gider − tasarruf).
+          </li>
+          <li>
             Faturalar bölümü hizmet ayına göredir ve bilgi içindir; gidere ikinci kez eklenmez.
           </li>
         </ul>
       </details>
     </template>
 
+    <GiderFormu
+      v-model:visible="giderFormuAcik"
+      :varsayilan="giderVarsayilan"
+      :kaynaklar="giderKaynaklari"
+      @kaydedildi="yukle"
+    />
+    <TasarrufFormu v-model:visible="tasarrufAcik" @kaydedildi="yukle" />
     <GelirFormu
       v-model:visible="gelirFormuAcik"
       :varsayilan="varsayilan"

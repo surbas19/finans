@@ -90,6 +90,79 @@ export interface GelirKaynagi {
   not: string | null
 }
 
+/** Düzenli ödemenin tanımı (eğitim, bakıcı…); düzenli kaynaktan her dönem "beklenen" gider çıkar */
+export interface GiderKaynagi {
+  id: number
+  uye_id: number | null
+  kategori_id: number | null
+  ad: string
+  siklik: GelirSikligi
+  beklenen_tutar: number | null
+  gun: number | null
+  baslangic: string | null
+  bitis: string | null
+  aktif: boolean
+  not: string | null
+}
+
+export type GiderKaynagiGirdisi = Omit<Partial<GiderKaynagi>, 'id'> & { ad: string }
+
+/** Gerçekleşen kartsız gider (düzenli ödeme ya da tek seferlik) */
+export interface DuzenliGider {
+  id: number
+  gider_kaynagi_id: number | null
+  kategori_id: number | null
+  aciklama: string
+  tutar: number
+  tarih: string
+  donem: string
+  not: string | null
+}
+
+export interface DuzenliGiderGirdisi {
+  gider_kaynagi_id: number | null
+  kategori_id: number | null
+  aciklama: string
+  tutar: number | null
+  tarih: string
+  donem: string
+  not: string | null
+}
+
+export interface BeklenenGider {
+  kaynak: GiderKaynagi
+  donem: string
+  tarih: string | null
+}
+
+/** Bütçeden ayrılıp portföy hesabına alış olarak yazılan tasarruf (gider sayılmaz) */
+export interface Tasarruf {
+  id: number
+  uye_id: number | null
+  hesap_id: number
+  hesap_ad: string | null
+  islem_id: number
+  varlik_id: number | null
+  varlik_ad: string | null
+  varlik_tur: string | null
+  miktar: number | null
+  tarih: string
+  donem: string
+  tutar: number
+  not: string | null
+}
+
+export interface TasarrufGirdisi {
+  hesap_id: number | null
+  varlik_id: number | null
+  uye_id: number | null
+  miktar: number | null
+  birim_fiyat: number | null
+  komisyon: number | null
+  tarih: string
+  not: string | null
+}
+
 export interface Gelir {
   id: number
   uye_id: number
@@ -328,6 +401,8 @@ export interface AylikOzet {
     toplam: number
     kart_harcamasi: number
     kartsiz_faturalar: number
+    duzenli: { toplam: number; kalemler: DuzenliGider[] }
+    beklenenler: BeklenenGider[]
     kategoriler: {
       kategori_id: number | null
       ad: string
@@ -362,7 +437,10 @@ export interface AylikOzet {
     }[]
     donemi_bilinmeyen: number
   }
+  tasarruf: { toplam: number; kalemler: Tasarruf[] }
   fark: number
+  /** Gelir − Gider − Tasarruf */
+  kalan: number
   uyarilar: {
     gecikmis_faturalar: Fatura[]
     bekleyen_faturalar: Fatura[]
@@ -424,6 +502,29 @@ export const aileApi = {
   kaynakGuncelle: (id: number, veri: GelirKaynagiGirdisi) =>
     http.put<{ kaynak: GelirKaynagi }>(`/aile/gelir-kaynaklari/${id}`, veri).then((r) => r.data),
   kaynakSil: (id: number) => http.delete(`/aile/gelir-kaynaklari/${id}`),
+
+  giderKaynaklari: () =>
+    http.get<{ kaynaklar: GiderKaynagi[] }>('/aile/gider-kaynaklari').then((r) => r.data.kaynaklar),
+  giderKaynagiEkle: (veri: GiderKaynagiGirdisi) =>
+    http.post<{ kaynak: GiderKaynagi }>('/aile/gider-kaynaklari', veri).then((r) => r.data),
+  giderKaynagiGuncelle: (id: number, veri: GiderKaynagiGirdisi) =>
+    http.put<{ kaynak: GiderKaynagi }>(`/aile/gider-kaynaklari/${id}`, veri).then((r) => r.data),
+  giderKaynagiSil: (id: number) => http.delete(`/aile/gider-kaynaklari/${id}`),
+  duzenliGiderler: (donem: string) =>
+    http
+      .get<{ giderler: DuzenliGider[]; beklenenler: BeklenenGider[] }>('/aile/duzenli-giderler', {
+        params: { donem },
+      })
+      .then((r) => r.data),
+  duzenliGiderEkle: (veri: DuzenliGiderGirdisi) =>
+    http.post<{ gider: DuzenliGider }>('/aile/duzenli-giderler', veri).then((r) => r.data),
+  duzenliGiderGuncelle: (id: number, veri: DuzenliGiderGirdisi) =>
+    http.put<{ gider: DuzenliGider }>(`/aile/duzenli-giderler/${id}`, veri).then((r) => r.data),
+  duzenliGiderSil: (id: number) => http.delete(`/aile/duzenli-giderler/${id}`),
+
+  tasarrufEkle: (veri: TasarrufGirdisi) =>
+    http.post<{ tasarruf: Tasarruf }>('/aile/tasarruflar', veri).then((r) => r.data),
+  tasarrufSil: (id: number) => http.delete(`/aile/tasarruflar/${id}`),
   gelirTurleri: () =>
     http.get<{ turler: GelirTuru[] }>('/aile/gelir-turleri').then((r) => r.data.turler),
   gelirTuruEkle: (ad: string) =>
@@ -489,6 +590,17 @@ export const aileApi = {
       }>('/aile/ekstreler', veri)
       .then((r) => r.data)
   },
+  /** Dosyasız ekstre: yalnızca kesim, son ödeme ve dönem borcu; onaylı ekstre + tek gider satırı */
+  ekstreElle: (veri: {
+    kart_id: number | null
+    kesim_tarihi: string
+    son_odeme_tarihi: string
+    donem_borcu: number | null
+    asgari_odeme: number | null
+  }) =>
+    http
+      .post<{ ekstre: Ekstre; message: string }>('/aile/ekstreler/elle', veri)
+      .then((r) => r.data),
   ekstre: (id: number) =>
     http
       .get<{

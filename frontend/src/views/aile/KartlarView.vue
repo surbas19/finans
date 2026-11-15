@@ -5,6 +5,7 @@ import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import BosDurum from '@/components/BosDurum.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
+import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import KartFormu from '@/components/aile/KartFormu.vue'
 import { aileApi, type Ekstre } from '@/api/aile'
@@ -18,6 +19,7 @@ const aile = useAileStore()
 const ekstreler = ref<Ekstre[] | null>(null)
 const kartFormuAcik = ref(false)
 const yukleAcik = ref(false)
+const elleAcik = ref(false)
 
 async function yukle(): Promise<void> {
   await aile.yukle()
@@ -51,6 +53,15 @@ function sonEkstre(kartId: number): Ekstre | undefined {
         icon="pi pi-upload"
         :disabled="!aile.kartlar.length && !aile.hane?.yetenekler?.ai_acik"
         @click="yukleAcik = true"
+      />
+      <Button
+        label="Tutarla ekstre gir"
+        icon="pi pi-pencil"
+        severity="secondary"
+        outlined
+        :disabled="!aile.kartlar.length"
+        data-test="elle-ekstre"
+        @click="elleAcik = true"
       />
       <Button
         label="Kart ekle"
@@ -138,5 +149,6 @@ function sonEkstre(kartId: number): Ekstre | undefined {
 
     <KartFormu v-model:visible="kartFormuAcik" @kaydedildi="yukle" />
     <EkstreYukleDialog v-model:visible="yukleAcik" />
+    <ElleEkstreDialog v-model:visible="elleAcik" />
   </div>
 </template>
