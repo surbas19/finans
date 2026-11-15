@@ -1,0 +1,391 @@
+{
+  "bank_name": "Halkbank",
+  "statement_type": "credit_card",
+  "account": {
+    "label": "Paraf",
+    "currency": "TRY"
+  },
+  "period": {
+    "start_date": null,
+    "end_date": null,
+    "cut_date": "2026-11-10",
+    "due_date": "2026-11-20"
+  },
+  "summary": {
+    "previous_balance": 1243.53,
+    "total_due": 6166.37,
+    "min_payment": 1233.27,
+    "total_purchases": null,
+    "total_payments": 1243.53,
+    "total_refunds": null,
+    "total_interest": 0,
+    "total_fees": 0,
+    "total_taxes": 0,
+    "total_bonus_used": null,
+    "remaining_installments": null,
+    "opening_balance": null,
+    "closing_balance": null,
+    "total_credits": null,
+    "total_debits": null
+  },
+  "transactions": [
+    {
+      "date": "2026-08-12",
+      "description": "E/TRENDYOL İSTANBUL",
+      "amount": 749.63,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "installment",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 2,
+      "source_text": "12/08/2026 E/TRENDYOL İSTANBUL 749.63 0.00/3-03.Taksit",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": 3,
+        "count": 3,
+        "total_amount": null,
+        "remaining_amount": 0
+      }
+    },
+    {
+      "date": "2026-10-13",
+      "description": "KRAL DÖNER ÇORUM",
+      "amount": 400,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 2,
+      "source_text": "13/10/2026 KRAL DÖNER ÇORUM 400.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-15",
+      "description": "Kredi kartı borç ödemesi",
+      "amount": 1243.53,
+      "currency": "TRY",
+      "direction": "credit",
+      "transaction_type": "payment",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 2,
+      "source_text": "15/10/2026 Hesaptan Ödeme - Teşekkür Ederiz + 1,243.53 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-15",
+      "description": "İNCİ UNLU MAMÜLLERİ ÇORUM",
+      "amount": 32.5,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 2,
+      "source_text": "15/10/2026 İNCİ UNLU MAMÜLLERİ ÇORUM 32.50 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-16",
+      "description": "A-101 AKŞEM ÇORUM",
+      "amount": 289.75,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 2,
+      "source_text": "16/10/2026 9940-6702 A-101AKŞEM ÇORUM 289.75 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-24",
+      "description": "A-101 AKŞEM ÇORUM",
+      "amount": 169,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 2,
+      "source_text": "24/10/2026 9940-6702 A-101AKŞEM ÇORUM 169.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-24",
+      "description": "MESAY PETROL ÜRÜNLER ÇORUM",
+      "amount": 1235.49,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "24/10/2026 MESAY PETROL ÜRÜNLER ÇORUM 1,235.49 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-28",
+      "description": "HOŞGÖR PASTANESİ ÇORUM",
+      "amount": 525,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "28/10/2026 HOŞGÖR PASTANESİ ÇORUM 525.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-28",
+      "description": "A101 DR DE ÇORUM",
+      "amount": 835,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "28/10/2026 9940 H236 A101 DR DE ÇORUM 835.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-31",
+      "description": "ÇORUM İSKİLİP H",
+      "amount": 219,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "31/10/2026 6546 ÇORUM İSKİLİP H ÇORUM 219.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-10-31",
+      "description": "ŞOK ÇORUM İSKİLİP",
+      "amount": 657,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "31/10/2026 ŞOK-8870-ÇORUM İSKİL ÇORUM 657.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-11-01",
+      "description": "ŞOK ÇORUM İSKİLİP",
+      "amount": 289,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "01/11/2026 ŞOK-8870-ÇORUM İSKİL ÇORUM 289.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "description": "KRAL DÖNER ÇORUM",
+      "amount": 440,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "04/11/2026 KRAL DÖNER ÇORUM 440.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    },
+    {
+      "date": "2026-11-06",
+      "description": "TOSYA İSKİLİP C ÇORUM",
+      "amount": 325,
+      "currency": "TRY",
+      "direction": "debit",
+      "transaction_type": "purchase",
+      "original_currency": null,
+      "original_amount": null,
+      "balance": null,
+      "bonus_earned": 0,
+      "source_page": 3,
+      "source_text": "06/11/2026 9940 TOSYA İSKİLİP C ÇORUM 325.00 0.00",
+      "confidence": 1,
+      "needs_review": false,
+      "review_reason": null,
+      "installment_details": {
+        "number": null,
+        "count": null,
+        "total_amount": null,
+        "remaining_amount": null
+      }
+    }
+  ],
+  "installments": [
+    {
+      "description": "E/TRENDYOL İSTANBUL",
+      "installment_number": 3,
+      "installment_count": 3,
+      "installment_amount": 749.63,
+      "total_amount": null,
+      "remaining_amount": 0,
+      "source_page": 2
+    }
+  ],
+  "bonus_transactions": [],
+  "page_audit": [
+    {
+      "page_number": 1,
+      "has_transaction_table": false,
+      "found_count": 0,
+      "status": "no_transactions"
+    },
+    {
+      "page_number": 2,
+      "has_transaction_table": true,
+      "found_count": 6,
+      "status": "processed"
+    },
+    {
+      "page_number": 3,
+      "has_transaction_table": true,
+      "found_count": 8,
+      "status": "processed"
+    }
+  ],
+  "warnings": [
+    "Borç denklemi tutuyor"
+  ],
+  "review_required": false
+}

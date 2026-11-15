@@ -60,7 +60,8 @@ class EkstreMutabakati
             $kontroller[] = ['ad' => 'borc_denklemi', 'etiket' => 'Borç denklemi', 'durum' => 'kontrol_edilemedi', 'neden' => $borc === null ? 'Dönem borcu okunamadı.' : 'Önceki dönem borcu okunamadı.'];
         }
         // Ekstrenin kendi özet toplamları (varsa) satırlardan çıkanla karşılaştırılır
-        if (($ozet['harcama_toplami'] ?? null) !== null || ($ozet['faiz_toplami'] ?? null) !== null) {
+        // Ekstre harcama toplamını yazmıyorsa (yalnız faiz / ücret var) karşılaştırma yapılamaz: beklenen 0 sayılmaz
+        if (($ozet['harcama_toplami'] ?? null) !== null) {
             $ekstre = Kurus::kurus($ozet['harcama_toplami'] ?? '0') + Kurus::kurus($ozet['faiz_toplami'] ?? '0');
             $satirlardan = $t['borc'] + $t['ucret'] + $t['avans'] - $t['iade'] - $t['bonus'];
             $kontroller[] = $this->kontrol('donem_hareketi', 'Dönem harcamaları + faiz / ücretler (ekstre özeti = satırlar, iadeler düşülmüş)', $ekstre, $satirlardan);

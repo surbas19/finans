@@ -256,9 +256,20 @@ class TransactionValidator
      */
     private function tutarlar(string $metin): array
     {
-        preg_match_all(self::TUTAR, $metin, $e);
+        // Türkçe (1.234,56) ve İngilizce (1,234.56; Halkbank gibi) yazımlar sırasıyla bulunur, Türkçe yazıma çevrilir.
+        // Sıfır tutar (bonus / puan sütunu: "0.00") tutar sayılmaz.
+        preg_match_all('/(?<![\d.,])(?:\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2})(?![\d])/u', $metin, $e);
+        $liste = [];
+        foreach ($e[0] as $t) {
+            if (preg_match('/^\d{1,3}(?:,\d{3})*\.\d{2}$|^\d+\.\d{2}$/', $t) === 1) {
+                $t = strtr($t, [',' => '.', '.' => ',']);
+            }
+            if ($t !== '0,00') {
+                $liste[] = $t;
+            }
+        }
 
-        return $e[0];
+        return $liste;
     }
 
     private static function kurus(mixed $tutar): string
