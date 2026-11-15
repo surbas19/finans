@@ -9,7 +9,7 @@ import Textarea from 'primevue/textarea'
 import FormAlani from '@/components/FormAlani.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import VarlikAdi from '@/components/VarlikAdi.vue'
-import { aileApi, type TasarrufGirdisi } from '@/api/aile'
+import { aileApi, type AyGunu, type TasarrufGirdisi } from '@/api/aile'
 import {
   finansApi,
   sabitFiyatli,
@@ -21,6 +21,7 @@ import {
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAileStore } from '@/stores/aile'
 import { useKatalogStore } from '@/stores/katalog'
+import { useToast } from 'primevue/usetoast'
 import { tarihMetni, tl } from '@/utils/bicim'
 
 /**
@@ -28,9 +29,12 @@ import { tarihMetni, tl } from '@/utils/bicim'
  * (ev, banka kasası, yatırım hesabı…) alış işlemi olarak yazılır; o ayın tasarrufu olarak görünür, gider sayılmaz.
  */
 const gorunur = defineModel<boolean>('visible', { default: false })
+/** Verilirse altın / döviz gününün bu ayki alımı hazır gelir (hesap, varlık, miktar); kime verildiği nota yazılır */
+const props = defineProps<{ gun?: AyGunu | null }>()
 const emit = defineEmits<{ kaydedildi: [] }>()
 
 const aile = useAileStore()
+const toast = useToast()
 const katalog = useKatalogStore()
 const hesaplar = ref<HesapOzeti[]>([])
 const yukleniyor = ref(false)
@@ -68,6 +72,16 @@ watch(gorunur, async (acik) => {
     ])
   } finally {
     yukleniyor.value = false
+  }
+  const g = props.gun
+  if (g) {
+    form.value.gun_id = g.gun.id
+    form.value.hesap_id = g.gun.hesap_id
+    form.value.varlik_id = g.gun.varlik_id
+    form.value.miktar = Number(g.gun.miktar)
+    const hedef = g.vadesi_geldi ? new Date(`${g.tarih}T00:00:00`) : new Date()
+    tarihSecimi.value = hedef
+    form.value.tarih = tarihMetni(hedef)
   }
 })
 
@@ -118,6 +132,7 @@ async function kaydet(): Promise<void> {
   }
   const sonuc = await gonder(() => aileApi.tasarrufEkle(veri), 'Tasarruf kaydedildi')
   if (sonuc) {
+    if (sonuc.uyari) toast.add({ severity: 'warn', summary: sonuc.uyari, life: 6000 })
     gorunur.value = false
     emit('kaydedildi')
   }
@@ -125,7 +140,11 @@ async function kaydet(): Promise<void> {
 </script>
 
 <template>
-  <UygulamaPenceresi v-model:visible="gorunur" baslik="Tasarruf yap" :genislik="34">
+  <UygulamaPenceresi
+    v-model:visible="gorunur"
+    :baslik="gun ? `${gun.gun.ad}: bu ayın alımı` : 'Tasarruf yap'"
+    :genislik="34"
+  >
     <Message v-if="gorunur && !yukleniyor && hesaplar.length === 0" severity="warn" class="mb-3">
       Önce bir portföy hesabı ekleyin (Portföy → Hesaplar → Hesap ekle): ev, banka kasası, yatırım
       hesabı…
@@ -239,8 +258,20 @@ async function kaydet(): Promise<void> {
         Bu ayın tasarrufuna <strong>{{ tl(toplam) }}</strong> yazılır.
       </p>
 
-      <FormAlani etiket="Not" for="tas-not" :hata="hatalar.not">
-        <Textarea id="tas-not" v-model="form.not" rows="2" maxlength="255" auto-resize />
+      <FormAlani
+        :etiket="gun ? 'Kime verildi / açıklama' : 'Not'"
+        for="tas-not"
+        :hata="hatalar.not"
+      >
+        <Textarea
+          id="tas-not"
+          v-model="form.not"
+          rows="2"
+          maxlength="255"
+          auto-resize
+          :placeholder="gun ? 'Örn. Kasım: Ayşe teyzeye verildi' : undefined"
+          data-test="tasarruf-not"
+        />
       </FormAlani>
       <div class="flex justify-end gap-2">
         <Button label="Vazgeç" severity="secondary" text @click="gorunur = false" />

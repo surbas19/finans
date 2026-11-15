@@ -66,6 +66,7 @@ function ornek(): AylikOzet {
       taksitler: [],
       sonraki_taksitler: [],
     },
+    gunler: [],
     faturalar: {
       toplam: 0,
       odenen: 0,
@@ -83,6 +84,8 @@ function ornek(): AylikOzet {
           hesap_id: 2,
           hesap_ad: 'Evde',
           islem_id: 3,
+          gun_id: null,
+          gun_ad: null,
           varlik_id: 5,
           varlik_ad: 'Gram altın',
           varlik_tur: 'altin',
@@ -197,6 +200,68 @@ describe('Bütçe aylık özeti', () => {
     const kart = sayfa.get('[data-test="sonraki-taksit-karti"]').text().replace(/\s+/g, ' ')
     expect(kart).toContain('1.251,25')
     expect(kart).toContain('5 taksit')
+    sayfa.unmount()
+  })
+
+  it('altın / döviz günleri: bekleyen günde alım düğmesi, yapılanda rozet', async () => {
+    const veri = ornek()
+    const gun = (id: number, ad: string) => ({
+      id,
+      ad,
+      hesap_id: 1,
+      hesap_ad: 'Evde',
+      varlik_id: 9,
+      varlik_ad: 'Gram altın',
+      varlik_kod: 'GRAM',
+      varlik_birim: 'gr',
+      miktar: '5',
+      ay_gunu: 10,
+      baslangic: '2026-09-01',
+      ay_sayisi: 6,
+      aktif: true,
+    })
+    veri.gunler = [
+      {
+        gun: gun(1, 'Mahalle günü'),
+        donem: '2026-11',
+        tarih: '2026-11-10',
+        durum: 'bekliyor',
+        vadesi_geldi: true,
+        tasarruf_id: null,
+      },
+      {
+        gun: gun(2, 'Dolar günü'),
+        donem: '2026-11',
+        tarih: '2026-11-20',
+        durum: 'yapildi',
+        vadesi_geldi: false,
+        tasarruf_id: 4,
+      },
+    ]
+    ozet.mockResolvedValue(veri)
+    const { default: AileOzetView } = await import('@/views/aile/AileOzetView.vue')
+    setActivePinia(createPinia())
+    const sayfa = mount(AileOzetView, {
+      global: {
+        plugins: [PrimeVue, ConfirmationService, ToastService],
+        stubs: {
+          RouterLink: { template: '<a><slot /></a>' },
+          VeriGrafigi: true,
+          GelirFormu: true,
+          GiderFormu: true,
+          TasarrufFormu: true,
+          TasarrufGunuFormu: true,
+        },
+      },
+    })
+    await flushPromises()
+    const satirlar = sayfa.findAll('[data-test="gun-satiri"]')
+    expect(satirlar).toHaveLength(2)
+    expect(satirlar[0]!.text()).toContain('Mahalle günü')
+    expect(satirlar[0]!.text()).toContain('5 gr Gram altın')
+    expect(satirlar[0]!.find('[data-test="gun-alimi-yap"]').text()).toContain('Bu ayın alımını yap')
+    expect(satirlar[1]!.find('[data-test="gun-yapildi"]').exists()).toBe(true)
+    expect(satirlar[1]!.find('[data-test="gun-alimi-yap"]').exists()).toBe(false)
     sayfa.unmount()
   })
 })

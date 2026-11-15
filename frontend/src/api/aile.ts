@@ -142,6 +142,8 @@ export interface Tasarruf {
   hesap_id: number
   hesap_ad: string | null
   islem_id: number
+  gun_id: number | null
+  gun_ad: string | null
   varlik_id: number | null
   varlik_ad: string | null
   varlik_tur: string | null
@@ -152,7 +154,45 @@ export interface Tasarruf {
   not: string | null
 }
 
+/** Altın / döviz günü şablonu: her ay `ay_gunu`nda `miktar` kadar alım */
+export interface TasarrufGunu {
+  id: number
+  ad: string
+  hesap_id: number
+  hesap_ad: string | null
+  varlik_id: number
+  varlik_ad: string | null
+  varlik_kod: string | null
+  varlik_birim: string | null
+  miktar: string
+  ay_gunu: number
+  baslangic: string
+  ay_sayisi: number | null
+  aktif: boolean
+}
+
+export interface TasarrufGunuGirdisi {
+  ad: string
+  hesap_id: number | null
+  varlik_id: number | null
+  miktar: number | null
+  ay_gunu: number | null
+  baslangic: string
+  ay_sayisi: number | null
+}
+
+/** Ayın günü: bu ay alım yapıldı mı (yapildi) ya da bekliyor */
+export interface AyGunu {
+  gun: TasarrufGunu
+  donem: string
+  tarih: string
+  durum: 'bekliyor' | 'yapildi'
+  vadesi_geldi: boolean
+  tasarruf_id: number | null
+}
+
 export interface TasarrufGirdisi {
+  gun_id?: number | null
   hesap_id: number | null
   varlik_id: number | null
   uye_id: number | null
@@ -463,6 +503,8 @@ export interface AylikOzet {
     donemi_bilinmeyen: number
   }
   tasarruf: { toplam: number; kalemler: Tasarruf[] }
+  /** Altın / döviz günleri: bu ay beklenen ve yapılan alımlar (toplamlara girmez) */
+  gunler: AyGunu[]
   fark: number
   /** Gelir − Gider − Tasarruf */
   kalan: number
@@ -747,7 +789,20 @@ export const aileApi = {
   duzenliGiderSil: (id: number) => http.delete(`/aile/duzenli-giderler/${id}`),
 
   tasarrufEkle: (veri: TasarrufGirdisi) =>
-    http.post<{ tasarruf: Tasarruf }>('/aile/tasarruflar', veri).then((r) => r.data),
+    http
+      .post<{ tasarruf: Tasarruf; uyari: string | null }>('/aile/tasarruflar', veri)
+      .then((r) => r.data),
+  tasarrufGunleri: (donem: string) =>
+    http
+      .get<{ gunler: TasarrufGunu[]; ay: AyGunu[] }>('/aile/tasarruf-gunleri', {
+        params: { donem },
+      })
+      .then((r) => r.data),
+  gunEkle: (veri: TasarrufGunuGirdisi) =>
+    http.post<{ gun: TasarrufGunu }>('/aile/tasarruf-gunleri', veri).then((r) => r.data),
+  gunGuncelle: (id: number, veri: TasarrufGunuGirdisi) =>
+    http.put<{ gun: TasarrufGunu }>(`/aile/tasarruf-gunleri/${id}`, veri).then((r) => r.data),
+  gunSil: (id: number) => http.delete(`/aile/tasarruf-gunleri/${id}`),
   tasarrufSil: (id: number) => http.delete(`/aile/tasarruflar/${id}`),
 
   zekatAyar: () => http.get<ZekatAyarYaniti>('/aile/zekat/ayar').then((r) => r.data),

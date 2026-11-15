@@ -15,9 +15,11 @@ import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import GiderFormu from '@/components/aile/GiderFormu.vue'
 import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
+import TasarrufGunuFormu from '@/components/aile/TasarrufGunuFormu.vue'
 import VeriGrafigi from '@/components/VeriGrafigi.vue'
 import {
   aileApi,
+  type AyGunu,
   type AylikOzet,
   type BeklenenGelir,
   type BeklenenGider,
@@ -25,6 +27,7 @@ import {
   type GelirGirdisi,
   type GelirKaynagi,
   type GiderKaynagi,
+  type TasarrufGunu,
 } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useSonIstek } from '@/composables/useSonIstek'
@@ -51,6 +54,28 @@ const giderKaynaklari = ref<GiderKaynagi[]>([])
 const giderFormuAcik = ref(false)
 const giderVarsayilan = ref<Partial<DuzenliGiderGirdisi> | undefined>()
 const tasarrufAcik = ref(false)
+/** Altın / döviz günü: yeni gün / düzenleme formu ve "bu ayın alımı" için seçili gün */
+const gunFormuAcik = ref(false)
+const duzenlenenGun = ref<TasarrufGunu | null>(null)
+const gunAlimiAcik = ref(false)
+const alimGunu = ref<AyGunu | null>(null)
+
+function gunEkle(): void {
+  duzenlenenGun.value = null
+  gunFormuAcik.value = true
+}
+function gunDuzenle(g: TasarrufGunu): void {
+  duzenlenenGun.value = g
+  gunFormuAcik.value = true
+}
+function gunAlimiYap(g: AyGunu): void {
+  alimGunu.value = g
+  gunAlimiAcik.value = true
+}
+function tasarrufAc(): void {
+  alimGunu.value = null
+  tasarrufAcik.value = true
+}
 const confirm = useConfirm()
 const toast = useToast()
 
@@ -361,7 +386,7 @@ const gunMetni = (gun: number | null | undefined) =>
             icon="pi pi-wallet"
             size="small"
             data-test="tasarruf-yap"
-            @click="tasarrufAcik = true"
+            @click="tasarrufAc"
           />
         </div>
         <p v-if="!ozet.tasarruf.kalemler.length" class="py-1 text-sm text-surface-500">
@@ -389,6 +414,58 @@ const gunMetni = (gun: number | null | undefined) =>
               size="small"
               :aria-label="`${t.varlik_ad} tasarrufunu sil`"
               @click="tasarrufSil(t.id, t.varlik_ad ?? 'Tasarruf')"
+            />
+          </li>
+        </ul>
+      </section>
+
+      <!-- Altın / döviz günleri -->
+      <section class="kart p-4 sm:p-5" data-test="gunler-bolumu">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="bolum-etiketi">Altın / döviz günleri</h2>
+          <Button
+            label="Gün ekle"
+            icon="pi pi-plus"
+            size="small"
+            severity="secondary"
+            outlined
+            data-test="gun-ekle"
+            @click="gunEkle"
+          />
+        </div>
+        <p v-if="!ozet.gunler.length" class="py-1 text-sm text-surface-500">
+          Bu ay için gün yok. Her ay belli miktarda altın ya da döviz aldığınız bir gün varsa
+          ekleyin; ay gelince buradan alımı kaydedersiniz.
+        </p>
+        <ul v-else class="divide-y divide-surface-100">
+          <li
+            v-for="g in ozet.gunler"
+            :key="g.gun.id"
+            class="flex flex-wrap items-center gap-3 py-2.5"
+            data-test="gun-satiri"
+          >
+            <button type="button" class="min-w-0 flex-1 text-left" @click="gunDuzenle(g.gun)">
+              <span class="block truncate text-sm font-semibold">{{ g.gun.ad }}</span>
+              <span class="block text-xs text-surface-500">
+                {{ g.gun.miktar }} {{ g.gun.varlik_birim ?? '' }} {{ g.gun.varlik_ad }} · her ayın
+                {{ g.gun.ay_gunu }}'i · {{ g.gun.hesap_ad }}
+              </span>
+            </button>
+            <span
+              v-if="g.durum === 'yapildi'"
+              class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+              data-test="gun-yapildi"
+              >Alım yapıldı</span
+            >
+            <Button
+              v-else
+              :label="g.vadesi_geldi ? 'Bu ayın alımını yap' : 'Alımı şimdi yap'"
+              icon="pi pi-check"
+              size="small"
+              :severity="g.vadesi_geldi ? 'primary' : 'secondary'"
+              :outlined="!g.vadesi_geldi"
+              data-test="gun-alimi-yap"
+              @click="gunAlimiYap(g)"
             />
           </li>
         </ul>
@@ -626,6 +703,8 @@ const gunMetni = (gun: number | null | undefined) =>
       @kaydedildi="yukle"
     />
     <TasarrufFormu v-model:visible="tasarrufAcik" @kaydedildi="yukle" />
+    <TasarrufFormu v-model:visible="gunAlimiAcik" :gun="alimGunu" @kaydedildi="yukle" />
+    <TasarrufGunuFormu v-model:visible="gunFormuAcik" :gun="duzenlenenGun" @kaydedildi="yukle" />
     <GelirFormu
       v-model:visible="gelirFormuAcik"
       :varsayilan="varsayilan"
