@@ -409,8 +409,17 @@ export interface AylikOzet {
       renk: string | null
       ikon: string | null
       toplam: number
+      /** "Ekstredeki diğer": ekstre borcu ile satır toplamı arasındaki fark (devreden borç, ödeme, bonus…) */
+      diger?: boolean
     }[]
-    kartlar: { kart_id: number; ad: string; sahip_uye_id: number | null; toplam: number }[]
+    kartlar: {
+      kart_id: number
+      ad: string
+      sahip_uye_id: number | null
+      /** Kart gideri: kesim ayı bu ay olan onaylı ekstrelerin dönem borcu (+ ekstreye girmemiş elle satırlar) */
+      toplam: number
+      ekstre: { id: number; donem_borcu: number | null; son_odeme_tarihi: string | null } | null
+    }[]
     haric: { tur: KartIslemTuru; etiket: string; toplam: number }[]
     taksitler: {
       islem_id: number

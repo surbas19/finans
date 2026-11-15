@@ -110,10 +110,10 @@ class FaturaTest extends TestCase
         $this->assertTrue(KartIslemi::find($iski['id'])->kategori->fatura);
         $this->assertSame(0, Fatura::where('kart_islemi_id', $dogalgaz['id'])->count());
 
-        // Hizmet ayına göre: Eylül faturaları; kart harcaması işlem ayında (Ekim), fatura ikinci kez sayılmaz
+        // Hizmet ayına göre: Eylül faturaları; kart gideri ekstre borcudur (Kasım ekstresi), fatura ikinci kez sayılmaz
         $eylul = $this->getJson('/api/v1/aile/ozet?ay=2026-09')->assertOk();
         $eylul->assertJsonPath('faturalar.toplam', 1157.4)->assertJsonPath('faturalar.kartla_odenen', 1157.4)->assertJsonPath('gider.toplam', 0);
-        $this->getJson('/api/v1/aile/ozet?ay=2026-10')->assertJsonPath('gider.toplam', 2707.5)->assertJsonPath('gider.kartsiz_faturalar', 0);
+        $this->getJson('/api/v1/aile/ozet?ay=2026-10')->assertJsonPath('gider.toplam', 0)->assertJsonPath('gider.kartsiz_faturalar', 0);
         $this->getJson('/api/v1/aile/faturalar?donem=2026-09')->assertJsonCount(2, 'faturalar')->assertJsonPath('toplam', 1157.4);
         // Dönemi açıklamada olmayan fatura kesim ayına yazıldığı için "dönemi bilinmeyen" kalmaz; Kasım'da Enerjisa var
         $this->getJson('/api/v1/aile/faturalar?bilinmeyen=1')->assertJsonCount(0, 'faturalar');

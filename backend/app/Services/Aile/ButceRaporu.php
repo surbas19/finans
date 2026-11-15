@@ -30,6 +30,9 @@ use Illuminate\Support\Collection;
  */
 class ButceRaporu
 {
+    /** Kategori dağılımında ekstre borcu ile satır toplamı arasındaki fark (devreden borç, ödeme, bonus…) */
+    private const EKSTREDEKI_DIGER = -1;
+
     public function __construct(private GelirTakvimi $takvim, private GiderTakvimi $giderTakvimi) {}
 
     /**
@@ -71,34 +74,74 @@ class ButceRaporu
     }
 
     /**
-     * Gider: onaylı kart satırlarından, rapor ayı `$donem` olanlar. Harcama ve faiz / ücret eklenir, iade düşülür
-     * (kategorisi yoksa iade edilen harcamanınki); kart borcu ödemesi, transfer ve nakit avans gider sayılmaz, ayrıca
-     * gösterilir. Taksitli alışta aya düşen taksit gidere, toplam borç yalnızca bilgi olarak.
+     * Gider: kart tarafı kesim ayı bu ay olan onaylı ekstrelerin **dönem borcu** (devreden borç, ödeme, bonus… dahil,
+     * ayrılmaz) + henüz ekstreye girmemiş elle kart satırları; kategori dağılımı satırlardan, aradaki fark "ekstredeki
+     * diğer" dilimi. Ayrıca kartsız ödenen faturalar ve düzenli giderler.
      *
      * @return array<string, mixed>
      */
     public function giderOzeti(int $haneId, string $donem): array
     {
-        $islemler = KartIslemi::where('hane_id', $haneId)->where('durum', KartIslemDurumu::Onayli->value)
-            ->where('rapor_donemi', $donem)->with(['iadeEdilen:id,kategori_id'])->orderBy('islem_tarihi')->get();
         $kategoriler = HarcamaKategorisi::where('hane_id', $haneId)->get()->keyBy('id');
         $kartlar = Kart::where('hane_id', $haneId)->get()->keyBy('id');
 
+        // Kart gideri = kesim ayı bu ay olan onaylı ekstrelerin dönem borcu (devreden borç, ödeme, bonus… dahil).
+        $ekstreler = Ekstre::where('hane_id', $haneId)->where('durum', EkstreDurumu::Onaylandi->value)
+            ->whereBetween('kesim_tarihi', [Donem::ilkGun($donem)->toDateString(), Donem::sonGun($donem)->toDateString()])
+            ->orderBy('kesim_tarihi')->get();
+        $ekstreSatirlari = KartIslemi::whereIn('ekstre_id', $ekstreler->modelKeys())->where('durum', KartIslemDurumu::Onayli->value)
+            ->with(['iadeEdilen:id,kategori_id'])->orderBy('islem_tarihi')->get();
+
         $kategoriToplam = [];
         $kartToplam = [];
+        $kartEkstre = [];
         $haric = [];
-        foreach ($islemler as $islem) {
-            $etki = $this->giderEtkisi($islem);
-            if ($islem->tur->giderYonu() === 0) {
-                $haric[$islem->tur->value] = ($haric[$islem->tur->value] ?? 0) + Kurus::kurus($islem->tutar);
-
-                continue;
-            }
+        $kategoriyeYaz = function (KartIslemi $islem, int $etki) use (&$kategoriToplam): void {
             $kategori = $islem->kategori_id ?? $islem->iadeEdilen?->kategori_id ?? 0;
             $kategoriToplam[$kategori] = ($kategoriToplam[$kategori] ?? 0) + $etki;
+        };
+        foreach ($ekstreler as $ekstre) {
+            $satirlar = $ekstreSatirlari->where('ekstre_id', $ekstre->id);
+            $satirToplam = 0;
+            foreach ($satirlar as $islem) {
+                if ($islem->tur->giderYonu() === 0) {
+                    $haric[$islem->tur->value] = ($haric[$islem->tur->value] ?? 0) + Kurus::kurus($islem->tutar);
+
+                    continue;
+                }
+                $etki = $this->giderEtkisi($islem);
+                $satirToplam += $etki;
+                $kategoriyeYaz($islem, $etki);
+            }
+            // Dönem borcu okunamadıysa satırlardan; okunduysa tamamı gider, satırlarla farkı "ekstredeki diğer" (devreden borç…)
+            $borc = $ekstre->donem_borcu !== null ? Kurus::kurus($ekstre->donem_borcu) : $satirToplam;
+            if ($borc !== $satirToplam) {
+                $kategoriToplam[self::EKSTREDEKI_DIGER] = ($kategoriToplam[self::EKSTREDEKI_DIGER] ?? 0) + $borc - $satirToplam;
+            }
+            $kartToplam[$ekstre->kart_id] = ($kartToplam[$ekstre->kart_id] ?? 0) + $borc;
+            $kartEkstre[$ekstre->kart_id] = $ekstre;
+        }
+
+        // Henüz ekstreye girmemiş elle kart satırları ay giderine eklenir (ilk sonraki ekstre 35 günden yakınsa ekstrededir)
+        $onayliEkstreler = Ekstre::where('hane_id', $haneId)->where('durum', EkstreDurumu::Onaylandi->value)->get(['kart_id', 'kesim_tarihi'])->groupBy('kart_id');
+        $elle = KartIslemi::where('hane_id', $haneId)->where('durum', KartIslemDurumu::Onayli->value)->whereNull('ekstre_id')
+            ->where('rapor_donemi', $donem)->with(['iadeEdilen:id,kategori_id'])->get()
+            ->filter(function (KartIslemi $islem) use ($onayliEkstreler): bool {
+                if ($islem->tur->giderYonu() === 0 || $islem->islem_tarihi === null) {
+                    return false;
+                }
+                $sonraki = ($onayliEkstreler[$islem->kart_id] ?? collect())
+                    ->filter(fn (Ekstre $e): bool => $e->kesim_tarihi->gte($islem->islem_tarihi))->min('kesim_tarihi');
+
+                return $sonraki === null || $islem->islem_tarihi->diffInDays($sonraki) > 35;
+            });
+        foreach ($elle as $islem) {
+            $etki = $this->giderEtkisi($islem);
+            $kategoriyeYaz($islem, $etki);
             $kartToplam[$islem->kart_id] = ($kartToplam[$islem->kart_id] ?? 0) + $etki;
         }
-        $kartHarcamasi = array_sum($kategoriToplam);
+        $kartHarcamasi = array_sum($kartToplam);
+        $islemler = $ekstreSatirlari->concat($elle);
 
         // Kartla ödenmemiş (kart satırına bağlı olmayan) ödenmiş faturalar: ödendiği ayın gideri, Faturalar kategorisine.
         // Kart satırına bağlı fatura zaten kart harcamasındadır, ikinci kez sayılmaz.
@@ -128,11 +171,12 @@ class ButceRaporu
             'beklenenler' => $this->giderTakvimi->beklenenler($haneId, $donem),
             'kategoriler' => collect($kategoriToplam)
                 ->map(fn (int $t, int $id): array => [
-                    'kategori_id' => $id ?: null,
-                    'ad' => $kategoriler[$id]->ad ?? 'Kategorisiz',
+                    'kategori_id' => $id > 0 ? $id : null,
+                    'ad' => $id === self::EKSTREDEKI_DIGER ? 'Ekstredeki diğer (devreden borç, ödeme, bonus…)' : ($kategoriler[$id]->ad ?? 'Kategorisiz'),
                     'renk' => $kategoriler[$id]->renk ?? null,
                     'ikon' => $kategoriler[$id]->ikon ?? null,
                     'toplam' => Kurus::tl($t),
+                    'diger' => $id === self::EKSTREDEKI_DIGER,
                 ])->sortByDesc('toplam')->values(),
             'kartlar' => collect($kartToplam)
                 ->map(fn (int $t, int $id): array => [
@@ -140,8 +184,13 @@ class ButceRaporu
                     'ad' => $kartlar[$id]->ad ?? '',
                     'sahip_uye_id' => $kartlar[$id]->sahip_uye_id ?? null,
                     'toplam' => Kurus::tl($t),
+                    'ekstre' => isset($kartEkstre[$id]) ? [
+                        'id' => $kartEkstre[$id]->id,
+                        'donem_borcu' => $kartEkstre[$id]->donem_borcu !== null ? Kurus::tl(Kurus::kurus($kartEkstre[$id]->donem_borcu)) : null,
+                        'son_odeme_tarihi' => $kartEkstre[$id]->son_odeme_tarihi?->toDateString(),
+                    ] : null,
                 ])->sortByDesc('toplam')->values(),
-            // Gidere girmeyen satırlar: kullanıcıya neden sayılmadığı gösterilir
+            // Ödeme / bonus / nakit avans: ekstre borcunun içinde; ayrıca gidere eklenmez
             'haric' => collect($haric)->map(fn (int $t, string $tur): array => [
                 'tur' => $tur,
                 'etiket' => KartIslemTuru::from($tur)->etiket(),

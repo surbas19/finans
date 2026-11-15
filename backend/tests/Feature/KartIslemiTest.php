@@ -72,9 +72,8 @@ class KartIslemiTest extends TestCase
         $kategoriler = collect($ozet->json('gider.kategoriler'))->keyBy('ad');
         $this->assertSame(400, $kategoriler['Market']['toplam']); // iade kendi kategorisi yoksa asıl harcamanınkinden düşer
         $this->assertSame(320.35, $kategoriler['Kategorisiz']['toplam']);
-        $haric = collect($ozet->json('gider.haric'))->pluck('toplam', 'tur');
-        $this->assertSame(['bonus' => 60, 'nakit_avans' => 1000, 'odeme' => 2000, 'transfer' => 300], $haric->sortKeys()->all());
-        $this->assertSame('Bonus / puanla ödenen', collect($ozet->json('gider.haric'))->firstWhere('tur', 'bonus')['etiket']);
+        // Ekstresiz elle satırlarda ödeme / transfer / avans / bonus hiç gidere girmez; "haric" yalnızca ekstre satırlarından
+        $this->assertSame([], $ozet->json('gider.haric'));
         $ozet->assertJsonPath('gider.taksitler.0.aya_dusen', 250.25)
             ->assertJsonPath('gider.taksitler.0.toplam_borc', 1501.5)
             ->assertJsonPath('gider.taksitler.0.toplam_tahmini', true);
@@ -124,7 +123,8 @@ class KartIslemiTest extends TestCase
             'islem_tarihi' => '2026-11-02', 'aciklama' => 'SHELL', 'tutar' => '900.00', 'tur' => KartIslemTuru::Harcama]);
         app(KartIslemKurallari::class)->onayla($satir, $ekstre, 1);
         $this->deleteJson("/api/v1/aile/kart-islemleri/{$satir->id}")->assertOk()->assertJsonPath('islem.durum', 'atlandi');
-        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gider.toplam', 500);
+        // Elle satır (5 Kasım) 10 Kasım kesimli ekstrenin dönemindedir: ekstrede sayılır, ayrıca eklenmez
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gider.toplam', 0);
 
         // Düzeltme: tür ödeme yapılınca gider düşer
         $kalan = KartIslemi::where('aciklama', 'MIGROS KADIKOY')->first();

@@ -392,6 +392,7 @@ const gunMetni = (gun: number | null | undefined) =>
               <button
                 type="button"
                 class="flex w-full items-center justify-between gap-2 text-left"
+                :disabled="k.diger"
                 @click="
                   router.push({
                     name: 'aile-islemler',
@@ -431,13 +432,7 @@ const gunMetni = (gun: number | null | undefined) =>
             Kartsız ödenen faturalar {{ tl(ozet.gider.kartsiz_faturalar) }} giderde (Faturalar).
           </li>
           <li v-for="h in ozet.gider.haric" :key="h.tur">
-            {{ h.etiket }} {{ tl(h.toplam) }}: gidere sayılmadı{{
-              h.tur === 'odeme'
-                ? ' (ekstredeki harcamalar zaten sayıldı)'
-                : h.tur === 'bonus'
-                  ? ' (puanla ödenen harcama, harcama olarak sayıldı)'
-                  : ''
-            }}.
+            {{ h.etiket }} {{ tl(h.toplam) }}: ekstre borcunun içinde, ayrıca eklenmedi.
           </li>
         </ul>
       </section>
@@ -516,15 +511,13 @@ const gunMetni = (gun: number | null | undefined) =>
             katılmaz.
           </li>
           <li>
-            Gider: kart harcamaları işlem tarihinin ayına; taksitler ekstrenin kapandığı aya (aya
-            düşen taksit). Faiz / ücret eklenir, iade düşülür.
+            Gider: kart gideri, o ay kesilen ekstrenin dönem borcunun tamamıdır (devreden borç,
+            taksit, faiz, ödeme ve bonus dahil; ayrılmaz). Kategori grafiği ekstre satırlarından
+            çıkar, borçla farkı "Ekstredeki diğer" olarak görünür. Ekstresi henüz gelmemiş elle
+            girilen kart harcamaları ay giderine eklenir.
           </li>
           <li>
-            Kart borcu ödemesi, hesaplar arası transfer ve nakit avans gider değildir; ekstredeki
-            harcamalar zaten sayıldı.
-          </li>
-          <li>
-            Kartla ödenen fatura kart harcaması olarak bir kez sayılır; kartsız ödenen fatura
+            Kartla ödenen fatura ekstre borcunun içindedir, ayrıca sayılmaz; kartsız ödenen fatura
             ödendiği ayın gideridir.
           </li>
           <li>

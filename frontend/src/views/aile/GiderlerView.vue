@@ -15,7 +15,6 @@ import {
   type BeklenenGider,
   type DuzenliGider,
   type DuzenliGiderGirdisi,
-  type Ekstre,
   type GiderKaynagi,
 } from '@/api/aile'
 import { useSonIstek } from '@/composables/useSonIstek'
@@ -32,7 +31,6 @@ const aile = useAileStore()
 const donem = ref(buAy())
 const ozet = ref<AylikOzet | null>(null)
 const kaynaklar = ref<GiderKaynagi[]>([])
-const ekstreler = ref<Ekstre[]>([])
 const sonIstek = useSonIstek()
 
 const giderFormuAcik = ref(false)
@@ -44,12 +42,11 @@ const elleAcik = ref(false)
 
 async function yukle(): Promise<void> {
   const veri = await sonIstek(() =>
-    Promise.all([aileApi.ozet(donem.value), aileApi.giderKaynaklari(), aileApi.ekstreler()]),
+    Promise.all([aileApi.ozet(donem.value), aileApi.giderKaynaklari()]),
   )
   if (veri === undefined) return
   ozet.value = veri[0]
   kaynaklar.value = veri[1]
-  ekstreler.value = veri[2]
 }
 
 onMounted(async () => {
@@ -61,15 +58,8 @@ watch(donem, () => {
   void yukle()
 })
 
-/** Kart başına: bu ay kart harcaması + kesimi bu aya düşen onaylı ekstre (borç, son ödeme) */
-const kartlar = computed(() =>
-  (ozet.value?.gider.kartlar ?? []).map((k) => ({
-    ...k,
-    ekstre: ekstreler.value.find(
-      (e) => e.kart_id === k.kart_id && e.donem === donem.value && e.durum === 'onaylandi',
-    ),
-  })),
-)
+/** Kart gideri = kesimi bu aya düşen onaylı ekstrenin dönem borcu (sunucu hesaplar) */
+const kartlar = computed(() => ozet.value?.gider.kartlar ?? [])
 
 function giderEkle(on?: Partial<DuzenliGiderGirdisi>): void {
   duzenlenen.value = null
@@ -171,7 +161,7 @@ function kaynakAdi(id: number | null): string {
               <span class="block text-xs text-surface-500">
                 <KisiEtiketi :kisi="aile.uye(k.sahip_uye_id)" />
                 <template v-if="k.ekstre">
-                  · ekstre borcu {{ tl(k.ekstre.donem_borcu) }}
+                  · ekstre
                   <template v-if="k.ekstre.son_odeme_tarihi">
                     · son ödeme {{ tarih(k.ekstre.son_odeme_tarihi) }}</template
                   >
@@ -182,7 +172,8 @@ function kaynakAdi(id: number | null): string {
           </li>
         </ul>
         <p class="mt-2 text-xs text-surface-500">
-          Ekstre borcu bilgi içindir; gider, ekstredeki harcamalardan hesaplanır.
+          Kart gideri ekstre borcunun tamamıdır (kesim ayına yazılır); ekstresi gelmemiş elle
+          girilen harcamalar ayrıca eklenir.
         </p>
       </section>
 

@@ -109,9 +109,12 @@ class EkstreTest extends TestCase
             ->assertJsonPath('ekstre.durum', 'onaylandi');
         $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertJsonValidationErrors('ekstre');
 
-        // Rapor: Ekim'de market + fatura; taksit Kasım'a (kesim ayı); kart borcu ödemesi gider değil
-        $this->getJson('/api/v1/aile/ozet?ay=2026-10')->assertJsonPath('gider.toplam', 2079.71);
-        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gider.toplam', 1400);
+        // Rapor: kart gideri ekstrenin dönem borcudur (kesim ayı Kasım); Ekim'de ekstre yok
+        $this->getJson('/api/v1/aile/ozet?ay=2026-10')->assertJsonPath('gider.toplam', 0);
+        $kasim = $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gider.toplam', 3479.66)->assertJsonPath('gider.kart_harcamasi', 3479.66)
+            ->assertJsonPath('gider.kartlar.0.ekstre.id', $id);
+        // Kategori dağılımı satırlardan; borçla farkı "ekstredeki diğer" dilimi: toplamları gideri verir
+        $this->assertEqualsWithDelta(3479.66, array_sum(array_column($kasim->json('gider.kategoriler'), 'toplam')), 0.001);
         // Onaylı ekstrenin satırı incelemeden değişmez
         $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satirlar[0]['id']}", ['tutar' => 1])->assertJsonValidationErrors('islem');
 
