@@ -102,7 +102,6 @@ const uyariVar = computed(
     !!ozet.value &&
     (ozet.value.uyarilar.gecikmis_faturalar.length > 0 ||
       ozet.value.uyarilar.bekleyen_faturalar.length > 0 ||
-      ozet.value.uyarilar.son_odemeler.length > 0 ||
       (auth.yonetici && (ozet.value.uyarilar.zekat?.length ?? 0) > 0)),
 )
 
@@ -214,21 +213,6 @@ const gunMetni = (gun: number | null | undefined) =>
           <span class="font-semibold whitespace-nowrap"
             >{{ tl(f.tutar)
             }}<template v-if="f.son_odeme_tarihi"> · {{ gunMetni(f.gun) }}</template></span
-          >
-        </RouterLink>
-        <RouterLink
-          v-for="e in ozet.uyarilar.son_odemeler"
-          :key="`e${e.id}`"
-          :to="{ name: 'aile-ekstre', params: { id: e.id } }"
-          class="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900"
-        >
-          <i class="pi pi-credit-card" />
-          <span class="min-w-0 flex-1 truncate"
-            ><KartEtiketi :kart-id="e.kart_id" :ad="e.kart_ad" /> son ödeme
-            {{ tarih(e.son_odeme_tarihi) }}</span
-          >
-          <span class="font-semibold whitespace-nowrap"
-            >{{ tl(e.donem_borcu) }} · {{ gunMetni(e.gun) }}</span
           >
         </RouterLink>
         <RouterLink

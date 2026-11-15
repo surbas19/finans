@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import Accordion from 'primevue/accordion'
+import AccordionContent from 'primevue/accordioncontent'
+import AccordionHeader from 'primevue/accordionheader'
+import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
@@ -10,7 +14,7 @@ import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import KartFormu from '@/components/aile/KartFormu.vue'
 import { aileApi, type Ekstre, type Kart } from '@/api/aile'
 import { useAileStore } from '@/stores/aile'
-import { tarih, tl } from '@/utils/bicim'
+import { bugun, tarih, tl } from '@/utils/bicim'
 import { kartDegradesi } from '@/utils/kartRengi'
 
 /**
@@ -51,6 +55,22 @@ const bekleyenler = computed(() => (ekstreler.value ?? []).filter((e) => e.durum
 const kartlar = computed(() =>
   [...aile.kartlar].sort((a, b) => a.banka_id - b.banka_id || a.id - b.id),
 )
+
+/** Son ödeme hatırlatıcıları: onaylı, ödenmemiş, son ödeme tarihi belli ekstreler (tarihe göre) */
+const sonOdemeler = computed(() => {
+  const bu = new Date(`${bugun()}T00:00:00`).getTime()
+
+  return (ekstreler.value ?? [])
+    .filter((e) => e.durum === 'onaylandi' && !e.odendi && e.son_odeme_tarihi)
+    .map((e) => ({
+      ekstre: e,
+      gun: Math.round((new Date(`${e.son_odeme_tarihi}T00:00:00`).getTime() - bu) / 86_400_000),
+    }))
+    .sort((a, b) => a.gun - b.gun)
+})
+
+const gunMetni = (gun: number): string =>
+  gun < 0 ? `${-gun} gün geçti` : gun === 0 ? 'bugün' : `${gun} gün kaldı`
 
 function sonEkstre(kartId: number): Ekstre | undefined {
   return (ekstreler.value ?? []).find((e) => e.kart_id === kartId && e.durum === 'onaylandi')
@@ -196,6 +216,53 @@ function sonEkstre(kartId: number): Ekstre | undefined {
           </div>
         </template>
       </KaydirmaliPaneller>
+
+      <!-- Son ödeme hatırlatıcıları: kartların altında akordiyon -->
+      <section v-if="sonOdemeler.length" class="kart p-2" data-test="son-odeme-akordiyon">
+        <Accordion
+          :value="['son-odeme']"
+          multiple
+          class="[&_.p-accordioncontent-wrapper]:min-w-0 [&_.p-accordioncontent-wrapper]:overflow-hidden"
+        >
+          <AccordionPanel value="son-odeme">
+            <AccordionHeader data-test="son-odeme-baslik"
+              >Son ödeme hatırlatıcıları ({{ sonOdemeler.length }})</AccordionHeader
+            >
+            <AccordionContent>
+              <ul class="flex flex-col gap-2 text-sm">
+                <li v-for="s in sonOdemeler" :key="s.ekstre.id">
+                  <RouterLink
+                    :to="{ name: 'aile-ekstre', params: { id: s.ekstre.id } }"
+                    class="flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1"
+                    :class="
+                      s.gun < 0
+                        ? 'bg-red-50 text-red-900 ring-red-200'
+                        : s.gun <= 3
+                          ? 'bg-amber-50 text-amber-900 ring-amber-200'
+                          : 'bg-sky-50 text-sky-900 ring-sky-200'
+                    "
+                    data-test="son-odeme-satiri"
+                  >
+                    <i class="pi pi-credit-card" />
+                    <span class="min-w-0 flex-1">
+                      <span class="block truncate font-semibold"
+                        ><KartEtiketi :kart-id="s.ekstre.kart_id"
+                      /></span>
+                      <span class="block text-xs opacity-80"
+                        >son ödeme {{ tarih(s.ekstre.son_odeme_tarihi) }} ·
+                        {{ gunMetni(s.gun) }}</span
+                      >
+                    </span>
+                    <span class="font-semibold whitespace-nowrap tabular-nums">{{
+                      tl(s.ekstre.donem_borcu)
+                    }}</span>
+                  </RouterLink>
+                </li>
+              </ul>
+            </AccordionContent>
+          </AccordionPanel>
+        </Accordion>
+      </section>
     </template>
 
     <KartFormu v-model:visible="kartFormuAcik" @kaydedildi="yukle" />
