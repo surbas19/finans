@@ -5,7 +5,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
-import type { ZekatOdemesi } from '@/api/aile'
 import type { Islem } from '@/api/finans'
 
 function telefonKur(dar: boolean): void {
@@ -137,39 +136,7 @@ describe('IslemListesi zekât satırları', () => {
       varlik: { id: 1, tur: 'hisse', kod: 'THYAO', ad: 'Türk Hava Yolları', birim: 'adet' },
       hesap_ad: 'Yatırım',
     }) as unknown as Islem
-  const odeme = (id: number, tarih: string, alici: string): ZekatOdemesi => ({
-    id,
-    zekat_yili_id: null,
-    uye_id: null,
-    tarih,
-    tutar: 2500,
-    alici,
-    not: null,
-  })
-
-  it('zekât ödemeleri işlemlerle tarihe göre karışır, rozetlidir ve silme olayı verir', async () => {
-    telefonKur(true)
-    const { default: IslemListesi } = await import('@/components/IslemListesi.vue')
-    const sayfa = mount(IslemListesi, {
-      props: {
-        islemler: [islem(1, '2026-11-10'), islem(2, '2026-10-01')],
-        zekatOdemeleri: [odeme(7, '2026-11-05', 'Vakıf')],
-      },
-      global: { plugins: [PrimeVue, ConfirmationService, ToastService] },
-    })
-    const satirlar = sayfa.findAll('li')
-    expect(satirlar).toHaveLength(3)
-    // 10 Kasım işlem, 5 Kasım zekât, 1 Ekim işlem
-    expect(satirlar[0]!.find('[data-test="islem-karti"]').exists()).toBe(true)
-    expect(satirlar[1]!.find('[data-test="zekat-satiri"]').exists()).toBe(true)
-    expect(satirlar[2]!.find('[data-test="islem-karti"]').exists()).toBe(true)
-    expect(satirlar[1]!.text()).toContain('Zekât')
-    expect(satirlar[1]!.text()).toContain('Vakıf')
-    await satirlar[1]!.find('button').trigger('click')
-    expect(sayfa.emitted('zekatSil')?.[0]?.[0]).toMatchObject({ id: 7 })
-  })
-
-  it('zekât ödemesi verilmezse yalnızca işlemler görünür (diğer sayfalar etkilenmez)', async () => {
+  it("işlem listesi yalnız işlemleri gösterir; zekât ödemeleri Yönetim → Zekât'ta", async () => {
     telefonKur(true)
     const { default: IslemListesi } = await import('@/components/IslemListesi.vue')
     const sayfa = mount(IslemListesi, {

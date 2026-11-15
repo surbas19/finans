@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\V1\Aile;
 use App\Http\Controllers\Controller;
 use App\Models\ZekatOdemesi;
 use App\Models\ZekatYili;
+use App\Services\Zekat\ZekatDonemleri;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +19,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ZekatOdemeController extends Controller
 {
+    public function __construct(private ZekatDonemleri $donemler) {}
+
     public function index(Request $request): JsonResponse
     {
         return response()->json([
@@ -27,7 +31,7 @@ class ZekatOdemeController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $veri = $this->dogrula($request);
+        $veri = $this->yilaBagla($request, $this->dogrula($request));
         $odeme = ZekatOdemesi::create([...$veri, 'hane_id' => $request->user()->hane_id, 'olusturan_id' => $request->user()->id]);
 
         return response()->json(['odeme' => $odeme->ozet(), 'message' => 'Verilen zekât kaydedildi.'], 201);
@@ -36,7 +40,7 @@ class ZekatOdemeController extends Controller
     public function update(Request $request, ZekatOdemesi $odeme): JsonResponse
     {
         Gate::authorize('hane-kaydi', $odeme);
-        $odeme->update($this->dogrula($request));
+        $odeme->update($this->yilaBagla($request, $this->dogrula($request)));
 
         return response()->json(['odeme' => $odeme->ozet(), 'message' => 'Ödeme kaydedildi.']);
     }
@@ -47,6 +51,21 @@ class ZekatOdemeController extends Controller
         $odeme->delete();
 
         return response()->json(['message' => 'Ödeme silindi.']);
+    }
+
+    /**
+     * Yıl seçilmemişse ödeme tarihini kapsayan (Ramazan'dan Ramazan'a) KESİNLEŞMİŞ zekât yılına bağlanır; yoksa bağsız kalır.
+     *
+     * @param  array<string, mixed>  $veri
+     * @return array<string, mixed>
+     */
+    private function yilaBagla(Request $request, array $veri): array
+    {
+        if (empty($veri['zekat_yili_id'])) {
+            $veri['zekat_yili_id'] = $this->donemler->kayitBul((int) $request->user()->hane_id, Carbon::parse($veri['tarih']))?->id;
+        }
+
+        return $veri;
     }
 
     /**

@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\Aile\TasarrufGunuController;
 use App\Http\Controllers\Api\V1\Aile\ZekatAyarController;
 use App\Http\Controllers\Api\V1\Aile\ZekatBorcController;
 use App\Http\Controllers\Api\V1\Aile\ZekatController;
+use App\Http\Controllers\Api\V1\Aile\ZekatDonemController;
 use App\Http\Controllers\Api\V1\Aile\ZekatOdemeController;
 use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
@@ -149,6 +150,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::get('zekat/borclar', [ZekatBorcController::class, 'index'])->name('zekat.borclar.index');
             Route::post('zekat/borclar', [ZekatBorcController::class, 'store'])->name('zekat.borclar.store');
             Route::delete('zekat/borclar/{borc}', [ZekatBorcController::class, 'destroy'])->name('zekat.borclar.destroy');
+            Route::get('zekat/donemler', ZekatDonemController::class)->name('zekat.donemler');
             Route::get('zekat/odemeler', [ZekatOdemeController::class, 'index'])->name('zekat.odemeler.index');
             Route::post('zekat/odemeler', [ZekatOdemeController::class, 'store'])->name('zekat.odemeler.store');
             Route::put('zekat/odemeler/{odeme}', [ZekatOdemeController::class, 'update'])->name('zekat.odemeler.update');
