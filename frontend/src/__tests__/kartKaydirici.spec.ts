@@ -202,11 +202,14 @@ describe('GelirGiderView', () => {
     expect(sayfa.find('[data-test="panel-cizgi-gider"]').attributes('style')).toContain(
       '--p-red-500',
     )
-    expect(sayfa.find('[data-test="panel-gider"]').attributes('aria-selected')).toBe('true')
-    expect(sayfa.find('[data-test="panel-gelir"]').attributes('aria-selected')).toBe('false')
-    // Hızlı geçiş düğmesi paneli değiştirir
-    await sayfa.find('[data-test="panel-gelir"]').trigger('click')
-    expect(sayfa.find('[data-test="panel-gelir"]').attributes('aria-selected')).toBe('true')
+    // Ekranda "Gelir" / "Gider" yazısı yok; çizgi dikey ve sağ kenarda
+    expect(sayfa.text()).not.toMatch(/Gelir|Gider/)
+    expect(sayfa.find('[data-test="panel-cizgi-gelir"]').classes().join(' ')).toContain('-right-4')
+    expect(sayfa.find('[data-test="panel-cizgi-gelir"]').classes()).toContain('w-[3px]')
+    expect(sayfa.find('[data-test="kaydirici-nokta"]').exists()).toBe(false)
+    expect(sayfa.find('[data-test="panel-gelir"]').exists()).toBe(false)
+    // Dönem seçici tam genişlik modunda
+    expect(sayfa.findComponent({ name: 'AySecici' }).props('genis')).toBe(true)
     vi.doUnmock('vue-router')
   })
 })

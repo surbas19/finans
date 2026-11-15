@@ -15,8 +15,21 @@ const props = withDefaults(
     sutun?: 1 | 2 | 3
     etiket?: (oge: T, sira: number) => string
     anahtar?: (oge: T, sira: number) => string | number
+    /** Telefonda panel ekranı tam kaplar (yandakinin kenarı görünmez) */
+    tamGenislik?: boolean
+    /** Telefonda alttaki gösterge noktaları */
+    noktalar?: boolean
+    /** Paneller aynı boyda (en uzun panel kadar) */
+    esitBoy?: boolean
   }>(),
-  { sutun: 2, etiket: undefined, anahtar: undefined },
+  {
+    sutun: 2,
+    etiket: undefined,
+    anahtar: undefined,
+    tamGenislik: false,
+    noktalar: true,
+    esitBoy: false,
+  },
 )
 const sira = defineModel<number>('sira', { default: 0 })
 
@@ -27,7 +40,8 @@ const sagaVar = ref(false)
 
 const panelSinifi = computed(
   () =>
-    'shrink-0 snap-center w-[88%] ' +
+    'shrink-0 snap-center ' +
+    (props.tamGenislik ? 'w-full ' : 'w-[88%] ') +
     (props.sutun === 1
       ? 'sm:w-full'
       : props.sutun === 2
@@ -156,7 +170,8 @@ onBeforeUnmount(() => {
   <div class="relative" data-test="kaydirmali-paneller" aria-roledescription="carousel">
     <div
       ref="serit"
-      class="-mx-4 flex snap-x snap-mandatory items-start gap-3 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-0.5 [&::-webkit-scrollbar]:hidden"
+      class="flex snap-x snap-mandatory gap-3 overflow-x-auto py-1 [scrollbar-width:none] sm:mx-0 sm:px-0.5 [&::-webkit-scrollbar]:hidden"
+      :class="[esitBoy ? 'items-stretch' : 'items-start', tamGenislik ? '' : '-mx-4 px-4']"
       data-test="kaydirici-serit"
       @scroll.passive="oklariGuncelle"
     >
@@ -196,7 +211,7 @@ onBeforeUnmount(() => {
     </template>
 
     <div
-      v-if="dar && ogeler.length > 1"
+      v-if="noktalar && dar && ogeler.length > 1"
       class="mt-2 flex justify-center gap-1.5"
       role="tablist"
       aria-label="Paneller"

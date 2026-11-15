@@ -125,7 +125,7 @@ function sonEkstre(kartId: number): Ekstre | undefined {
             <!-- Kredi kartı görünümü: kartın rengi; dokununca kart sayfası -->
             <RouterLink
               :to="{ name: 'aile-kart', params: { id: k.id } }"
-              class="block rounded-3xl p-5 text-white shadow-md"
+              class="flex h-52 flex-col rounded-3xl p-5 text-white shadow-md"
               :class="k.aktif ? '' : 'opacity-60 grayscale'"
               :style="{ background: kartDegradesi(k) }"
               data-test="kart-satiri"
@@ -139,13 +139,13 @@ function sonEkstre(kartId: number): Ekstre | undefined {
                 >
                 <i v-else class="pi pi-credit-card text-lg opacity-90" />
               </span>
-              <span class="mt-8 block truncate text-xl font-bold">{{ k.ad }}</span>
+              <span class="mt-auto block truncate text-xl font-bold">{{ k.ad }}</span>
               <span class="mt-0.5 block truncate text-xs opacity-90">
                 {{ aile.uyeAdi(k.sahip_uye_id) }}
                 <template v-if="k.kesim_gunu"> · kesim {{ k.kesim_gunu }}</template>
                 <template v-if="k.son_odeme_gunu"> · son ödeme {{ k.son_odeme_gunu }}</template>
               </span>
-              <span class="mt-4 flex items-end justify-between gap-3">
+              <span class="mt-4 flex min-h-[2.75rem] items-end justify-between gap-3">
                 <span v-if="sonEkstre(k.id)">
                   <span class="block text-[11px] opacity-80">Son ekstre borcu</span>
                   <span class="block text-lg font-semibold tabular-nums">{{
