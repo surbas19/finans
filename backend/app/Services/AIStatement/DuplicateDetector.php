@@ -48,6 +48,26 @@ class DuplicateDetector
     }
 
     /**
+     * PDF'siz (metinsiz kaynak) mod: sayfa metni olmadığından kaç kez geçmesi gerektiği bilinmez; aynı sayfada aynı
+     * kaynak satırın ikinci ve sonraki gelişi inceleme ister (reddedilmez: iki ayrı kahve de olabilir).
+     *
+     * @param  list<array<string, mixed>>  $islemler
+     * @return array<int, bool> dizin → ikinci / sonraki geliş mi
+     */
+    public function metinsizTekrarlar(array $islemler): array
+    {
+        $gorulen = [];
+        $sonuc = [];
+        foreach ($islemler as $k => $i) {
+            $anahtar = (is_int($i['source_page'] ?? null) ? $i['source_page'] : 0).'|'.TransactionValidator::bosluksuz((string) ($i['source_text'] ?? ''));
+            $sonuc[$k] = isset($gorulen[$anahtar]);
+            $gorulen[$anahtar] = true;
+        }
+
+        return $sonuc;
+    }
+
+    /**
      * Taslak ekstrenin satırlarında olası tekrarları işaretler (inceleme gerekir); işaretlenen satır sayısı.
      */
     public function olasiTekrarlar(Ekstre $ekstre): int

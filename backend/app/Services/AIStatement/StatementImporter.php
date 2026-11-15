@@ -32,7 +32,30 @@ class StatementImporter
         private EkstreMutabakati $mutabakat,
         private DuplicateDetector $tekrar,
         private StatementAuditService $denetim,
+        private KisiselVeriTemizleyici $temizleyici,
     ) {}
+
+    /**
+     * Yapay zekânın yazdığı borç denklemi / özet toplamı denetimi (kuruş hassasiyetiyle). Dış yapay zekâ JSON'unda
+     * (PDF'siz) satır incelemesini açıp açmamaya da bu karar verir.
+     *
+     * @param  array<string, mixed>  $ai
+     * @param  list<array<string, mixed>>  $kabul
+     * @return array<string, mixed>
+     */
+    public function mutabakat(array $ai, ?string $donemBorcu, array $kabul): array
+    {
+        return $this->mutabakat->denetle(
+            ['donem_borcu' => $donemBorcu],
+            array_filter([
+                'onceki_borc' => self::tutar($ai['summary']['previous_balance'] ?? null, eksiOlabilir: true),
+                'harcama_toplami' => self::tutar($ai['summary']['total_purchases'] ?? null),
+                'faiz_toplami' => self::tutar($ai['summary']['total_interest'] ?? null),
+                'odeme_toplami' => self::tutar($ai['summary']['total_payments'] ?? null),
+            ], fn (?string $d): bool => $d !== null),
+            $kabul,
+        );
+    }
 
     /**
      * @param  array{ai: array<string, mixed>, kabul: list<array<string, mixed>>, reddedilen: list<array<string, mixed>>, sayfa_denetimi: array<string, mixed>, model: string, sayfa_metinleri?: list<string>}  $analiz
@@ -41,7 +64,13 @@ class StatementImporter
     {
         DB::transaction(function () use ($ekstre, $user, $analiz): void {
             $ai = $analiz['ai'];
-            $kabul = $analiz['kabul'];
+            // Satır açıklaması ve kaynak satır da maskelenir (kart no, IBAN, telefon, kimlik, e-posta)
+            $kabul = array_map(fn (array $s): array => [
+                ...$s,
+                'aciklama' => $this->temizleyici->maskele((string) $s['aciklama']),
+                'ham' => $this->temizleyici->maskele((string) $s['ham']),
+            ], $analiz['kabul']);
+            $metinsizKaynak = (bool) ($analiz['metinsiz_kaynak'] ?? false);
             $onceki = $ekstre->denetim ?? [];
             // PHP okuyucunun sonucu ilk yapay zekâ çalışmasında özetlenir, sonraki çalışmalarda korunur
             $php = $onceki['php'] ?? [
@@ -70,22 +99,13 @@ class StatementImporter
                 }
             }
 
-            $aiMutabakat = $this->mutabakat->denetle(
-                ['donem_borcu' => $ekstre->donem_borcu !== null ? (string) $ekstre->donem_borcu : null],
-                array_filter([
-                    'onceki_borc' => self::tutar($ai['summary']['previous_balance'] ?? null, eksiOlabilir: true),
-                    'harcama_toplami' => self::tutar($ai['summary']['total_purchases'] ?? null),
-                    'faiz_toplami' => self::tutar($ai['summary']['total_interest'] ?? null),
-                    'odeme_toplami' => self::tutar($ai['summary']['total_payments'] ?? null),
-                ], fn (?string $d): bool => $d !== null),
-                $kabul,
-            );
+            $aiMutabakat = $this->mutabakat($ai, $ekstre->donem_borcu !== null ? (string) $ekstre->donem_borcu : null, $kabul);
             $phpSatir = (int) ($php['ozet']['satir'] ?? 0);
             $phpKalir = ($php['durum'] ?? null) === 'tutuyor' && $aiMutabakat['durum'] === 'tutmuyor' && $phpSatir > 0;
             $capraz = $this->capraz($php, $kabul, $aiMutabakat, $ai, $ekstre, $phpKalir);
             $sayfaDenetimi = $this->denetim->denetle(
                 (int) ($analiz['sayfa_denetimi']['pdf_sayfa'] ?? $ekstre->sayfa_sayisi),
-                $ai['page_audit'], $kabul, $analiz['reddedilen'], $analiz['sayfa_metinleri'] ?? [], $php['ozet']['sayfalar'] ?? [],
+                $ai['page_audit'], $kabul, $analiz['reddedilen'], $analiz['sayfa_metinleri'] ?? [], $php['ozet']['sayfalar'] ?? [], $metinsizKaynak,
             );
 
             if (! $phpKalir) {
@@ -96,7 +116,8 @@ class StatementImporter
                 'banka' => mb_substr((string) ($ai['bank_name'] ?? ''), 0, 60),
                 'tur' => $ai['statement_type'],
                 'inceleme_gerekli' => (bool) $ai['review_required'],
-                'uyarilar' => array_map(fn ($u): string => mb_substr((string) $u, 0, 200), array_slice($ai['warnings'], 0, 20)),
+                'uyarilar' => array_map(fn ($u): string => mb_substr((string) $u, 0, 200), [...($analiz['ek_uyarilar'] ?? []), ...array_slice($ai['warnings'], 0, 20)]),
+                ...(isset($analiz['harici']) ? ['harici' => (bool) $analiz['harici'], 'metinsiz' => $metinsizKaynak] : []),
                 'sayfa_denetimi' => $sayfaDenetimi,
                 'reddedilen' => array_slice($analiz['reddedilen'], 0, 50),
                 'bonus_hareketi' => count($ai['bonus_transactions']),
