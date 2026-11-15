@@ -69,7 +69,8 @@ const uyariVar = computed(
     !!ozet.value &&
     (ozet.value.uyarilar.gecikmis_faturalar.length > 0 ||
       ozet.value.uyarilar.bekleyen_faturalar.length > 0 ||
-      ozet.value.uyarilar.son_odemeler.length > 0),
+      ozet.value.uyarilar.son_odemeler.length > 0 ||
+      (ozet.value.uyarilar.zekat?.length ?? 0) > 0),
 )
 
 const grafik = computed(() => {
@@ -196,6 +197,17 @@ const gunMetni = (gun: number | null | undefined) =>
             >{{ tl(e.donem_borcu) }} · {{ gunMetni(e.gun) }}</span
           >
         </RouterLink>
+        <RouterLink
+          v-for="z in ozet.uyarilar.zekat ?? []"
+          :key="`z${z.tur}${z.yil_id ?? ''}`"
+          :to="{ name: 'aile-zekat' }"
+          class="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          data-test="zekat-uyari"
+        >
+          <i class="pi pi-heart" />
+          <span class="min-w-0 flex-1">{{ z.mesaj }}</span>
+          <span v-if="z.kalan" class="font-semibold whitespace-nowrap">{{ tl(z.kalan) }}</span>
+        </RouterLink>
       </section>
 
       <!-- Gelir / gider / tasarruf / kalan -->
@@ -239,6 +251,13 @@ const gunMetni = (gun: number | null | undefined) =>
         </div>
         <p class="col-span-2 text-xs text-surface-500 sm:col-span-4" data-test="ozet-fark">
           Kalan = gelir − gider − tasarruf (tasarruf öncesi fark {{ tl(ozet.fark) }}).
+        </p>
+        <p
+          v-if="ozet.zekat && ozet.zekat.adet > 0"
+          class="col-span-2 text-xs text-emerald-800 sm:col-span-4"
+          data-test="ozet-zekat"
+        >
+          Bu ay verilen zekât: {{ tl(ozet.zekat.verilen) }} (bilgi; gider ve kalana dahil değil).
         </p>
       </section>
 

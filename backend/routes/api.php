@@ -17,6 +17,10 @@ use App\Http\Controllers\Api\V1\Aile\KategoriController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufController;
+use App\Http\Controllers\Api\V1\Aile\ZekatAyarController;
+use App\Http\Controllers\Api\V1\Aile\ZekatBorcController;
+use App\Http\Controllers\Api\V1\Aile\ZekatController;
+use App\Http\Controllers\Api\V1\Aile\ZekatOdemeController;
 use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
 use App\Http\Controllers\Api\V1\IslemController;
@@ -124,6 +128,24 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::post('faturalar/{fatura}/bagla', [FaturaController::class, 'bagla'])->name('faturalar.bagla');
             Route::post('faturalar/{fatura}/coz', [FaturaController::class, 'coz'])->name('faturalar.coz');
             Route::get('ozet', AileOzetController::class)->name('ozet');
+
+            // Zekât: ayar, hesap (önizleme), yıl kayıtları (taslak → kesinleşmiş), elle borç, verilen zekât
+            Route::get('zekat/ayar', [ZekatAyarController::class, 'show'])->name('zekat.ayar');
+            Route::put('zekat/ayar', [ZekatAyarController::class, 'update'])->name('zekat.ayar.guncelle');
+            Route::post('zekat/hesapla', [ZekatController::class, 'hesapla'])->name('zekat.hesapla');
+            Route::get('zekat/yillar', [ZekatController::class, 'index'])->name('zekat.yillar.index');
+            Route::post('zekat/yillar', [ZekatController::class, 'store'])->name('zekat.yillar.store');
+            Route::get('zekat/yillar/{yil}', [ZekatController::class, 'show'])->name('zekat.yillar.show');
+            Route::put('zekat/yillar/{yil}', [ZekatController::class, 'update'])->name('zekat.yillar.update');
+            Route::delete('zekat/yillar/{yil}', [ZekatController::class, 'destroy'])->name('zekat.yillar.destroy');
+            Route::post('zekat/yillar/{yil}/kesinlestir', [ZekatController::class, 'kesinlestir'])->name('zekat.yillar.kesinlestir');
+            Route::get('zekat/borclar', [ZekatBorcController::class, 'index'])->name('zekat.borclar.index');
+            Route::post('zekat/borclar', [ZekatBorcController::class, 'store'])->name('zekat.borclar.store');
+            Route::delete('zekat/borclar/{borc}', [ZekatBorcController::class, 'destroy'])->name('zekat.borclar.destroy');
+            Route::get('zekat/odemeler', [ZekatOdemeController::class, 'index'])->name('zekat.odemeler.index');
+            Route::post('zekat/odemeler', [ZekatOdemeController::class, 'store'])->name('zekat.odemeler.store');
+            Route::put('zekat/odemeler/{odeme}', [ZekatOdemeController::class, 'update'])->name('zekat.odemeler.update');
+            Route::delete('zekat/odemeler/{odeme}', [ZekatOdemeController::class, 'destroy'])->name('zekat.odemeler.destroy');
         });
 
         Route::prefix('yonetim')->name('yonetim.')->group(function (): void {

@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
+import ToggleSwitch from 'primevue/toggleswitch'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import {
@@ -27,15 +28,28 @@ const turler = (Object.keys(HESAP_TURLERI) as HesapTuru[]).map((t) => ({
   deger: t,
   etiket: HESAP_TURLERI[t].etiket,
 }))
-const form = ref<HesapGirdisi>({ ad: '', tur: 'araci_kurum', renk: 'teal', not: null })
+const form = ref<HesapGirdisi>({
+  ad: '',
+  tur: 'araci_kurum',
+  renk: 'teal',
+  not: null,
+  zekata_dahil: true,
+})
 const { hatalar, gonderiliyor, gonder } = useFormGonder()
 
 watch(gorunur, (acik) => {
   if (!acik) return
   hatalar.value = {}
   form.value = props.hesap
-    ? { ad: props.hesap.ad, tur: props.hesap.tur, renk: props.hesap.renk, not: props.hesap.not }
-    : { ad: '', tur: 'araci_kurum', renk: 'teal', not: null }
+    ? {
+        ad: props.hesap.ad,
+        tur: props.hesap.tur,
+        renk: props.hesap.renk,
+        not: props.hesap.not,
+        zekata_dahil: props.hesap.zekata_dahil ?? true,
+        zekat_notu: props.hesap.zekat_notu ?? null,
+      }
+    : { ad: '', tur: 'araci_kurum', renk: 'teal', not: null, zekata_dahil: true }
 })
 
 async function kaydet(): Promise<void> {
@@ -100,6 +114,17 @@ async function kaydet(): Promise<void> {
         ipucu="Hesap / kart numarası yazmayın."
       >
         <Textarea id="hesap-not" v-model="form.not" rows="2" maxlength="500" auto-resize />
+      </FormAlani>
+      <FormAlani
+        etiket="Zekât"
+        for="hesap-zekat"
+        :hata="hatalar.zekat_notu"
+        ipucu="Zekâta tabi olmayan hesabı (ör. emanet) kapatın."
+      >
+        <label class="flex items-center gap-3 text-sm">
+          <ToggleSwitch v-model="form.zekata_dahil" input-id="hesap-zekat" />
+          Zekât hesabına dahil et
+        </label>
       </FormAlani>
       <div class="flex justify-end gap-2">
         <Button label="Vazgeç" severity="secondary" text @click="gorunur = false" />

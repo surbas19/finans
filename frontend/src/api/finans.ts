@@ -56,6 +56,9 @@ export interface HesapOzeti extends Toplam {
   renk: string | null
   sira: number
   not: string | null
+  /** Zekât hesabına dahil mi (varsayılan evet) */
+  zekata_dahil?: boolean
+  zekat_notu?: string | null
   varlik_sayisi: number
   /** Hanede hesabı açan kişi (başkasının hesabıysa adı gösterilir) */
   sahip_id?: number
@@ -157,6 +160,8 @@ export interface HesapGirdisi {
   tur: HesapTuru
   renk: string | null
   not: string | null
+  zekata_dahil?: boolean
+  zekat_notu?: string | null
 }
 
 export interface Secenek<T extends string = string> {

@@ -96,6 +96,8 @@ class HesapController extends Controller
             'tur' => ['required', Rule::enum(HesapTuru::class)],
             'renk' => ['nullable', 'string', 'max:20', 'regex:/^[a-z0-9#-]+$/i'],
             'not' => ['nullable', 'string', 'max:500'],
+            'zekata_dahil' => ['sometimes', 'boolean'],
+            'zekat_notu' => ['nullable', 'string', 'max:255'],
         ], ['ad.unique' => 'Bu adla bir hesabınız zaten var.'], ['ad' => 'hesap adı', 'tur' => 'hesap türü']);
     }
 }
