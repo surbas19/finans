@@ -19,7 +19,10 @@ const props = defineProps<{
   /** Her satırın yanında "Genel toplama dahil" düğmesi (yalnız hesaba bağlı satırlarda) */
   degistirilebilir?: boolean
 }>()
-const emit = defineEmits<{ dahilDegistir: [p: Pozisyon, dahil: boolean] }>()
+const emit = defineEmits<{
+  dahilDegistir: [p: Pozisyon, dahil: boolean]
+  aktar: [p: Pozisyon]
+}>()
 
 /** Miktar × fiyat · hesap. Nakitte miktar yazılmaz (değer yeterli); bireysel emeklilikte ödenen tutar. */
 function altSatir(p: Pozisyon): string {
@@ -101,6 +104,18 @@ function altSatir(p: Pozisyon): string {
           </template>
         </span>
       </RouterLink>
+      <!-- Başka hesaba aktar (bireysel emeklilik aktarılamaz) -->
+      <button
+        v-if="degistirilebilir && p.hesap_id !== null && p.varlik.tur !== 'bes'"
+        type="button"
+        class="flex w-9 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100 sm:w-11"
+        :aria-label="`${p.varlik.ad} başka hesaba aktarılsın`"
+        data-test="aktar-dugmesi"
+        @click="emit('aktar', p)"
+      >
+        <i class="pi pi-arrow-right-arrow-left text-base" />
+        <span class="hidden text-[10px] leading-none font-semibold sm:block">Aktar</span>
+      </button>
       <!-- Genel toplama dahil: kapalıysa satır toplamlara ve zekâta girmez -->
       <button
         v-if="degistirilebilir && p.hesap_id !== null"

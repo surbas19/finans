@@ -20,6 +20,8 @@ import IslemListesi from '@/components/IslemListesi.vue'
 import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
 import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
+import PozisyonAktarDialog from '@/components/PozisyonAktarDialog.vue'
+import { usePozisyonAktar } from '@/composables/usePozisyonAktar'
 import TopluEkleDialog from '@/components/TopluEkleDialog.vue'
 import {
   finansApi,
@@ -73,6 +75,8 @@ function islemDegisti(): void {
   yenile.value++
   void yukle()
 }
+
+const { aktarAcik, aktarPozisyon, aktarAc } = usePozisyonAktar()
 
 /** Dahil / hariç değişince hesap toplamı ve performans grafiği de tazelenir */
 const dahilDegistir = usePozisyonDahil(() => {
@@ -261,6 +265,7 @@ function hesabiSil(): void {
                   :pozisyonlar="pozisyonlar"
                   degistirilebilir
                   @dahil-degistir="dahilDegistir"
+                  @aktar="aktarAc"
                 />
               </TabPanel>
               <TabPanel value="islemler">
@@ -294,5 +299,10 @@ function hesabiSil(): void {
       @kaydedildi="islemDegisti"
     />
     <TopluEkleDialog v-model:visible="topluAcik" :hesap-id="id" @kaydedildi="islemDegisti" />
+    <PozisyonAktarDialog
+      v-model:visible="aktarAcik"
+      :pozisyon="aktarPozisyon"
+      @aktarildi="islemDegisti"
+    />
   </div>
 </template>

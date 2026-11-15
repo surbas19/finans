@@ -14,6 +14,8 @@ import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
 import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
+import PozisyonAktarDialog from '@/components/PozisyonAktarDialog.vue'
+import { usePozisyonAktar } from '@/composables/usePozisyonAktar'
 import {
   finansApi,
   sabitFiyatli,
@@ -70,6 +72,7 @@ async function yukle(): Promise<void> {
 onMounted(yukle)
 
 const dahilDegistir = usePozisyonDahil(() => yukle())
+const { aktarAcik, aktarPozisyon, aktarAc } = usePozisyonAktar()
 
 async function izlemeDegistir(): Promise<void> {
   if (!varlik.value) return
@@ -242,6 +245,7 @@ async function elleKaydet(): Promise<void> {
             :hesap-adi="(p) => p.hesap_ad"
             degistirilebilir
             @dahil-degistir="dahilDegistir"
+            @aktar="aktarAc"
           />
           <p v-else-if="pozisyonlar[0]" class="text-xs text-surface-500">
             Hesap: {{ pozisyonlar[0].hesap_ad }}
@@ -255,6 +259,7 @@ async function elleKaydet(): Promise<void> {
       </section>
     </template>
 
+    <PozisyonAktarDialog v-model:visible="aktarAcik" :pozisyon="aktarPozisyon" @aktarildi="yukle" />
     <IslemFormu
       v-model:visible="islemFormuAcik"
       :islem="duzenlenen"

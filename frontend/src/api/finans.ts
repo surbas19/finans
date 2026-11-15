@@ -131,6 +131,8 @@ export interface Islem {
   kar_yuzde?: number | null
   tarih: string
   not: string | null
+  /** Hesaplar arası aktarımda kaynak satışı ve hedef alışı aynı kodu taşır */
+  aktarim_kodu?: string | null
   varlik?: Varlik
   hesap_ad?: string
 }
@@ -242,6 +244,14 @@ export const finansApi = {
   hesapGuncelle: (id: number, veri: HesapGirdisi) => http.put(`/hesaplar/${id}`, veri),
   hesapSil: (id: number) => http.delete(`/hesaplar/${id}`),
   hesapSirala: (ids: number[]) => http.put('/hesaplar/sira', { ids }),
+  pozisyonAktar: (
+    hesapId: number,
+    varlikId: number,
+    veri: { hedef_hesap_id: number; miktar: number; tarih: string; not: string | null },
+  ) =>
+    http
+      .post<{ message: string }>(`/hesaplar/${hesapId}/pozisyonlar/${varlikId}/aktar`, veri)
+      .then((r) => r.data),
   pozisyonDahil: (hesapId: number, varlikId: number, dahil: boolean) =>
     http
       .put<{ dahil: boolean; message: string }>(`/hesaplar/${hesapId}/pozisyonlar/${varlikId}`, {

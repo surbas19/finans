@@ -89,4 +89,16 @@ describe('Yatırım satırı: genel toplama dahil düğmesi', () => {
     vi.doUnmock('@/api/finans')
     vi.doUnmock('primevue/usetoast')
   })
+
+  it('aktar düğmesi hesaba bağlı satırda görünür, bireysel emeklilikte yok; tıklayınca satırı yayar', async () => {
+    const bes = poz(7, true)
+    bes.varlik.tur = 'bes'
+    const w = mount(PozisyonListesi, {
+      props: { pozisyonlar: [poz(1, true), poz(2, true, null), bes], degistirilebilir: true },
+      global: genel,
+    })
+    expect(w.findAll('[data-test="aktar-dugmesi"]')).toHaveLength(1)
+    await w.find('[data-test="aktar-dugmesi"]').trigger('click')
+    expect(w.emitted('aktar')).toEqual([[expect.objectContaining({ hesap_id: 1 })]])
+  })
 })

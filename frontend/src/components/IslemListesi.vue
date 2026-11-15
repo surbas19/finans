@@ -92,7 +92,9 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
           class="flex min-h-14 w-full items-center gap-3 py-3 text-left transition-colors active:bg-surface-50 sm:hidden"
           :aria-label="`${tarih(s.islem.tarih)} ${islemEtiketi(s.islem.tur, s.islem.varlik?.tur)} ${s.islem.varlik ? `${s.islem.varlik.kod} ${s.islem.varlik.ad}` : ''}: düzenle`"
           data-test="islem-karti"
-          @click="emit('duzenle', s.islem)"
+          @click="
+            s.islem.aktarim_kodu ? sil(s.islem, () => emit('silindi')) : emit('duzenle', s.islem)
+          "
         >
           <span class="min-w-0 flex-1">
             <span class="flex items-center gap-2">
@@ -100,6 +102,13 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
                 :value="islemEtiketi(s.islem.tur, s.islem.varlik?.tur)"
                 :severity="TUR_RENGI[s.islem.tur]"
                 class="shrink-0"
+              />
+              <Tag
+                v-if="s.islem.aktarim_kodu"
+                value="Aktarım"
+                severity="info"
+                class="shrink-0"
+                data-test="aktarim-rozeti"
               />
               <VarlikAdi v-if="s.islem.varlik" :kod="s.islem.varlik.kod" :ad="s.islem.varlik.ad" />
             </span>
@@ -130,6 +139,13 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
                 :severity="TUR_RENGI[s.islem.tur]"
                 class="shrink-0"
               />
+              <Tag
+                v-if="s.islem.aktarim_kodu"
+                value="Aktarım"
+                severity="info"
+                class="shrink-0"
+                data-test="aktarim-rozeti"
+              />
               <VarlikAdi v-if="s.islem.varlik" :kod="s.islem.varlik.kod" :ad="s.islem.varlik.ad" />
             </div>
             <div class="mt-0.5 truncate text-xs text-surface-500">
@@ -144,6 +160,7 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
           </div>
           <div class="flex shrink-0">
             <Button
+              v-if="!s.islem.aktarim_kodu"
               icon="pi pi-pencil"
               text
               rounded

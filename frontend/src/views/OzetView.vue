@@ -14,6 +14,8 @@ import PozisyonListesi from '@/components/PozisyonListesi.vue'
 import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import { finansApi, HESAP_TURLERI, type HesapOzeti, type Ozet, type Toplam } from '@/api/finans'
 import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
+import PozisyonAktarDialog from '@/components/PozisyonAktarDialog.vue'
+import { usePozisyonAktar } from '@/composables/usePozisyonAktar'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { neZaman, tl } from '@/utils/bicim'
 import { hesapDilimleri, hesapRengi, varlikDilimleri } from '@/utils/halka'
@@ -148,6 +150,7 @@ const haricSatirlar = computed(() =>
     : [],
 )
 const dahilDegistir = usePozisyonDahil(() => yukle())
+const { aktarAcik, aktarPozisyon, aktarAc } = usePozisyonAktar()
 
 /** "Hesaplar" listesinden: o hesabın slaytı seçilir, sayfa kaydırıcıya çıkar (tek hesapta hesap sayfası açılır) */
 function hesabaGec(id: number): void {
@@ -334,6 +337,7 @@ async function elleYenile(): Promise<void> {
           :renkler="secili.renkler"
           :degistirilebilir="secili.degistirilebilir"
           @dahil-degistir="dahilDegistir"
+          @aktar="aktarAc"
         />
         <div v-if="haricSatirlar.length" class="mt-4" data-test="haric-bolumu">
           <h3 class="bolum-etiketi mb-1">Genel toplama dahil olmayanlar</h3>
@@ -342,6 +346,7 @@ async function elleYenile(): Promise<void> {
             :hesap-adi="(p) => ozet?.hesaplar.find((h) => h.id === p.hesap_id)?.ad"
             degistirilebilir
             @dahil-degistir="dahilDegistir"
+            @aktar="aktarAc"
           />
         </div>
       </section>
@@ -360,5 +365,6 @@ async function elleYenile(): Promise<void> {
       :varsayilan="secilenHesap ? { hesap_id: secilenHesap } : undefined"
       @kaydedildi="islemKaydedildi"
     />
+    <PozisyonAktarDialog v-model:visible="aktarAcik" :pozisyon="aktarPozisyon" @aktarildi="yukle" />
   </div>
 </template>
