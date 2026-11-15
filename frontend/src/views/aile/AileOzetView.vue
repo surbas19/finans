@@ -179,7 +179,7 @@ const gunMetni = (gun: number | null | undefined) =>
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <AySecici v-model="donem" :ileri-sinir="null" />
+      <AySecici v-model="donem" :ileri-sinir="null" genis :yukseklik="100" />
       <span v-if="aile.hane" class="text-sm text-surface-500">{{ aile.hane.hane.ad }}</span>
     </div>
 
@@ -549,7 +549,11 @@ const gunMetni = (gun: number | null | undefined) =>
         class="kart p-2"
         data-test="taksit-akordiyon"
       >
-        <Accordion :value="['taksitler']" multiple>
+        <Accordion
+          :value="['taksitler']"
+          multiple
+          class="[&_.p-accordioncontent-wrapper]:min-w-0 [&_.p-accordioncontent-wrapper]:overflow-hidden"
+        >
           <AccordionPanel v-if="ozet.gider.taksitler.length" value="taksitler">
             <AccordionHeader>Taksitler ({{ ozet.gider.taksitler.length }})</AccordionHeader>
             <AccordionContent>
@@ -608,10 +612,11 @@ const gunMetni = (gun: number | null | undefined) =>
                       :key="m.islem_id"
                       class="flex justify-between gap-3 py-1"
                     >
-                      <span class="min-w-0 truncate"
-                        >{{ m.aciklama }} · {{ m.kalan_adet }} taksit × {{ tl(m.aya_dusen) }}</span
-                      >
-                      <span class="tabular-nums">{{ tl(m.kalan_toplam) }}</span>
+                      <span class="min-w-0 flex-1">
+                        <span class="block break-words">{{ m.aciklama }}</span>
+                        <span class="block">{{ m.kalan_adet }} taksit × {{ tl(m.aya_dusen) }}</span>
+                      </span>
+                      <span class="self-start tabular-nums">{{ tl(m.kalan_toplam) }}</span>
                     </li>
                   </ul>
                 </li>

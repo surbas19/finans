@@ -6,10 +6,14 @@ import { buAy, donemEkle, donemEtiketi } from '@/utils/donem'
 /**
  * Ay seçici: ‹ Kasım 2026 ›. Geçmiş aylar serbest; `ileriSinir` verilirse o aydan sonrasına gidilmez.
  */
-const props = withDefaults(defineProps<{ ileriSinir?: string | null; genis?: boolean }>(), {
-  ileriSinir: undefined,
-  genis: false,
-})
+const props = withDefaults(
+  defineProps<{ ileriSinir?: string | null; genis?: boolean; yukseklik?: number }>(),
+  {
+    ileriSinir: undefined,
+    genis: false,
+    yukseklik: 150,
+  },
+)
 const donem = defineModel<string>({ required: true })
 
 const sinir = computed(() => (props.ileriSinir === undefined ? buAy() : props.ileriSinir))
@@ -20,9 +24,10 @@ const ileriKapali = computed(() => sinir.value !== null && donem.value >= sinir.
   <div
     :class="
       genis
-        ? 'flex h-[150px] w-full items-center justify-between gap-2 rounded-3xl bg-white p-3 ring-1 ring-surface-200'
+        ? 'flex w-full items-center justify-between gap-2 rounded-3xl bg-white p-3 ring-1 ring-surface-200'
         : 'inline-flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-surface-200'
     "
+    :style="genis ? { height: `${yukseklik}px` } : undefined"
     :data-genis="genis ? 'evet' : undefined"
   >
     <Button
