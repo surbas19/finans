@@ -103,6 +103,9 @@ const secilenVarlik = computed<Varlik | undefined>(() =>
 )
 const sabit = computed(() => sabitFiyatli(secilenVarlik.value?.tur))
 
+/** Gün alımında "kime verildi" yazılmışsa alım başkasınadır: hiçbir hesaba eklenmez, yalnız tasarruf toplamına girer */
+const verilen = computed(() => !!props.gun && !!form.value.not?.trim())
+
 /** Piyasanın satış fiyatı önerilir (yalnızca TL fiyatlı varlıkta) */
 watch(
   () => form.value.varlik_id,
@@ -127,6 +130,7 @@ async function kaydet(): Promise<void> {
   form.value.tarih = tarihMetni(tarihSecimi.value)
   const veri: TasarrufGirdisi = {
     ...form.value,
+    hesap_id: verilen.value ? null : form.value.hesap_id,
     birim_fiyat: sabit.value ? null : form.value.birim_fiyat,
     komisyon: sabit.value ? null : form.value.komisyon,
   }
@@ -155,7 +159,13 @@ async function kaydet(): Promise<void> {
         tasarrufu sayılır. Tasarruf gider değildir; kalan paradan düşülür.
       </p>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormAlani etiket="Hangi hesaba" for="tas-hesap" :hata="hatalar.hesap_id" zorunlu>
+        <FormAlani
+          v-if="!verilen"
+          etiket="Hangi hesaba"
+          for="tas-hesap"
+          :hata="hatalar.hesap_id"
+          zorunlu
+        >
           <Select
             id="tas-hesap"
             v-model="form.hesap_id"
@@ -251,6 +261,14 @@ async function kaydet(): Promise<void> {
         />
       </FormAlani>
       <p
+        v-if="verilen"
+        class="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900"
+        data-test="verilen-uyari"
+      >
+        Kime verildiği yazıldığı için bu alım <strong>hiçbir hesaba eklenmez</strong>; yalnız aylık
+        tasarruf toplamına girer.
+      </p>
+      <p
         v-if="toplam !== null"
         class="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900"
         data-test="tasarruf-toplam"
@@ -280,7 +298,7 @@ async function kaydet(): Promise<void> {
           label="Tasarruf et"
           icon="pi pi-check"
           :loading="gonderiliyor"
-          :disabled="hesaplar.length === 0"
+          :disabled="hesaplar.length === 0 && !verilen"
         />
       </div>
     </form>

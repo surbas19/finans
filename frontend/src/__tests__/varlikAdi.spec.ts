@@ -75,6 +75,9 @@ describe('varlık yazımı: kod vurgulu, ad küçük', () => {
     const { default: IslemListesi } = await import('@/components/IslemListesi.vue')
     const islem: Islem = {
       id: 1,
+      no: 'İ-1',
+      dahil: true,
+      islem_zamani: null,
       hesap_id: 1,
       varlik_id: ASELS.id,
       tur: 'alis',

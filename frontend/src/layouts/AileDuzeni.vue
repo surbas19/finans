@@ -2,7 +2,7 @@
 import { useRoute } from 'vue-router'
 
 /**
- * Bütçe bölümü: üstte sekmeler (Özet · Gelir / Gider · Kartlar · İşlemler · Faturalar · Ayarlar), altında sayfa.
+ * Bütçe bölümü: üstte sekmeler (Özet · Gelir / Gider · Tasarruf · Kartlar · İşlemler · Faturalar · Ayarlar), altında sayfa.
  * Telefonda sekmeler yana kayar.
  */
 const route = useRoute()
@@ -10,6 +10,7 @@ const route = useRoute()
 const SEKMELER = [
   { ad: 'aile', etiket: 'Özet', ikon: 'pi pi-chart-bar' },
   { ad: 'aile-gelir-gider', etiket: 'Gelir / Gider', ikon: 'pi pi-arrow-right-arrow-left' },
+  { ad: 'aile-tasarruf', etiket: 'Tasarruf', ikon: 'pi pi-wallet' },
   { ad: 'aile-kartlar', etiket: 'Kartlar', ikon: 'pi pi-credit-card' },
   { ad: 'aile-islemler', etiket: 'İşlemler', ikon: 'pi pi-list' },
   { ad: 'aile-faturalar', etiket: 'Faturalar', ikon: 'pi pi-bolt' },

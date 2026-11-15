@@ -74,6 +74,9 @@ describe('IslemListesi', () => {
     const { default: IslemListesi } = await import('@/components/IslemListesi.vue')
     const islem: Islem = {
       id: 7,
+      no: 'İ-7',
+      dahil: true,
+      islem_zamani: '2026-11-02T09:30:00+03:00',
       hesap_id: 1,
       varlik_id: 2,
       tur: 'alis',

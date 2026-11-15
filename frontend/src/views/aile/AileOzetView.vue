@@ -7,14 +7,14 @@ import AccordionContent from 'primevue/accordioncontent'
 import AccordionHeader from 'primevue/accordionheader'
 import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
-import { useConfirm } from 'primevue/useconfirm'
-import { useToast } from 'primevue/usetoast'
 import Skeleton from 'primevue/skeleton'
 import AySecici from '@/components/aile/AySecici.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import GiderFormu from '@/components/aile/GiderFormu.vue'
 import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
+import TasarrufKalemi from '@/components/aile/TasarrufKalemi.vue'
+import { useTasarrufEylemleri } from '@/composables/useTasarrufEylemleri'
 import TasarrufGunuFormu from '@/components/aile/TasarrufGunuFormu.vue'
 import VeriGrafigi from '@/components/VeriGrafigi.vue'
 import {
@@ -29,7 +29,6 @@ import {
   type GiderKaynagi,
   type TasarrufGunu,
 } from '@/api/aile'
-import { hataMesaji } from '@/api/http'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAuthStore } from '@/stores/auth'
 import { useAileStore } from '@/stores/aile'
@@ -76,8 +75,6 @@ function tasarrufAc(): void {
   alimGunu.value = null
   tasarrufAcik.value = true
 }
-const confirm = useConfirm()
-const toast = useToast()
 
 async function yukle(): Promise<void> {
   const veri = await sonIstek(() =>
@@ -147,23 +144,7 @@ function odendi(b: BeklenenGider): void {
   giderFormuAcik.value = true
 }
 
-function tasarrufSil(id: number, ad: string): void {
-  confirm.require({
-    header: 'Tasarrufu sil',
-    message: `"${ad}" tasarrufu silinsin mi? Portföydeki alış işlemi de silinir.`,
-    acceptProps: { label: 'Sil', severity: 'danger' },
-    rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
-    accept: async () => {
-      try {
-        await aileApi.tasarrufSil(id)
-        toast.add({ severity: 'success', summary: 'Tasarruf silindi', life: 3000 })
-        await yukle()
-      } catch (e) {
-        toast.add({ severity: 'error', summary: 'Silinemedi', detail: hataMesaji(e), life: 6000 })
-      }
-    },
-  })
-}
+const tasarrufEylem = useTasarrufEylemleri(() => yukle())
 
 const gunMetni = (gun: number | null | undefined) =>
   gun === null || gun === undefined
@@ -377,30 +358,21 @@ const gunMetni = (gun: number | null | undefined) =>
           Bu ay tasarruf yok. Altın, döviz, hisse ya da fon alarak bir portföy hesabına
           ayırabilirsiniz.
         </p>
-        <ul v-else class="divide-y divide-surface-100">
-          <li
+        <div v-else class="divide-y divide-surface-100">
+          <TasarrufKalemi
             v-for="t in ozet.tasarruf.kalemler"
             :key="t.id"
-            class="flex items-center gap-3 py-2.5"
-          >
-            <span class="min-w-0 flex-1">
-              <span class="block truncate text-sm font-semibold">{{ t.varlik_ad }}</span>
-              <span class="block text-xs text-surface-500"
-                >{{ t.hesap_ad }} · {{ tarih(t.tarih) }}</span
-              >
-            </span>
-            <span class="font-semibold text-sky-700 tabular-nums">{{ tl(t.tutar) }}</span>
-            <Button
-              icon="pi pi-trash"
-              severity="danger"
-              text
-              rounded
-              size="small"
-              :aria-label="`${t.varlik_ad} tasarrufunu sil`"
-              @click="tasarrufSil(t.id, t.varlik_ad ?? 'Tasarruf')"
-            />
-          </li>
-        </ul>
+            :kalem="t"
+            @sil="tasarrufEylem.sil"
+            @dahil="tasarrufEylem.dahil"
+          />
+        </div>
+        <RouterLink
+          :to="{ name: 'aile-tasarruf' }"
+          class="mt-2 inline-block text-sm font-semibold text-primary-600"
+          data-test="tum-donemler"
+          >Tüm dönemler</RouterLink
+        >
       </section>
 
       <!-- Altın / döviz günleri -->

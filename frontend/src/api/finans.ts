@@ -133,6 +133,12 @@ export interface Islem {
   not: string | null
   /** Hesaplar arası aktarımda kaynak satışı ve hedef alışı aynı kodu taşır */
   aktarim_kodu?: string | null
+  /** Kalıcı işlem numarası (İ-123) */
+  no: string
+  /** Genel toplama / zekâta dahil mi (false: soluk, toplamlara girmez) */
+  dahil: boolean
+  /** Kaydın uygulamaya girildiği zaman (otomatik, değişmez); alım-satım tarihi `tarih`tir */
+  islem_zamani: string | null
   varlik?: Varlik
   hesap_ad?: string
 }
@@ -244,6 +250,10 @@ export const finansApi = {
   hesapGuncelle: (id: number, veri: HesapGirdisi) => http.put(`/hesaplar/${id}`, veri),
   hesapSil: (id: number) => http.delete(`/hesaplar/${id}`),
   hesapSirala: (ids: number[]) => http.put('/hesaplar/sira', { ids }),
+  islemDahil: (id: number, dahil: boolean) =>
+    http
+      .put<{ dahil: boolean; message: string }>(`/islemler/${id}/dahil`, { dahil })
+      .then((r) => r.data),
   pozisyonAktar: (
     hesapId: number,
     varlikId: number,

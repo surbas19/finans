@@ -95,6 +95,9 @@ describe('listelerde nakit ve BES', () => {
     const { default: IslemListesi } = await import('@/components/IslemListesi.vue')
     const islem = (id: number, v: Varlik, tur: Islem['tur'], ek: Partial<Islem> = {}): Islem => ({
       id,
+      no: `İ-${id}`,
+      dahil: true,
+      islem_zamani: null,
       hesap_id: 1,
       varlik_id: v.id,
       tur,

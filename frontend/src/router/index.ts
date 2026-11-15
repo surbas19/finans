@@ -89,6 +89,12 @@ export const rotalar: RouteRecordRaw[] = [
             redirect: { name: 'aile-gelir-gider', query: { panel: 'gider' } },
           },
           {
+            path: 'tasarruf',
+            name: 'aile-tasarruf',
+            component: () => import('@/views/aile/TasarrufView.vue'),
+            meta: { baslik: 'Tasarruf' },
+          },
+          {
             path: 'kartlar',
             name: 'aile-kartlar',
             component: () => import('@/views/aile/KartlarView.vue'),

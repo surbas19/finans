@@ -135,19 +135,33 @@ export interface BeklenenGider {
   tarih: string | null
 }
 
-/** Bütçeden ayrılıp portföy hesabına alış olarak yazılan tasarruf (gider sayılmaz) */
+/**
+ * Bütçeden ayrılan tasarruf (gider sayılmaz): portföy hesabına alış olarak yazılır; gün alımında "kime verildi" notu
+ * doluysa hiçbir hesaba yazılmaz (`hesaba_eklendi=false`), yalnız aylık tasarruf toplamına girer.
+ */
 export interface Tasarruf {
   id: number
+  /** Kalıcı işlem numarası (T-12) */
+  no: string
   uye_id: number | null
-  hesap_id: number
+  hesap_id: number | null
   hesap_ad: string | null
-  islem_id: number
+  islem_id: number | null
+  /** Bağlı portföy işleminin numarası (İ-34) */
+  islem_no: string | null
+  /** Bağlı portföy işlemi genel toplama dahil mi (işlem yoksa null) */
+  islem_dahil: boolean | null
+  hesaba_eklendi: boolean
   gun_id: number | null
   gun_ad: string | null
   varlik_id: number | null
   varlik_ad: string | null
+  varlik_kod: string | null
   varlik_tur: string | null
+  varlik_birim: string | null
   miktar: number | null
+  /** Kaydın uygulamaya girildiği zaman (otomatik) */
+  islem_zamani: string | null
   tarih: string
   donem: string
   tutar: number
@@ -192,6 +206,34 @@ export interface AyGunu {
   durum: 'bekliyor' | 'yapildi' | 'sira_bizde'
   vadesi_geldi: boolean
   tasarruf_id: number | null
+}
+
+/** Bütçe → Tasarruf sekmesi: yılın ayları, oranlar (gelire göre %) ve ay kalemleri */
+export interface TasarrufAyi {
+  donem: string
+  etiket: string
+  gelir: number
+  gider: number
+  tasarruf: number
+  kalan: number
+  gider_orani: number | null
+  tasarruf_orani: number | null
+  kalan_orani: number | null
+  kalemler: Tasarruf[]
+}
+
+export interface TasarrufOzeti {
+  yil: number
+  aylar: TasarrufAyi[]
+  toplam: {
+    gelir: number
+    gider: number
+    tasarruf: number
+    kalan: number
+    gider_orani: number | null
+    tasarruf_orani: number | null
+    kalan_orani: number | null
+  }
 }
 
 export interface TasarrufGirdisi {
@@ -806,6 +848,8 @@ export const aileApi = {
   gunGuncelle: (id: number, veri: TasarrufGunuGirdisi) =>
     http.put<{ gun: TasarrufGunu }>(`/aile/tasarruf-gunleri/${id}`, veri).then((r) => r.data),
   gunSil: (id: number) => http.delete(`/aile/tasarruf-gunleri/${id}`),
+  tasarrufOzeti: (yil: number) =>
+    http.get<TasarrufOzeti>('/aile/tasarruf-ozeti', { params: { yil } }).then((r) => r.data),
   tasarrufSil: (id: number) => http.delete(`/aile/tasarruflar/${id}`),
 
   zekatAyar: () => http.get<ZekatAyarYaniti>('/aile/zekat/ayar').then((r) => r.data),
