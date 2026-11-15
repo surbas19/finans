@@ -118,6 +118,9 @@ class IslemController extends Controller
     public function update(Request $request, Islem $islem): JsonResponse
     {
         Gate::authorize('update', $islem);
+        if ($islem->aktarim_kodu !== null) {
+            throw ValidationException::withMessages(['islem' => 'Aktarım kaydı düzenlenemez; silip yeniden aktarın.']);
+        }
         $eski = $islem->replicate();
         $eski->id = $islem->id;
         $islem->fill($this->dogrula($request));
@@ -130,18 +133,25 @@ class IslemController extends Controller
     public function destroy(Islem $islem): JsonResponse
     {
         Gate::authorize('delete', $islem);
-        $kalan = Islem::where('hesap_id', $islem->hesap_id)->where('varlik_id', $islem->varlik_id)
-            ->whereKeyNot($islem->id)->get();
-        try {
-            $this->portfoy->dogrula($kalan);
-        } catch (YetersizMiktar $e) {
-            throw ValidationException::withMessages([
-                'islem' => 'Bu işlem silinirse '.$e->islem->tarih->format('d.m.Y').' tarihli satış elde olandan fazla kalır. Önce o satışı düzeltin.',
-            ]);
+        // Aktarımın bir kaydı silinirse eşleşik bütün kayıtlar (kaynak satışı + hedef alışı) birlikte silinir
+        $silinecek = $islem->aktarim_kodu !== null ? Islem::where('aktarim_kodu', $islem->aktarim_kodu)->get() : collect([$islem]);
+        foreach ($silinecek as $s) {
+            Gate::authorize('delete', $s);
         }
-        $islem->delete();
+        $ciftler = $silinecek->map(fn (Islem $s): array => [$s->hesap_id, $s->varlik_id])->unique(fn (array $c): string => implode('-', $c));
+        foreach ($ciftler as [$hesapId, $varlikId]) {
+            $kalan = Islem::where('hesap_id', $hesapId)->where('varlik_id', $varlikId)->whereNotIn('id', $silinecek->modelKeys())->get();
+            try {
+                $this->portfoy->dogrula($kalan);
+            } catch (YetersizMiktar $e) {
+                throw ValidationException::withMessages([
+                    'islem' => 'Bu işlem silinirse '.$e->islem->tarih->format('d.m.Y').' tarihli satış elde olandan fazla kalır. Önce o satışı düzeltin.',
+                ]);
+            }
+        }
+        DB::transaction(fn () => $silinecek->each->delete());
 
-        return response()->json(['message' => 'İşlem silindi.']);
+        return response()->json(['message' => $silinecek->count() > 1 ? 'Aktarım ve eşleşik kayıtlar silindi.' : 'İşlem silindi.']);
     }
 
     /**

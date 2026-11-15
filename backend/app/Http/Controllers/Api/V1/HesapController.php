@@ -9,8 +9,10 @@ use App\Models\Islem;
 use App\Models\PozisyonAyari;
 use App\Models\Varlik;
 use App\Services\Portfoy\PortfoyHesabi;
+use App\Services\Portfoy\PozisyonAktarimi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
@@ -77,6 +79,28 @@ class HesapController extends Controller
             'dahil' => (bool) $veri['dahil'],
             'message' => $veri['dahil'] ? 'Genel toplama eklendi.' : 'Genel toplamdan ve zekâttan çıkarıldı.',
         ]);
+    }
+
+    /**
+     * Hesaptaki bir yatırımı (varlık) hanedeki başka bir hesaba aktarır: kaynakta satış, hedefte alış; maliyet taşınır.
+     */
+    public function pozisyonAktar(Request $request, Hesap $hesap, Varlik $varlik, PozisyonAktarimi $aktarim): JsonResponse
+    {
+        Gate::authorize('update', $hesap);
+        $veri = $request->validate([
+            'hedef_hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
+            'miktar' => ['required', 'numeric', 'gt:0', 'max:1000000000000'],
+            'tarih' => ['required', 'date', 'before_or_equal:today'],
+            'not' => ['nullable', 'string', 'max:200'],
+        ], [
+            'tarih.before_or_equal' => 'İleri tarihli aktarım girilemez.',
+        ], ['hedef_hesap_id' => 'hedef hesap', 'miktar' => 'miktar', 'tarih' => 'tarih']);
+        $hedef = Hesap::findOrFail((int) $veri['hedef_hesap_id']);
+        Gate::authorize('update', $hedef);
+
+        $sonuc = $aktarim->aktar($request->user(), $hesap, $hedef, $varlik, (float) $veri['miktar'], Carbon::parse($veri['tarih']), $veri['not'] ?? null);
+
+        return response()->json(['aktarim' => $sonuc, 'message' => $hesap->ad.' → '.$hedef->ad.' aktarıldı.'], 201);
     }
 
     public function update(Request $request, Hesap $hesap): JsonResponse

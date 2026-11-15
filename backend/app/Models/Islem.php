@@ -18,7 +18,7 @@ class Islem extends Model
 
     protected $table = 'islemler';
 
-    protected $fillable = ['user_id', 'hesap_id', 'varlik_id', 'tur', 'miktar', 'birim_fiyat', 'komisyon', 'tarih', 'not'];
+    protected $fillable = ['user_id', 'hesap_id', 'varlik_id', 'tur', 'miktar', 'birim_fiyat', 'komisyon', 'tarih', 'not', 'aktarim_kodu'];
 
     /**
      * @return array<string, string>
@@ -72,6 +72,7 @@ class Islem extends Model
             'kar_yuzde' => $deger && $this->birim_fiyat ? round((1 / $this->birim_fiyat - 1) * 100, 2) : null,
             'tarih' => $this->tarih->toDateString(),
             'not' => $this->not,
+            'aktarim_kodu' => $this->aktarim_kodu,
         ];
     }
 }
