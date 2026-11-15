@@ -65,6 +65,7 @@ function ornek(): AylikOzet {
       haric: [],
       taksitler: [],
       sonraki_taksitler: [],
+      sonraki_taksit_aylari: [],
     },
     gunler: [],
     faturalar: {
@@ -182,6 +183,20 @@ describe('Bütçe aylık özeti', () => {
         ],
       },
     ]
+    veri.gider.sonraki_taksit_aylari = [
+      {
+        donem: '2026-12',
+        etiket: 'Aralık 2026',
+        toplam: 500.5,
+        kartlar: [{ kart_id: 7, ad: 'Bonus', tutar: 500.5 }],
+      },
+      {
+        donem: '2027-01',
+        etiket: 'Ocak 2027',
+        toplam: 250.25,
+        kartlar: [{ kart_id: 7, ad: 'Bonus', tutar: 250.25 }],
+      },
+    ]
     ozet.mockResolvedValue(veri)
     const { default: AileOzetView } = await import('@/views/aile/AileOzetView.vue')
     setActivePinia(createPinia())
@@ -207,6 +222,15 @@ describe('Bütçe aylık özeti', () => {
     const kart = sayfa.get('[data-test="sonraki-taksit-karti"]').text().replace(/\s+/g, ' ')
     expect(kart).toContain('1.251,25')
     expect(kart).toContain('5 taksit')
+    // Sonraki her ay ayrı satır: ay adı + o ayın taksit toplamı
+    const aylar = sayfa
+      .findAll('[data-test="sonraki-taksit-ayi"]')
+      .map((e) => e.text().replace(/\s+/g, ' '))
+    expect(aylar).toHaveLength(2)
+    expect(aylar[0]).toContain('Aralık 2026')
+    expect(aylar[0]).toContain('500,50')
+    expect(aylar[1]).toContain('Ocak 2027')
+    expect(aylar[1]).toContain('250,25')
     sayfa.unmount()
   })
 

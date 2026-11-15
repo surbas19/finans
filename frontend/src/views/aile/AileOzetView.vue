@@ -552,8 +552,32 @@ const gunMetni = (gun: number | null | undefined) =>
             >
             <AccordionContent>
               <p class="mb-2 text-xs text-surface-500">
-                Bu aydan sonra ödenecek kalan taksitlerin kart başına toplamı.
+                Bu aydaki taksitli harcamaların sonraki her ay ödenecek taksitleri.
               </p>
+              <ul class="mb-4 flex flex-col gap-2 text-sm" data-test="sonraki-taksit-aylari">
+                <li
+                  v-for="a in ozet.gider.sonraki_taksit_aylari"
+                  :key="a.donem"
+                  class="rounded-2xl bg-surface-50 px-3 py-2"
+                  data-test="sonraki-taksit-ayi"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="font-semibold">{{ a.etiket }}</span>
+                    <span class="font-semibold tabular-nums">{{ tl(a.toplam) }}</span>
+                  </div>
+                  <ul class="mt-1 text-xs text-surface-500">
+                    <li
+                      v-for="c in a.kartlar"
+                      :key="c.kart_id"
+                      class="flex items-center justify-between gap-3 py-0.5"
+                    >
+                      <KartEtiketi :kart-id="c.kart_id" />
+                      <span class="tabular-nums">{{ tl(c.tutar) }}</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+              <p class="mb-2 text-xs text-surface-500">Kart başına kalan taksitlerin toplamı.</p>
               <ul class="flex flex-col gap-3 text-sm">
                 <li
                   v-for="k in ozet.gider.sonraki_taksitler"

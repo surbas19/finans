@@ -82,6 +82,14 @@ class KartIslemiTest extends TestCase
             ->assertJsonPath('gider.sonraki_taksitler.0.toplam', 1251.25)
             ->assertJsonPath('gider.sonraki_taksitler.0.tahmini', true)
             ->assertJsonPath('gider.sonraki_taksitler.0.kalemler.0.kalan_adet', 5);
+        // Sonraki her ay ayrı: 1/6 taksit → 5 ay (Aralık..Nisan), her ay 250,25, kart kırılımıyla
+        $aylar = $ozet->json('gider.sonraki_taksit_aylari');
+        $this->assertSame(['2026-12', '2027-01', '2027-02', '2027-03', '2027-04'], array_column($aylar, 'donem'));
+        $this->assertSame('Aralık 2026', $aylar[0]['etiket']);
+        $this->assertEquals(250.25, $aylar[0]['toplam']);
+        $this->assertEquals(250.25, $aylar[4]['toplam']);
+        $this->assertSame($this->kart, $aylar[0]['kartlar'][0]['kart_id']);
+        $this->assertEquals(250.25, $aylar[0]['kartlar'][0]['tutar']);
 
         // Liste toplamı aynı kuralla
         $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-11')->assertOk()

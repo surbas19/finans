@@ -211,7 +211,45 @@ class ButceRaporu
                     'toplam_tahmini' => $i->taksit_toplam === null,
                 ])->values(),
             'sonraki_taksitler' => $this->sonrakiTaksitler($islemler, $kartlar),
+            'sonraki_taksit_aylari' => $this->sonrakiTaksitAylari($islemler, $kartlar, $donem),
         ];
+    }
+
+    /**
+     * Sonraki her ay için ayrı: rapor ayındaki taksitli harcamaların o ayda ödenecek taksitleri (aya düşen tutar; bir
+     * kalem kalan taksit sayısı kadar ay boyunca sürer), ay toplamı ve kart kırılımıyla.
+     *
+     * @param  Collection<int, KartIslemi>  $islemler
+     * @param  Collection<int, Kart>  $kartlar
+     * @return list<array<string, mixed>>
+     */
+    private function sonrakiTaksitAylari(Collection $islemler, Collection $kartlar, string $donem): array
+    {
+        $kalemler = $islemler->filter(fn (KartIslemi $i): bool => ($i->taksit_sayisi ?? 0) > 1 && $i->tur === KartIslemTuru::Harcama && ($i->taksit_no ?? 0) >= 1 && $i->taksit_no < $i->taksit_sayisi);
+        $enUzun = (int) $kalemler->map(fn (KartIslemi $i): int => (int) $i->taksit_sayisi - (int) $i->taksit_no)->max();
+        $aylar = [];
+        for ($k = 1; $k <= $enUzun; $k++) {
+            $ay = Donem::ekle($donem, $k);
+            $kartTutar = [];
+            foreach ($kalemler as $i) {
+                if ((int) $i->taksit_sayisi - (int) $i->taksit_no >= $k) {
+                    $kartTutar[$i->kart_id] = ($kartTutar[$i->kart_id] ?? 0) + Kurus::kurus($i->tutar);
+                }
+            }
+            arsort($kartTutar);
+            $aylar[] = [
+                'donem' => $ay,
+                'etiket' => Donem::etiket($ay),
+                'toplam' => Kurus::tl(array_sum($kartTutar)),
+                'kartlar' => array_map(fn (int $kartId, int $tutar): array => [
+                    'kart_id' => $kartId,
+                    'ad' => $kartlar[$kartId]->ad ?? '',
+                    'tutar' => Kurus::tl($tutar),
+                ], array_keys($kartTutar), array_values($kartTutar)),
+            ];
+        }
+
+        return $aylar;
     }
 
     /**

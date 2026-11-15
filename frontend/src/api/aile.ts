@@ -516,6 +516,13 @@ export interface AylikOzet {
       toplam_borc: number
       toplam_tahmini: boolean
     }[]
+    /** Sonraki her ay için ayrı: o ayda ödenecek taksit toplamı ve kart kırılımı */
+    sonraki_taksit_aylari: {
+      donem: string
+      etiket: string
+      toplam: number
+      kartlar: { kart_id: number; ad: string; tutar: number }[]
+    }[]
     /** Bu aydan sonra kalan taksitler, kart başına */
     sonraki_taksitler: {
       kart_id: number
