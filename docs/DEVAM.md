@@ -4,7 +4,7 @@
 
 
 ## Yayın bekleyenler
-`main`'de yayımlanmamış, kullanıcı onayı bekleniyor: 4c6413c (fatura dönemi), gelir türleri (…001000), yapay zekâ ekstre analizi (…001100, …001200) ve Bütçe Giderler / Tasarruf / tutarla ekstre (2026_11_15_000100, …000200).
+Yok: canlıda cc9a741 (2026-11-15; Giderler, Tasarruf, tutarla ekstre, yapay zekâ ekstre analizi, gelir türleri, fatura dönemi).
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
