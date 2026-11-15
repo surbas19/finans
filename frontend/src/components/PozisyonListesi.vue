@@ -46,7 +46,7 @@ function altSatir(p: Pozisyon): string {
     >
       <RouterLink
         :to="{ name: 'varlik', params: { id: p.varlik.id } }"
-        class="relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
+        class="relative flex min-w-0 flex-1 items-center gap-2 px-1 py-3.5 sm:gap-3 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
       >
         <!-- Şerit kartın sol boşluğunda durur: telefonda varlık adına yer kalsın -->
         <span
@@ -62,7 +62,7 @@ function altSatir(p: Pozisyon): string {
           <i :class="VARLIK_TURLERI[p.varlik.tur].ikon" />
         </span>
         <!-- Dar ekranda ad en az bu kadar yer alır; sağdaki K/Z sığmazsa yüzde alt satıra iner -->
-        <span class="min-w-[5.5rem] flex-1">
+        <span class="min-w-[4.5rem] flex-1">
           <span class="flex items-center gap-1.5">
             <VarlikAdi :kod="p.varlik.kod" :ad="p.varlik.ad" />
             <Tag
@@ -105,7 +105,7 @@ function altSatir(p: Pozisyon): string {
       <button
         v-if="degistirilebilir && p.hesap_id !== null"
         type="button"
-        class="ml-1 flex w-11 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100"
+        class="flex w-9 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100 sm:ml-1 sm:w-11"
         :aria-label="
           p.dahil === false
             ? `${p.varlik.ad} genel toplama eklensin`
@@ -119,7 +119,7 @@ function altSatir(p: Pozisyon): string {
           :class="p.dahil === false ? 'pi pi-eye-slash' : 'pi pi-eye text-primary-600'"
           class="text-base"
         />
-        <span class="text-[10px] leading-none font-semibold">{{
+        <span class="hidden text-[10px] leading-none font-semibold sm:block">{{
           p.dahil === false ? 'Hariç' : 'Dahil'
         }}</span>
       </button>
