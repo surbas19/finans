@@ -7,6 +7,7 @@ use App\Enums\FaturaDurumu;
 use App\Enums\GelirDuzeni;
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
+use App\Models\DuzenliGider;
 use App\Models\Ekstre;
 use App\Models\Fatura;
 use App\Models\FaturaTuru;
@@ -28,7 +29,7 @@ use Illuminate\Support\Collection;
  */
 class ButceRaporu
 {
-    public function __construct(private GelirTakvimi $takvim) {}
+    public function __construct(private GelirTakvimi $takvim, private GiderTakvimi $giderTakvimi) {}
 
     /**
      * @return array<string, mixed>
@@ -108,10 +109,22 @@ class ButceRaporu
             $kategoriToplam[$faturaKategorisi] = ($kategoriToplam[$faturaKategorisi] ?? 0) + $baglantisizToplam;
         }
 
+        // Düzenli / kartsız giderler: dönemi bu ay olan kayıtlar (kategorisi yoksa "Kategorisiz")
+        $duzenli = DuzenliGider::where('hane_id', $haneId)->where('donem', $donem)->orderBy('tarih')->orderBy('id')->get();
+        $duzenliToplam = $duzenli->reduce(fn (int $t, DuzenliGider $g): int => $t + Kurus::kurus($g->tutar), 0);
+        foreach ($duzenli as $g) {
+            $kategoriToplam[$g->kategori_id ?? 0] = ($kategoriToplam[$g->kategori_id ?? 0] ?? 0) + Kurus::kurus($g->tutar);
+        }
+
         return [
-            'toplam' => Kurus::tl($kartHarcamasi + $baglantisizToplam),
+            'toplam' => Kurus::tl($kartHarcamasi + $baglantisizToplam + $duzenliToplam),
             'kart_harcamasi' => Kurus::tl($kartHarcamasi),
             'kartsiz_faturalar' => Kurus::tl($baglantisizToplam),
+            'duzenli' => [
+                'toplam' => Kurus::tl($duzenliToplam),
+                'kalemler' => $duzenli->map(fn (DuzenliGider $g): array => $g->ozet())->values(),
+            ],
+            'beklenenler' => $this->giderTakvimi->beklenenler($haneId, $donem),
             'kategoriler' => collect($kategoriToplam)
                 ->map(fn (int $t, int $id): array => [
                     'kategori_id' => $id ?: null,
