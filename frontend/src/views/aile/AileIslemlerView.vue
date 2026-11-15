@@ -6,7 +6,6 @@ import AccordionContent from 'primevue/accordioncontent'
 import AccordionHeader from 'primevue/accordionheader'
 import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
-import DatePicker from 'primevue/datepicker'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import InputText from 'primevue/inputtext'
@@ -26,13 +25,13 @@ import {
 } from '@/api/aile'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAileStore } from '@/stores/aile'
-import { tl, tarihMetni } from '@/utils/bicim'
-import { donemdenTarih, gecerliDonem } from '@/utils/donem'
+import { tl } from '@/utils/bicim'
+import { donemEtiketi, gecerliDonem } from '@/utils/donem'
 
 /**
- * Kart işlemleri. Süzgeçsiz varsayılan görünüm: her kartın güncel ekstre dönemindeki harcamalar, kart adının altında
- * akordiyon (ilki açık). Süzgeç (arama, tarih ya da aralık, kişi, banka, kart, kategori, tür) uygulanınca bütün
- * dönemlerde süzülür ve bütün kart grupları açık gelir. Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
+ * Kart işlemleri: bütün ekstre işlemleri kart adının altında akordiyon (süzgeçsizken ilk kart açık). Süzgeç (arama,
+ * kişi, banka, kart, kategori, tür; Bütçe Özet'ten gelince ay çipi) uygulanınca bütün kart grupları açık gelir.
+ * Tarih seçici yoktur. Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
  */
 const aile = useAileStore()
 const route = useRoute()
@@ -41,33 +40,10 @@ const sonIstek = useSonIstek()
 
 const sayi = (d: unknown): number | null =>
   d !== undefined && d !== null && d !== '' && !Number.isNaN(Number(d)) ? Number(d) : null
-const TARIH_DESENI = /^\d{4}-\d{2}-\d{2}$/
-const metindenTarih = (m: unknown): Date | null => {
-  if (typeof m !== 'string' || !TARIH_DESENI.test(m)) return null
-  const [y, a, g] = m.split('-').map(Number) as [number, number, number]
-
-  return new Date(y, a - 1, g)
-}
-/** Ayın ilk ve son günü */
-function ayAraligi(ay: string): [Date, Date] {
-  const ilk = donemdenTarih(ay)
-
-  return [ilk, new Date(ilk.getFullYear(), ilk.getMonth() + 1, 0)]
-}
-
 const q = route.query
-function baslangicAraligi(): Date[] | null {
-  const bas = metindenTarih(q.tarih_bas)
-  const bit = metindenTarih(q.tarih_bit)
-  if (bas || bit) return bit ? [bas ?? bit, bit] : [bas!]
-  // Özet'ten gelen eski bağlantı (?ay=2026-11): o ayın tamamı
-  if (gecerliDonem(String(q.ay ?? ''))) return ayAraligi(String(q.ay))
-
-  return null
-}
-
 const ara = ref(String(q.ara ?? ''))
-const aralik = ref<Date[] | null>(baslangicAraligi())
+/** Bütçe Özet'ten gelen ay (rapor ayı) süzgeci; çip ile kaldırılır */
+const ay = ref<string | null>(gecerliDonem(String(q.ay ?? '')) ? String(q.ay) : null)
 const uyeId = ref<number | null>(sayi(q.uye_id))
 const bankaId = ref<number | null>(sayi(q.banka_id))
 const kartId = ref<number | null>(sayi(q.kart_id))
@@ -92,17 +68,10 @@ const TURLER = (Object.keys(KART_ISLEM_TURLERI) as KartIslemTuru[]).map((t) => (
 }))
 const kategoriSecenekleri = computed(() => [{ id: 'yok', ad: 'Kategorisiz' }, ...aile.kategoriler])
 
-/** Seçilen aralığın başı / sonu; tek tarih seçilirse (bitiş henüz yok) tek gün */
-const tarihBas = computed(() => (aralik.value?.[0] ? tarihMetni(aralik.value[0]) : null))
-const tarihBit = computed(() => {
-  const [bas, bit] = aralik.value ?? []
-
-  return bit ? tarihMetni(bit) : bas ? tarihMetni(bas) : null
-})
 const suzgecVar = computed(
   () =>
     ara.value.trim() !== '' ||
-    aralik.value !== null ||
+    ay.value !== null ||
     [uyeId, bankaId, kartId, kategoriId, tur].some((r) => r.value !== null),
 )
 
@@ -123,12 +92,9 @@ const gruplar = computed(() => {
 })
 
 async function yukle(): Promise<void> {
-  const guncel = !suzgecVar.value
   const veri = await sonIstek(() =>
     aileApi.kartIslemleri({
-      guncel: guncel ? 1 : null,
-      tarih_bas: tarihBas.value,
-      tarih_bit: tarihBit.value,
+      ay: ay.value,
       ara: ara.value.trim() || null,
       uye_id: uyeId.value,
       banka_id: bankaId.value,
@@ -157,8 +123,7 @@ let zamanlayici: ReturnType<typeof setTimeout> | undefined
 function adresVeYukle(): void {
   void router.replace({
     query: {
-      tarih_bas: tarihBas.value ?? undefined,
-      tarih_bit: tarihBit.value ?? undefined,
+      ay: ay.value ?? undefined,
       ara: ara.value.trim() || undefined,
       uye_id: uyeId.value ?? undefined,
       banka_id: bankaId.value ?? undefined,
@@ -176,9 +141,7 @@ watch(ara, () => {
   clearTimeout(zamanlayici)
   zamanlayici = setTimeout(adresVeYukle, 300)
 })
-// Tarih aralığı: ikinci tarih seçilince (ya da temizlenince) süzülür; tek tarih seçili beklerken tek gün sayılır
-watch([aralik, uyeId, bankaId, kartId, kategoriId, tur], () => {
-  if (aralik.value && aralik.value.length === 2 && aralik.value[1] === null) return
+watch([ay, uyeId, bankaId, kartId, kategoriId, tur], () => {
   clearTimeout(zamanlayici)
   adresVeYukle()
 })
@@ -186,7 +149,7 @@ onBeforeUnmount(() => clearTimeout(zamanlayici))
 
 function temizle(): void {
   ara.value = ''
-  aralik.value = null
+  ay.value = null
   uyeId.value = bankaId.value = kartId.value = kategoriId.value = tur.value = null
 }
 
@@ -215,21 +178,16 @@ function kategoriSec(i: KartIslemi): void {
           data-test="islem-ara"
         />
       </IconField>
-      <DatePicker
-        v-model="aralik"
-        selection-mode="range"
-        date-format="dd.mm.yy"
-        placeholder="Tarih ya da aralık"
-        :manual-input="false"
-        show-button-bar
-        show-icon
-        icon-display="input"
-        append-to="body"
-        aria-label="Tarih ya da tarih aralığı"
-        class="w-full sm:w-64"
-        data-test="islem-tarih"
-      />
     </div>
+    <button
+      v-if="ay"
+      type="button"
+      class="-mt-2 inline-flex items-center gap-1.5 self-start rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 ring-1 ring-primary-200"
+      data-test="ay-cipi"
+      @click="ay = null"
+    >
+      {{ donemEtiketi(ay) }} (Bütçe Özet ayı) <i class="pi pi-times text-[10px]" />
+    </button>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
       <Select
         v-model="uyeId"
@@ -295,15 +253,8 @@ function kategoriSec(i: KartIslemi): void {
         <p class="font-semibold tabular-nums">{{ toplam.adet }}</p>
       </div>
       <p class="col-span-3 text-[11px] text-surface-500" data-test="islem-not">
-        <template v-if="!suzgecVar"
-          >Her kartın güncel ekstre dönemi (en yeni onaylı ekstre + ekstreye girmemiş satırlar).
-          Arama ya da tarih seçince bütün dönemlerde aranır. </template
-        >Gider: harcama ve faiz / ücret eklenir, iade düşülür. Kart borcu ödemesi, transfer ve nakit
+        Gider: harcama ve faiz / ücret eklenir, iade düşülür. Kart borcu ödemesi, transfer ve nakit
         avans gider sayılmaz (ekstredeki harcamalar zaten sayıldı).
-        <template v-if="aralik">
-          Tarih işlem tarihine göredir; Bütçe Özet'te kart gideri ekstre kesim ayına yazıldığından
-          aylık toplam farklı olabilir.</template
-        >
       </p>
     </section>
     <p class="-mt-2 text-center text-[11px] text-surface-400" data-test="uzun-basma-ipucu">
