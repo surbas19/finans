@@ -791,6 +791,39 @@ export interface KartIslemSuzgeci {
   ara?: string | null
 }
 
+/** Dönem grafikleri (yılın 12 ayı, TL; oran %; gelir 0 olan ayın oranı null) */
+export interface GrafikKisi {
+  uye_id: number
+  ad: string
+  renk: string | null
+  toplam: number[]
+}
+export interface GrafikGelirTuru {
+  gelir_turu_id: number
+  ad: string
+  toplam: number[]
+  kisiler: GrafikKisi[]
+}
+export interface GrafikFaturaTuru {
+  fatura_turu_id: number
+  ad: string
+  tutar: number[]
+  oran: (number | null)[]
+}
+export interface GrafikKart {
+  kart_id: number
+  ad: string
+  renk: string | null
+  tutar: number[]
+}
+export interface DonemGrafikleri {
+  yil: number
+  etiketler: string[]
+  gelir: { toplam: number[]; kisiler: GrafikKisi[]; turler: GrafikGelirTuru[] }
+  faturalar: { toplam: number[]; toplam_oran: (number | null)[]; turler: GrafikFaturaTuru[] }
+  kartlar: { toplam: number[]; kartlar: GrafikKart[] }
+}
+
 /** Boş süzgeç alanları istekten çıkar */
 function temiz<T extends object>(nesne: T): Partial<T> {
   return Object.fromEntries(
@@ -928,6 +961,8 @@ export const aileApi = {
     http.post(`/aile/kategoriler/${kategoriId}/kurallar`, { desen }),
   kuralSil: (id: number) => http.delete(`/aile/kategori-kurallari/${id}`),
 
+  grafikler: (yil: number) =>
+    http.get<DonemGrafikleri>('/aile/grafikler', { params: { yil } }).then((r) => r.data),
   kartIslemleri: (suzgec: KartIslemSuzgeci) =>
     http
       .get<{

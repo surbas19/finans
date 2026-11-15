@@ -7,6 +7,7 @@ import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
+import KartGrafigi from '@/components/grafik/KartGrafigi.vue'
 import KaydirmaliPaneller from '@/components/KaydirmaliPaneller.vue'
 import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
@@ -216,6 +217,9 @@ function sonEkstre(kartId: number): Ekstre | undefined {
           </div>
         </template>
       </KaydirmaliPaneller>
+
+      <!-- Dönem dönem dönem sonu ödemeler -->
+      <KartGrafigi />
 
       <!-- Son ödeme hatırlatıcıları: kartların altında akordiyon -->
       <section v-if="sonOdemeler.length" class="kart p-2" data-test="son-odeme-akordiyon">

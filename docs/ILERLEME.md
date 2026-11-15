@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-15) Dönem dönem çizgi grafikler ([planlar/donem-grafikleri.md](planlar/donem-grafikleri.md)): Faturalar (toplam + tür, Tutar / gelire oran %), Kartlar (toplam + kart başına dönem sonu ödeme, kart renkleri), Gelir (maaş / ek ders türü seçimi, toplam + kişi başına); hareketli, modern, mobil öncelikli; yıl seçici. Testler: ön yüz 121, arka uç GrafikTest 4.
 - (2026-11-15) Bütçe → İşlemler: arama kutusu + tarih / tarih aralığı seçici (işlem tarihine göre, hızlı Bu ay / Geçen ay / Son 30 gün), "Özet ayı / İşlem tarihi / Ekstre dönemi" ve "İşlem ekle" düğmeleri kaldırıldı ([planlar/islem-arama-tarih.md](planlar/islem-arama-tarih.md)). Testler: ön yüz 116, arka uç KartIslemiTest 7.
 - (2026-11-15) Zekât ekranı otomatik anlık hesap ([planlar/zekat-otomatik-hesap.md](planlar/zekat-otomatik-hesap.md)): ekran açılınca (ve ayar kaydedilince) hesap kendiliğinden yapılır, Hesapla düğmesi kalktı, anlık hesap Verilen zekât bölümünün üstünde, varlık ayrıntıları gösterilmez (kayıtlı yıl penceresinde kalır). Testler: ön yüz 112.
 - (2026-11-15) Zekât ödemeleri Yönetim → Zekât'ta, Ramazan'dan Ramazan'a ([planlar/zekat-odemeleri-yillik.md](planlar/zekat-odemeleri-yillik.md)): İşlemler'den kaldırıldı; zekât yılı bazında gereken / verilen / kalan / fazla, yıl başına ödemeler ve 'Ödeme ekle' (akordiyon, bu yıl açık); ödeme tarihe göre kesinleşmiş zekât yılına otomatik bağlanır, eski bağsız ödemeler migration'la bağlandı. Testler: ön yüz 109, arka uç 232.

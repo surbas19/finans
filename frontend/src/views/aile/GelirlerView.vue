@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
+import GelirGrafigi from '@/components/grafik/GelirGrafigi.vue'
 import BosDurum from '@/components/BosDurum.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
@@ -257,6 +258,8 @@ function kaynakAdi(id: number | null): string {
         </li>
       </ul>
     </section>
+
+    <GelirGrafigi />
 
     <GelirFormu
       v-model:visible="gelirFormuAcik"

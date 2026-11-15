@@ -7,6 +7,7 @@ import SelectButton from 'primevue/selectbutton'
 import Skeleton from 'primevue/skeleton'
 import { useToast } from 'primevue/usetoast'
 import BosDurum from '@/components/BosDurum.vue'
+import FaturaGrafigi from '@/components/grafik/FaturaGrafigi.vue'
 import AySecici from '@/components/aile/AySecici.vue'
 import FaturaBaglaDialog from '@/components/aile/FaturaBaglaDialog.vue'
 import FaturaFormu from '@/components/aile/FaturaFormu.vue'
@@ -128,6 +129,7 @@ async function coz(f: Fatura): Promise<void> {
         @click="duzenle(null)"
       />
     </div>
+    <FaturaGrafigi />
     <p v-if="!aile.saglayicilar.length" class="kart p-4 text-sm text-surface-600">
       Önce Ayarlar'dan fatura sağlayıcılarınızı (ör. Enerjisa, İSKİ, İGDAŞ) ve ekstrede görünen
       yazımlarını ekleyin; ekstre yüklenince fatura ödemeleri bunlarla bulunur.
