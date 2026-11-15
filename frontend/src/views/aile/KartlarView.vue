@@ -40,10 +40,16 @@ function sonEkstre(kartId: number): Ekstre | undefined {
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap justify-end gap-2">
+      <RouterLink
+        :to="{ name: 'aile-ekstreler' }"
+        class="mr-auto inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-primary-600 ring-1 ring-primary-200"
+        data-test="ekstreler-baglanti"
+        ><i class="pi pi-inbox text-xs" /> Ekstreler</RouterLink
+      >
       <Button
         label="Ekstre yükle"
         icon="pi pi-upload"
-        :disabled="!aile.kartlar.length"
+        :disabled="!aile.kartlar.length && !aile.hane?.yetenekler?.ai_acik"
         @click="yukleAcik = true"
       />
       <Button

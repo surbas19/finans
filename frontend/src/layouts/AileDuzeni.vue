@@ -16,10 +16,17 @@ const SEKMELER = [
   { ad: 'aile-ayarlar', etiket: 'Ayarlar', ikon: 'pi pi-sliders-h' },
 ] as const
 
-/** Kart detayı ve ekstre incelemesi Kartlar sekmesindedir */
+/** Kart detayı, ekstreler (aktarım merkezi, inceleme, banka hesabı önizlemesi) Kartlar sekmesindedir */
 function seciliMi(ad: string): boolean {
   const simdiki = String(route.name ?? '')
-  if (ad === 'aile-kartlar') return ['aile-kartlar', 'aile-kart', 'aile-ekstre'].includes(simdiki)
+  if (ad === 'aile-kartlar')
+    return [
+      'aile-kartlar',
+      'aile-kart',
+      'aile-ekstre',
+      'aile-ekstreler',
+      'aile-hesap-ekstresi',
+    ].includes(simdiki)
 
   return simdiki === ad
 }

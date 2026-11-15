@@ -11,9 +11,18 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
+import AiAnalizPaneli from '@/components/aile/AiAnalizPaneli.vue'
+import AiDenetimPaneli from '@/components/aile/AiDenetimPaneli.vue'
 import EkstreSatiri from '@/components/aile/EkstreSatiri.vue'
 import EkstreSatirFormu from '@/components/aile/EkstreSatirFormu.vue'
-import { aileApi, BANKA_PROFILLERI, type Ekstre, type Kart, type KartIslemi } from '@/api/aile'
+import {
+  aileApi,
+  BANKA_PROFILLERI,
+  type AiCalisma,
+  type Ekstre,
+  type Kart,
+  type KartIslemi,
+} from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAileStore } from '@/stores/aile'
@@ -35,12 +44,14 @@ const kart = ref<Kart | null>(null)
 const satirlar = ref<KartIslemi[]>([])
 const bulunamadi = ref(false)
 const aiAcik = ref(false)
-const aiOnay = ref(false)
-const aiCalisiyor = ref(false)
+const aiAktarim = ref(false)
+const aiCalisma = ref<AiCalisma | null>(null)
+/** Yapay zekâ analizi sürüyor: satırlar düzenlenmez, onay yok */
+const aiSuruyor = ref(false)
 const onaylaniyor = ref(false)
 const duzeltilen = ref<KartIslemi | null>(null)
 const duzeltAcik = ref(false)
-const goster = ref<'hepsi' | 'sorunlu' | 'fatura'>('hepsi')
+const goster = ref<'hepsi' | 'inceleme' | 'sorunlu' | 'fatura'>('hepsi')
 
 /** Dönem bilgileri formu */
 const alan = ref({
@@ -57,6 +68,9 @@ async function yukle(): Promise<void> {
     ekstre.value = veri.ekstre
     kart.value = veri.kart
     aiAcik.value = veri.ai_acik ?? false
+    aiAktarim.value = veri.ai_aktarim ?? false
+    aiCalisma.value = veri.ai_calisma ?? null
+    aiSuruyor.value = veri.ai_calisma?.etkin ?? false
     satirlar.value = veri.satirlar
     alanlariDoldur(veri.ekstre)
   } catch {
@@ -80,14 +94,22 @@ const okunamayanSatir = computed(() =>
   satirlar.value.filter((s) => s.okuma?.alanlar?.length && s.durum !== 'atlandi'),
 )
 const faturaSecili = computed(() => dahil.value.filter((s) => s.fatura_onerisi?.secildi))
+/** Yapay zekâ satırı şüpheli ve henüz "Kontrol ettim" denmedi */
+const incelemeBekleyen = computed(() =>
+  dahil.value.filter((s) => s.okuma?.inceleme && !s.okuma.incelendi),
+)
+/** Yapay zekâ taslağı ve aktarım kapalı: yalnızca önizleme */
+const yalnizOnizleme = computed(() => ekstre.value?.banka_profili === 'ai' && !aiAktarim.value)
 const gorunenSatirlar = computed(() =>
-  goster.value === 'sorunlu'
-    ? satirlar.value.filter(
-        (s) => s.okuma?.alanlar?.length || s.okuma?.uyarilar?.length || s.tekrar,
-      )
-    : goster.value === 'fatura'
-      ? satirlar.value.filter((s) => s.fatura_onerisi)
-      : satirlar.value,
+  goster.value === 'inceleme'
+    ? satirlar.value.filter((s) => s.okuma?.inceleme)
+    : goster.value === 'sorunlu'
+      ? satirlar.value.filter(
+          (s) => s.okuma?.alanlar?.length || s.okuma?.uyarilar?.length || s.tekrar,
+        )
+      : goster.value === 'fatura'
+        ? satirlar.value.filter((s) => s.fatura_onerisi)
+        : satirlar.value,
 )
 
 function kaynak(alanAdi: string): string {
@@ -101,26 +123,6 @@ function kaynak(alanAdi: string): string {
   if (k === 'ai') return 'yapay zekâ okudu'
 
   return k === 'kullanici' ? 'siz girdiniz' : "PDF'den"
-}
-
-async function yapayZekayaOkut(): Promise<void> {
-  if (!aiOnay.value) return
-  aiCalisiyor.value = true
-  try {
-    const sonuc = await aileApi.ekstreYapayZeka(props.id)
-    toast.add({ severity: 'success', summary: sonuc.message, life: 6000 })
-    aiOnay.value = false
-    await yukle()
-  } catch (e) {
-    toast.add({
-      severity: 'error',
-      summary: 'Yapay zekâ ile okunamadı',
-      detail: hataMesaji(e),
-      life: 8000,
-    })
-  } finally {
-    aiCalisiyor.value = false
-  }
 }
 
 async function alanlariKaydet(): Promise<void> {
@@ -310,66 +312,17 @@ function sil(): void {
           </p>
         </div>
 
-        <!-- Yapay zekâ yedeği: yalnızca anahtar tanımlıysa, incelemedeki ekstrede ve her seferinde onayla -->
-        <div
-          v-if="aiAcik && taslak"
-          data-test="yapay-zeka"
-          class="mt-3 rounded-2xl bg-sky-50 p-3 text-xs text-sky-900"
-        >
-          <p class="font-semibold">Yapay zekâ ile oku (yedek)</p>
-          <p class="mt-1">
-            Satırlar eksik ya da yanlışsa ekstre metni yapay zekâya okutulabilir. PDF'in kendisi
-            değil, ad / adres / kart / TC satırları çıkarılmış metin OpenAI'ye gönderilir. Sonuç
-            satırları yenileyip yine incelemeye bırakır; onaylamadan hiçbir şey kaydedilmez.
-          </p>
-          <label class="mt-2 flex items-start gap-2">
-            <input v-model="aiOnay" type="checkbox" class="mt-0.5" data-test="yapay-zeka-onay" />
-            <span>Bu ekstrenin metninin OpenAI'ye gönderilmesini onaylıyorum.</span>
-          </label>
-          <Button
-            class="mt-2"
-            size="small"
-            icon="pi pi-sparkles"
-            label="Yapay zekâ ile oku"
-            :disabled="!aiOnay"
-            :loading="aiCalisiyor"
-            @click="yapayZekayaOkut"
-          />
-        </div>
-        <div
-          v-if="ekstre.denetim?.ai"
-          data-test="ai-denetimi"
-          class="mt-3 rounded-2xl bg-sky-50 p-3 text-xs text-sky-900"
-        >
-          <p class="font-semibold">
-            Yapay zekâ okudu ({{ ekstre.denetim.ai.model }}) ·
-            {{ ekstre.denetim.ai.sayfa_denetimi.analiz_edilen_sayfa }} /
-            {{ ekstre.denetim.ai.sayfa_denetimi.pdf_sayfa }} sayfa
-            <template v-if="!ekstre.denetim.ai.sayfa_denetimi.sayfa_uyusuyor"
-              >· sayfa sayısı uyuşmuyor</template
-            >
-          </p>
-          <ul class="mt-1 list-disc pl-4">
-            <li v-for="s in ekstre.denetim.ai.sayfa_denetimi.sayfalar" :key="s.sayfa">
-              Sayfa {{ s.sayfa }}:
-              {{
-                s.islem_tablosu_var ? s.ayristirilan_islem + ' işlem alındı' : 'işlem tablosu yok'
-              }}
-              <template v-if="s.inceleme_gereken">
-                · {{ s.inceleme_gereken }} satır inceleme gerek</template
-              >
-            </li>
-          </ul>
-          <template v-if="ekstre.denetim.ai.reddedilen.length">
-            <p class="mt-2 font-semibold">
-              Doğrulamadan geçmeyen {{ ekstre.denetim.ai.reddedilen.length }} satır (alınmadı)
-            </p>
-            <p v-for="(r, i) in ekstre.denetim.ai.reddedilen" :key="i" class="mt-0.5">
-              Sayfa {{ r.sayfa }}: {{ r.neden }} <span class="font-mono">{{ r.kaynak }}</span>
-            </p>
-          </template>
-          <p v-for="u in ekstre.denetim.ai.uyarilar" :key="u" class="mt-1">{{ u }}</p>
-        </div>
+        <!-- Yapay zekâ: başlat / ilerleme / iptal (yalnızca anahtar tanımlıysa, her seferinde onayla) -->
+        <AiAnalizPaneli
+          :ekstre-id="ekstre.id"
+          :ai-acik="aiAcik"
+          :taslak="taslak"
+          :ilk-calisma="aiCalisma"
+          :onceki-analiz-var="!!ekstre.denetim?.ai"
+          @surme="(s: boolean) => (aiSuruyor = s)"
+          @bitti="yukle"
+        />
+        <AiDenetimPaneli :ekstre="ekstre" />
 
         <p class="mt-3 rounded-2xl bg-surface-50 p-3 text-xs text-surface-600">
           <strong>İşlem tarihi</strong>: harcamanın yapıldığı gün (aylık özette bu aya yazılır;
@@ -468,10 +421,14 @@ function sil(): void {
           <span v-if="faturaSecili.length" class="text-amber-700"
             >{{ faturaSecili.length }} fatura bağlanacak</span
           >
-          <div class="ml-auto flex gap-1">
+          <span v-if="incelemeBekleyen.length" class="font-semibold text-amber-700"
+            >{{ incelemeBekleyen.length }} inceleme bekliyor</span
+          >
+          <div class="ml-auto flex flex-wrap gap-1">
             <Button
               v-for="g in [
                 { d: 'hepsi', e: 'Hepsi' },
+                { d: 'inceleme', e: 'İnceleme' },
                 { d: 'sorunlu', e: 'Dikkat' },
                 { d: 'fatura', e: 'Faturalar' },
               ] as const"
@@ -493,7 +450,7 @@ function sil(): void {
             :key="s.id"
             :satir="s"
             :ekstre-id="id"
-            :duzenlenebilir="taslak"
+            :duzenlenebilir="taslak && !aiSuruyor"
             @degisti="satirDegisti"
             @duzelt="duzelt"
           />
@@ -509,12 +466,20 @@ function sil(): void {
           :label="`Onayla (${dahil.length} satır)`"
           icon="pi pi-check"
           :loading="onaylaniyor"
+          :disabled="aiSuruyor || yalnizOnizleme"
           @click="onayla"
         />
         <Button label="Ekstreyi sil" icon="pi pi-trash" severity="danger" text @click="sil" />
       </div>
       <p v-if="!taslak" class="text-center text-xs text-surface-500">
         Onaylı ekstrenin satırları İşlemler sayfasından düzeltilir.
+      </p>
+      <p
+        v-else-if="yalnizOnizleme"
+        class="text-center text-xs text-surface-500"
+        data-test="onizleme"
+      >
+        Yapay zekâ taslağının Bütçe'ye aktarımı henüz açılmadı: satırları önizleyebilirsiniz.
       </p>
     </template>
 

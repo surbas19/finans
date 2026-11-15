@@ -63,6 +63,8 @@ export interface HaneBilgisi {
   hane: { id: number; ad: string }
   uyeler: HaneUyesi[]
   ben_uye_id: number | null
+  /** Ekstre yükleme seçenekleri: yapay zekâ açık mı, taslağı aktarılabilir mi, yükleme sınırı */
+  yetenekler?: { ai_acik: boolean; ai_aktarim: boolean; ekstre_max_mb: number }
 }
 
 /** Hanenin gelir türü (Maaş, Ek ders…); kullanıcı ekler */
@@ -237,7 +239,14 @@ export interface KartIslemi {
   tekrar_islem_id: number | null
   ham_metin: string | null
   sayfa: number | null
-  okuma: { alanlar: string[]; uyarilar: string[]; tutar_adaylari: string[] }
+  okuma: {
+    alanlar: string[]
+    uyarilar: string[]
+    tutar_adaylari: string[]
+    /** Yapay zekâ satırı şüpheli: "Kontrol ettim" denmeden onaylanmaz */
+    inceleme?: boolean
+    incelendi?: boolean
+  }
   fatura_onerisi: FaturaOnerisi | null
   ekstre_donemi?: string | null
   tekrar?: { id: number; yer: string } | null
@@ -464,14 +473,17 @@ export const aileApi = {
     http
       .get<{ ekstreler: Ekstre[] }>('/aile/ekstreler', { params: temiz({ kart_id: kartId }) })
       .then((r) => r.data.ekstreler),
-  ekstreYukle: (kartId: number, dosya: File) => {
+  /** Kart ekstresi; `yapayZeka`: kullanıcının açık onayıyla PDF yapay zekâ analizine gider (analiz hemen başlar) */
+  ekstreYukle: (kartId: number, dosya: File, yapayZeka = false) => {
     const veri = new FormData()
     veri.append('kart_id', String(kartId))
     veri.append('dosya', dosya)
+    if (yapayZeka) veri.append('yapay_zeka', '1')
 
     return http
       .post<{
         ekstre: Ekstre
+        calisma: AiCalisma | null
         ozet: { satir: number; okunamayan_satir: number; tekrar: number }
         message: string
       }>('/aile/ekstreler', veri)
@@ -479,9 +491,14 @@ export const aileApi = {
   },
   ekstre: (id: number) =>
     http
-      .get<{ ekstre: Ekstre; kart: Kart; satirlar: KartIslemi[]; ai_acik?: boolean }>(
-        `/aile/ekstreler/${id}`,
-      )
+      .get<{
+        ekstre: Ekstre
+        kart: Kart
+        satirlar: KartIslemi[]
+        ai_acik?: boolean
+        ai_aktarim?: boolean
+        ai_calisma?: AiCalisma | null
+      }>(`/aile/ekstreler/${id}`)
       .then((r) => r.data),
   ekstreGuncelle: (id: number, veri: Partial<Record<string, string | number | boolean | null>>) =>
     http.put<{ ekstre: Ekstre }>(`/aile/ekstreler/${id}`, veri).then((r) => r.data),
@@ -489,15 +506,56 @@ export const aileApi = {
     http
       .put<{ islem: KartIslemi }>(`/aile/ekstreler/${ekstreId}/satirlar/${islemId}`, veri)
       .then((r) => r.data),
-  /** Yapay zekâ yedeği: yalnızca kullanıcının açık onayıyla; satırları taslak olarak yeniler */
+  /** Yapay zekâ analizini başlatır (açık onayla); arka planda yürür, durumu ekstreAnalizDurumu ile sorulur */
   ekstreYapayZeka: (id: number) =>
     http
-      .post<{
-        ekstre: Ekstre
-        ozet: { satir: number; reddedilen: number }
-        message: string
-      }>(`/aile/ekstreler/${id}/yapay-zeka`, { onay: true })
+      .post<{ calisma: AiCalisma; message: string }>(`/aile/ekstreler/${id}/yapay-zeka`, {
+        onay: true,
+      })
       .then((r) => r.data),
+  ekstreAnalizDurumu: (id: number) =>
+    http
+      .get<{ calisma: AiCalisma | null; ekstre: Ekstre }>(`/aile/ekstreler/${id}/yapay-zeka`)
+      .then((r) => r.data),
+  ekstreAnalizIptal: (id: number) =>
+    http
+      .post<{ calisma: AiCalisma; message: string }>(`/aile/ekstreler/${id}/yapay-zeka/iptal`)
+      .then((r) => r.data),
+  /** Maskeli standart JSON (kişisel veri maskelenmiş) */
+  ekstreAiJson: (id: number) =>
+    http
+      .get<{ ai_cikti: StandartEkstre }>(`/aile/ekstreler/${id}/yapay-zeka/json`)
+      .then((r) => r.data.ai_cikti),
+
+  /** Banka hesabı ekstresi: yalnızca yapay zekâ analizi ve önizleme (Bütçe'ye aktarılmaz) */
+  hesapEkstreleri: () =>
+    http
+      .get<{
+        hesap_ekstreleri: (HesapEkstresi & { ai_calisma: AiCalisma | null })[]
+      }>('/aile/hesap-ekstreleri')
+      .then((r) => r.data.hesap_ekstreleri),
+  hesapEkstresiYukle: (dosya: File) => {
+    const veri = new FormData()
+    veri.append('dosya', dosya)
+    veri.append('onay', '1')
+
+    return http
+      .post<{
+        hesap_ekstresi: HesapEkstresi
+        calisma: AiCalisma
+        message: string
+      }>('/aile/hesap-ekstreleri', veri)
+      .then((r) => r.data)
+  },
+  hesapEkstresi: (id: number) =>
+    http
+      .get<{
+        hesap_ekstresi: HesapEkstresi
+        calisma: AiCalisma | null
+        ai_cikti: StandartEkstre | null
+      }>(`/aile/hesap-ekstreleri/${id}`)
+      .then((r) => r.data),
+  hesapEkstresiSil: (id: number) => http.delete(`/aile/hesap-ekstreleri/${id}`),
   ekstreOnayla: (id: number) =>
     http
       .post<{
@@ -577,8 +635,112 @@ export interface EkstreDenetimi {
   fark: string | null
   kontroller: EkstreKontrolu[]
   teshis?: EkstreTeshisi | null
-  /** Yapay zekâ yedeği çalıştıysa: sayfa denetimi ve doğrulamadan geçmeyen satırlar */
+  /** Yapay zekâ çalıştıysa: sayfa denetimi ve doğrulamadan geçmeyen satırlar */
   ai?: EkstreAiDenetimi | null
+  /** PDF okuyucu ↔ yapay zekâ karşılaştırması */
+  capraz?: EkstreCapraz | null
+  /** Kesim tarihi iki okumada farklı: kullanıcı kaydedene kadar onay yok */
+  kesim_teyit_gerekli?: boolean
+}
+
+/** Yapay zekâ analizi çalışması (içeriksiz) */
+export interface AiCalisma {
+  id: number
+  durum: 'bekliyor' | 'calisiyor' | 'basarili' | 'hata' | 'iptal'
+  asama: 'sirada' | 'gonderildi' | 'okunuyor' | 'dogrulaniyor' | 'tamam' | 'hata' | 'iptal' | null
+  etkin: boolean
+  hata_kodu: string | null
+  mesaj: string | null
+  kabul_satir: number
+  reddedilen_satir: number
+  model: string
+  basladi_at: string | null
+  bitti_at: string | null
+  sure_ms: number | null
+}
+
+export interface EkstreCapraz {
+  durum: 'uyumlu' | 'farkli' | 'php_yok'
+  /** Taslakta kalan satırlar: yapay zekânın mı, PDF okuyucunun mu */
+  secilen: 'ai' | 'php'
+  farklar: string[]
+  kesim_farkli: boolean
+  php: { satir: number; mutabakat: string | null }
+  ai: { satir: number; mutabakat: string }
+}
+
+export interface SayfaDenetimi {
+  pdf_sayfa: number
+  analiz_edilen_sayfa: number
+  sayfa_uyusuyor: boolean
+  sorunlu_sayfa?: number
+  sayfalar: {
+    sayfa: number
+    islem_tablosu_var: boolean
+    bulunan_islem: number
+    ayristirilan_islem: number
+    inceleme_gereken: number
+    reddedilen?: number
+    php_islem?: number | null
+    metin_var?: boolean
+    durum: string
+  }[]
+}
+
+/** Standart ekstre JSON'u (yapay zekâ çıktısı, maskeli); arayüzün kullandığı alanlar */
+export interface StandartIslem {
+  date: string | null
+  description: string
+  amount: number
+  currency: string
+  direction: 'debit' | 'credit'
+  transaction_type: string
+  balance: number | null
+  source_page: number
+  source_text: string
+  confidence: number
+  needs_review: boolean
+  review_reason: string | null
+}
+
+export interface StandartEkstre {
+  bank_name: string | null
+  statement_type: 'credit_card' | 'bank_account' | 'unknown'
+  account: { label: string | null; currency: string | null }
+  period: Record<string, string | null>
+  summary: Record<string, number | null>
+  transactions: StandartIslem[]
+  warnings: string[]
+  review_required: boolean
+  [alan: string]: unknown
+}
+
+export interface HesapEkstresiDenetimi {
+  tur?: string
+  bakiye?: {
+    durum: 'tutuyor' | 'tutmuyor' | 'kontrol_edilemedi'
+    kontroller: (EkstreKontrolu & { hatali_satir?: number })[]
+    satir_hatalari: { sira: number; beklenen: string; bulunan: string; fark: string }[]
+  }
+  satirlar?: { durum: 'kabul' | 'red'; neden: string | null; inceleme: string[] }[]
+  reddedilen?: { neden: string; kaynak: string; sayfa: number }[]
+  sayfa_denetimi?: SayfaDenetimi
+  uyarilar?: string[]
+}
+
+export interface HesapEkstresi {
+  id: number
+  tur: 'banka_hesabi'
+  durum: 'analiz' | 'onizleme' | 'hata'
+  banka_adi: string | null
+  donem_baslangic: string | null
+  donem_bitis: string | null
+  acilis_bakiyesi: number | null
+  kapanis_bakiyesi: number | null
+  denetim: HesapEkstresiDenetimi | null
+  dosya_adi: string | null
+  sayfa_sayisi: number | null
+  olusturuldu: string | null
 }
 
 /** Tanınan banka profilleri; yoksa "genel" */
@@ -604,21 +766,14 @@ export interface EkstreTeshisi {
 export interface EkstreAiDenetimi {
   model: string
   banka: string
+  /** Yapay zekânın belge türü tanıması */
+  tur?: 'credit_card' | 'bank_account' | 'unknown'
   inceleme_gerekli: boolean
   uyarilar: string[]
   bonus_hareketi: number
   reddedilen: { neden: string; kaynak: string; sayfa: number }[]
-  sayfa_denetimi: {
-    pdf_sayfa: number
-    analiz_edilen_sayfa: number
-    sayfa_uyusuyor: boolean
-    sayfalar: {
-      sayfa: number
-      islem_tablosu_var: boolean
-      bulunan_islem: number
-      ayristirilan_islem: number
-      inceleme_gereken: number
-      durum: string
-    }[]
-  }
+  sayfa_denetimi: SayfaDenetimi
+  /** PDF okuyucunun satırları korunduysa yapay zekâ sonucu yalnızca öneri */
+  oneri?: boolean
+  mutabakat?: { durum: string; fark: string | null } | null
 }

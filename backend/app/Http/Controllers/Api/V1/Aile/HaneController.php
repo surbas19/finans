@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Aile;
 use App\Http\Controllers\Controller;
 use App\Models\HaneUyesi;
 use App\Services\Aile\HaneYonetimi;
+use App\Services\AIStatement\OpenAIClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -27,6 +28,12 @@ class HaneController extends Controller
             'hane' => ['id' => $hane->id, 'ad' => $hane->ad],
             'uyeler' => $hane->uyeler()->with('user')->get()->map(fn (HaneUyesi $u): array => $u->ozet()),
             'ben_uye_id' => HaneUyesi::where('user_id', $user->id)->value('id'),
+            // Arayüzün göstereceği seçenekler (ekstre yükleme penceresi)
+            'yetenekler' => [
+                'ai_acik' => app(OpenAIClient::class)->acikMi(),
+                'ai_aktarim' => (bool) config('ekstre.ai_aktarim'),
+                'ekstre_max_mb' => (int) config('ekstre.max_mb'),
+            ],
         ]);
     }
 

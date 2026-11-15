@@ -90,6 +90,19 @@ export const rotalar: RouteRecordRaw[] = [
             meta: { baslik: 'Kart' },
           },
           {
+            path: 'ekstreler',
+            name: 'aile-ekstreler',
+            component: () => import('@/views/aile/EkstrelerView.vue'),
+            meta: { baslik: 'Ekstreler' },
+          },
+          {
+            path: 'hesap-ekstreleri/:id(\\d+)',
+            name: 'aile-hesap-ekstresi',
+            component: () => import('@/views/aile/HesapEkstresiView.vue'),
+            props: (r) => ({ id: Number(r.params.id) }),
+            meta: { baslik: 'Banka hesabı ekstresi' },
+          },
+          {
             path: 'ekstreler/:id(\\d+)',
             name: 'aile-ekstre',
             component: () => import('@/views/aile/EkstreView.vue'),

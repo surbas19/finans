@@ -130,6 +130,17 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
         Zaten kayıtlı: {{ satir.tekrar.yer }}
       </span>
       <span
+        v-if="satir.okuma?.inceleme && !satir.okuma.incelendi"
+        class="rounded-full bg-amber-500 px-2 py-0.5 font-semibold text-white"
+        data-test="inceleme-gerekli"
+        >İnceleme gerekli</span
+      >
+      <span
+        v-else-if="satir.okuma?.inceleme"
+        class="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800"
+        >Kontrol edildi</span
+      >
+      <span
         v-if="okunamayan.length"
         class="rounded-full bg-red-100 px-2 py-0.5 font-semibold text-red-700"
       >
@@ -150,6 +161,17 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
           class="rounded-full px-2 py-1 font-semibold text-primary-600 hover:bg-primary-50"
           >PDF s.{{ satir.sayfa }}</a
         >
+        <Button
+          v-if="duzenlenebilir && dahil && satir.okuma?.inceleme && !satir.okuma.incelendi"
+          label="Kontrol ettim"
+          icon="pi pi-check-circle"
+          size="small"
+          severity="warn"
+          outlined
+          :loading="kaydediliyor"
+          data-test="kontrol-ettim"
+          @click="gonder({ incelendi: true })"
+        />
         <Button
           v-if="duzenlenebilir"
           label="Düzelt"
