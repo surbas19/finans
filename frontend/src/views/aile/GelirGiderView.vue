@@ -46,13 +46,13 @@ watch(sira, (i) => {
     >
       <template #panel="{ oge: p }">
         <section
-          class="relative flex flex-col gap-3"
+          class="relative flex flex-col gap-3 px-4 sm:px-0"
           :data-test="`panel-icerik-${p.anahtar}`"
           :aria-label="p.etiket"
         >
           <!-- Ekranın sağ kenarında ince dikey çizgi: gelir yeşil, gider kırmızı (yazı yok) -->
           <div
-            class="pointer-events-none absolute inset-y-0 -right-4 w-[3px] rounded-full sm:right-0"
+            class="pointer-events-none absolute inset-y-0 right-0 w-[3px] rounded-full"
             :style="{ background: `var(--p-${p.renk}-500)` }"
             :data-test="`panel-cizgi-${p.anahtar}`"
             aria-hidden="true"

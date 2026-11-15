@@ -204,7 +204,7 @@ describe('GelirGiderView', () => {
     )
     // Ekranda "Gelir" / "Gider" yazısı yok; çizgi dikey ve sağ kenarda
     expect(sayfa.text()).not.toMatch(/Gelir|Gider/)
-    expect(sayfa.find('[data-test="panel-cizgi-gelir"]').classes().join(' ')).toContain('-right-4')
+    expect(sayfa.find('[data-test="panel-cizgi-gelir"]').classes().join(' ')).toContain('right-0')
     expect(sayfa.find('[data-test="panel-cizgi-gelir"]').classes()).toContain('w-[3px]')
     expect(sayfa.find('[data-test="kaydirici-nokta"]').exists()).toBe(false)
     expect(sayfa.find('[data-test="panel-gelir"]').exists()).toBe(false)

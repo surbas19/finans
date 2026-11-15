@@ -170,8 +170,12 @@ onBeforeUnmount(() => {
   <div class="relative" data-test="kaydirmali-paneller" aria-roledescription="carousel">
     <div
       ref="serit"
-      class="flex snap-x snap-mandatory gap-3 overflow-x-auto py-1 [scrollbar-width:none] sm:mx-0 sm:px-0.5 [&::-webkit-scrollbar]:hidden"
-      :class="[esitBoy ? 'items-stretch' : 'items-start', tamGenislik ? '' : '-mx-4 px-4']"
+      class="flex snap-x snap-mandatory overflow-x-auto py-1 [scrollbar-width:none] sm:mx-0 sm:px-0.5 [&::-webkit-scrollbar]:hidden"
+      :class="[
+        esitBoy ? 'items-stretch' : 'items-start',
+        // Tam genişlik: şerit ekran kenarlarına uzar, paneller aralıksız ekranı kaplar (yandakinin ucu görünmez)
+        tamGenislik ? '-mx-4 gap-0 sm:gap-3' : '-mx-4 gap-3 px-4',
+      ]"
       data-test="kaydirici-serit"
       @scroll.passive="oklariGuncelle"
     >
