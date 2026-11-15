@@ -19,6 +19,7 @@ import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
 import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
+import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
 import TopluEkleDialog from '@/components/TopluEkleDialog.vue'
 import {
   finansApi,
@@ -72,6 +73,12 @@ function islemDegisti(): void {
   yenile.value++
   void yukle()
 }
+
+/** Dahil / hariç değişince hesap toplamı ve performans grafiği de tazelenir */
+const dahilDegistir = usePozisyonDahil(() => {
+  yenile.value++
+  return yukle()
+})
 
 /** İşlem formunun ön değerleri: kısayola göre nakit ya da bireysel emeklilik seçili açılır */
 const formVarsayilan = ref<{ hesap_id: number; varlik_tur?: VarlikTuru; tur?: IslemTuru }>({
@@ -249,7 +256,12 @@ function hesabiSil(): void {
                     @click="topluAcik = true"
                   />
                 </BosDurum>
-                <PozisyonListesi v-else :pozisyonlar="pozisyonlar" />
+                <PozisyonListesi
+                  v-else
+                  :pozisyonlar="pozisyonlar"
+                  degistirilebilir
+                  @dahil-degistir="dahilDegistir"
+                />
               </TabPanel>
               <TabPanel value="islemler">
                 <p v-if="islemler.length === 0" class="py-6 text-center text-sm text-surface-500">

@@ -16,7 +16,10 @@ const props = defineProps<{
   hesapAdi?: (p: Pozisyon) => string | undefined
   /** Varlık kimliği → soldaki şeridin rengi (Özet'teki halka dilimiyle aynı; `--p-...` değişkeni) */
   renkler?: Map<number, string>
+  /** Her satırın yanında "Genel toplama dahil" düğmesi (yalnız hesaba bağlı satırlarda) */
+  degistirilebilir?: boolean
 }>()
+const emit = defineEmits<{ dahilDegistir: [p: Pozisyon, dahil: boolean] }>()
 
 /** Miktar × fiyat · hesap. Nakitte miktar yazılmaz (değer yeterli); bireysel emeklilikte ödenen tutar. */
 function altSatir(p: Pozisyon): string {
@@ -34,10 +37,16 @@ function altSatir(p: Pozisyon): string {
 
 <template>
   <ul class="divide-y divide-surface-100">
-    <li v-for="p in pozisyonlar" :key="`${p.hesap_id}-${p.varlik.id}`">
+    <li
+      v-for="p in pozisyonlar"
+      :key="`${p.hesap_id}-${p.varlik.id}`"
+      class="flex items-center"
+      :class="p.dahil === false ? 'opacity-55' : ''"
+      :data-dahil="p.dahil === false ? 'hayir' : 'evet'"
+    >
       <RouterLink
         :to="{ name: 'varlik', params: { id: p.varlik.id } }"
-        class="relative flex items-center gap-3 px-1 py-3.5 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
+        class="relative flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 transition-colors hover:bg-surface-50 sm:px-3 sm:py-3"
       >
         <!-- Şerit kartın sol boşluğunda durur: telefonda varlık adına yer kalsın -->
         <span
@@ -54,7 +63,15 @@ function altSatir(p: Pozisyon): string {
         </span>
         <!-- Dar ekranda ad en az bu kadar yer alır; sağdaki K/Z sığmazsa yüzde alt satıra iner -->
         <span class="min-w-[5.5rem] flex-1">
-          <VarlikAdi :kod="p.varlik.kod" :ad="p.varlik.ad" />
+          <span class="flex items-center gap-1.5">
+            <VarlikAdi :kod="p.varlik.kod" :ad="p.varlik.ad" />
+            <Tag
+              v-if="p.dahil === false"
+              value="Hariç"
+              severity="secondary"
+              data-test="haric-etiketi"
+            />
+          </span>
           <span class="block truncate text-xs text-surface-500">{{ altSatir(p) }}</span>
           <span v-if="p.maliyeti_bilinmeyen_miktar > 0" class="block text-xs text-amber-700">
             <template v-if="p.varlik.tur === 'bes'">Kâr yüzdesi girilmedi</template>
@@ -84,6 +101,28 @@ function altSatir(p: Pozisyon): string {
           </template>
         </span>
       </RouterLink>
+      <!-- Genel toplama dahil: kapalıysa satır toplamlara ve zekâta girmez -->
+      <button
+        v-if="degistirilebilir && p.hesap_id !== null"
+        type="button"
+        class="ml-1 flex w-11 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100"
+        :aria-label="
+          p.dahil === false
+            ? `${p.varlik.ad} genel toplama eklensin`
+            : `${p.varlik.ad} genel toplamdan çıkarılsın`
+        "
+        :aria-pressed="p.dahil !== false"
+        data-test="dahil-dugmesi"
+        @click="emit('dahilDegistir', p, p.dahil === false)"
+      >
+        <i
+          :class="p.dahil === false ? 'pi pi-eye-slash' : 'pi pi-eye text-primary-600'"
+          class="text-base"
+        />
+        <span class="text-[10px] leading-none font-semibold">{{
+          p.dahil === false ? 'Hariç' : 'Dahil'
+        }}</span>
+      </button>
     </li>
   </ul>
 </template>

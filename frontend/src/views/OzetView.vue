@@ -13,6 +13,7 @@ import PortfoyKaydirici, { type PortfoySlayti } from '@/components/PortfoyKaydir
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
 import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import { finansApi, HESAP_TURLERI, type HesapOzeti, type Ozet, type Toplam } from '@/api/finans'
+import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { neZaman, tl } from '@/utils/bicim'
 import { hesapDilimleri, hesapRengi, varlikDilimleri } from '@/utils/halka'
@@ -98,7 +99,8 @@ const slaytlar = computed<PortfoySlayti[]>(() => {
       kz: h.kz,
       kz_yuzde: h.kz_yuzde,
       gunluk_degisim: h.gunluk_degisim,
-      dilimler: varlikDilimleri(o.pozisyonlar.filter((p) => p.hesap_id === h.id)).dilimler,
+      dilimler: varlikDilimleri(o.pozisyonlar.filter((p) => p.hesap_id === h.id && p.dahil))
+        .dilimler,
       merkez: { ust: 'Payı', alt: oran(h.deger, o.toplam.deger) },
     })),
   ]
@@ -114,12 +116,17 @@ const secili = computed(() => {
   if (!o) return null
   const h = secilenHesapOzeti.value
   if (!h) {
+    // Tek hesapta satırlar hesaba bağlı gelir (dahil düğmesi çalışsın); birden çok hesapta varlıklar toplanmıştır
+    const tekHesap = !cokHesap.value
+    const liste = tekHesap ? o.pozisyonlar : o.varliklar
+
     return {
       baslik: 'Tüm hesaplar',
       toplam: o.toplam,
-      pozisyonlar: o.varliklar,
+      pozisyonlar: liste,
       dagilim: o.dagilim,
-      renkler: cokHesap.value ? undefined : varlikDilimleri(o.varliklar).renkler,
+      renkler: tekHesap ? varlikDilimleri(liste.filter((p) => p.dahil)).renkler : undefined,
+      degistirilebilir: tekHesap,
     }
   }
   const pozisyonlar = o.pozisyonlar.filter((p) => p.hesap_id === h.id)
@@ -129,9 +136,18 @@ const secili = computed(() => {
     toplam: h as Toplam,
     pozisyonlar,
     dagilim: h.dagilim ?? [],
-    renkler: varlikDilimleri(pozisyonlar).renkler,
+    renkler: varlikDilimleri(pozisyonlar.filter((p) => p.dahil)).renkler,
+    degistirilebilir: true,
   }
 })
+
+/** Birden çok hesapta toplu listede görünmeyen, genel toplama dahil olmayan satırlar (geri eklenebilsin) */
+const haricSatirlar = computed(() =>
+  cokHesap.value && secilenHesap.value === null
+    ? (ozet.value?.pozisyonlar.filter((p) => !p.dahil) ?? [])
+    : [],
+)
+const dahilDegistir = usePozisyonDahil(() => yukle())
 
 /** "Hesaplar" listesinden: o hesabın slaytı seçilir, sayfa kaydırıcıya çıkar (tek hesapta hesap sayfası açılır) */
 function hesabaGec(id: number): void {
@@ -312,7 +328,22 @@ async function elleYenile(): Promise<void> {
             @click="islemAcik = true"
           />
         </BosDurum>
-        <PozisyonListesi v-else :pozisyonlar="secili.pozisyonlar" :renkler="secili.renkler" />
+        <PozisyonListesi
+          v-else
+          :pozisyonlar="secili.pozisyonlar"
+          :renkler="secili.renkler"
+          :degistirilebilir="secili.degistirilebilir"
+          @dahil-degistir="dahilDegistir"
+        />
+        <div v-if="haricSatirlar.length" class="mt-4" data-test="haric-bolumu">
+          <h3 class="bolum-etiketi mb-1">Genel toplama dahil olmayanlar</h3>
+          <PozisyonListesi
+            :pozisyonlar="haricSatirlar"
+            :hesap-adi="(p) => ozet?.hesaplar.find((h) => h.id === p.hesap_id)?.ad"
+            degistirilebilir
+            @dahil-degistir="dahilDegistir"
+          />
+        </div>
       </section>
 
       <!-- Dağılım (türlere göre) -->

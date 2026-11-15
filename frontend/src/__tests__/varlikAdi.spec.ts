@@ -52,6 +52,7 @@ describe('varlık yazımı: kod vurgulu, ad küçük', () => {
   it('pozisyon listesi', async () => {
     const { default: PozisyonListesi } = await import('@/components/PozisyonListesi.vue')
     const poz: Pozisyon = {
+      dahil: true,
       hesap_id: 1,
       varlik: ASELS,
       miktar: 200,

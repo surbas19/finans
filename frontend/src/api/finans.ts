@@ -84,6 +84,8 @@ export interface Pozisyon {
   gerceklesen_kz_eksik: boolean
   hesap_sayisi?: number
   hesap_ad?: string
+  /** Genel yatırım toplamına ve zekâta dahil mi (false: listede soluk, toplamlara girmez) */
+  dahil: boolean
 }
 
 export interface DagilimDilimi {
@@ -240,6 +242,12 @@ export const finansApi = {
   hesapGuncelle: (id: number, veri: HesapGirdisi) => http.put(`/hesaplar/${id}`, veri),
   hesapSil: (id: number) => http.delete(`/hesaplar/${id}`),
   hesapSirala: (ids: number[]) => http.put('/hesaplar/sira', { ids }),
+  pozisyonDahil: (hesapId: number, varlikId: number, dahil: boolean) =>
+    http
+      .put<{ dahil: boolean; message: string }>(`/hesaplar/${hesapId}/pozisyonlar/${varlikId}`, {
+        dahil,
+      })
+      .then((r) => r.data),
 
   islemler: (filtre: { hesap_id?: number; varlik_id?: number }) =>
     http.get<{ islemler: Islem[] }>('/islemler', { params: filtre }).then((r) => r.data.islemler),

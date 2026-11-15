@@ -10,6 +10,7 @@ import {
 
 function pozisyon(id: number, kod: string, deger: number | null): Pozisyon {
   return {
+    dahil: true,
     hesap_id: 1,
     varlik: {
       id,

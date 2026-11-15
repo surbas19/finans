@@ -131,6 +131,7 @@ describe('listelerde nakit ve BES', () => {
   it("pozisyon listesi: nakitte K/Z yok, BES'te ödenen tutar", async () => {
     const { default: PozisyonListesi } = await import('@/components/PozisyonListesi.vue')
     const poz = (v: Varlik, ek: Partial<Pozisyon>): Pozisyon => ({
+      dahil: true,
       hesap_id: 1,
       varlik: v,
       miktar: 12000,

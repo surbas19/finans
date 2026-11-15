@@ -13,6 +13,7 @@ import FormAlani from '@/components/FormAlani.vue'
 import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
+import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
 import {
   finansApi,
   sabitFiyatli,
@@ -67,6 +68,8 @@ async function yukle(): Promise<void> {
 }
 
 onMounted(yukle)
+
+const dahilDegistir = usePozisyonDahil(() => yukle())
 
 async function izlemeDegistir(): Promise<void> {
   if (!varlik.value) return
@@ -237,6 +240,8 @@ async function elleKaydet(): Promise<void> {
             v-if="pozisyonlar.length > 1"
             :pozisyonlar="pozisyonlar"
             :hesap-adi="(p) => p.hesap_ad"
+            degistirilebilir
+            @dahil-degistir="dahilDegistir"
           />
           <p v-else-if="pozisyonlar[0]" class="text-xs text-surface-500">
             Hesap: {{ pozisyonlar[0].hesap_ad }}
