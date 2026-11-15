@@ -67,31 +67,6 @@ function sonEkstre(kartId: number): Ekstre | undefined {
         ><i class="pi pi-inbox text-xs" /> Ekstreler</RouterLink
       >
       <Button
-        label="Ekstre yükle"
-        icon="pi pi-upload"
-        :disabled="!aile.kartlar.length && !aile.hane?.yetenekler?.ai_acik"
-        @click="yukleAc('kart')"
-      />
-      <!-- Dış yapay zekâ (JSON yapıştır): OpenAI anahtarına bağlı değil -->
-      <Button
-        label="Dış yapay zekâ (JSON)"
-        icon="pi pi-clipboard"
-        severity="secondary"
-        outlined
-        :disabled="!aile.kartlar.length"
-        data-test="dis-ai-ekstre"
-        @click="yukleAc('yapistir')"
-      />
-      <Button
-        label="Tutarla ekstre gir"
-        icon="pi pi-pencil"
-        severity="secondary"
-        outlined
-        :disabled="!aile.kartlar.length"
-        data-test="elle-ekstre"
-        @click="elleAc()"
-      />
-      <Button
         label="Kart ekle"
         icon="pi pi-plus"
         severity="secondary"
@@ -188,7 +163,8 @@ function sonEkstre(kartId: number): Ekstre | undefined {
             <!-- Bu karta ekstre girişi -->
             <div class="grid grid-cols-3 gap-2">
               <Button
-                label="PDF yükle"
+                label="PDF"
+                aria-label="Bu karta PDF ekstre yükle"
                 icon="pi pi-upload"
                 size="small"
                 severity="secondary"
@@ -197,7 +173,8 @@ function sonEkstre(kartId: number): Ekstre | undefined {
                 @click="yukleAc('kart', k.id)"
               />
               <Button
-                label="JSON ile"
+                label="JSON"
+                aria-label="Bu karta dış yapay zekâ (JSON) ile ekstre gir"
                 icon="pi pi-clipboard"
                 size="small"
                 severity="secondary"
@@ -206,7 +183,8 @@ function sonEkstre(kartId: number): Ekstre | undefined {
                 @click="yukleAc('yapistir', k.id)"
               />
               <Button
-                label="Tutarla"
+                label="Tutar"
+                aria-label="Bu karta ekstreyi yalnızca tutarla gir"
                 icon="pi pi-pencil"
                 size="small"
                 severity="secondary"

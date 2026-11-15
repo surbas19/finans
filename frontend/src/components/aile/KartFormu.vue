@@ -139,6 +139,7 @@ async function kaydet(): Promise<void> {
           <InputNumber
             v-model="form.kesim_gunu"
             input-id="kart-kesim"
+            fluid
             :min="1"
             :max="31"
             :use-grouping="false"
@@ -148,6 +149,7 @@ async function kaydet(): Promise<void> {
           <InputNumber
             v-model="form.son_odeme_gunu"
             input-id="kart-odeme"
+            fluid
             :min="1"
             :max="31"
             :use-grouping="false"
