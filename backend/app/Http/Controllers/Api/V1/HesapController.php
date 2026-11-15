@@ -6,6 +6,8 @@ use App\Enums\HesapTuru;
 use App\Http\Controllers\Controller;
 use App\Models\Hesap;
 use App\Models\Islem;
+use App\Models\PozisyonAyari;
+use App\Models\Varlik;
 use App\Services\Portfoy\PortfoyHesabi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,6 +53,29 @@ class HesapController extends Controller
             'islemler' => Islem::where('hesap_id', $hesap->id)->with('varlik')
                 ->orderByDesc('tarih')->orderByDesc('id')->get()
                 ->map(fn (Islem $i): array => [...$i->ozet(), 'varlik' => $i->varlik->ozet()]),
+        ]);
+    }
+
+    /**
+     * Hesaptaki bir yatırım satırını (varlık) genel yatırım toplamına ve zekât hesabına dahil eder ya da çıkarır.
+     * Dahil olmayanlar `pozisyon_ayarlari`nda satır olarak durur; dahil edilince satır silinir.
+     */
+    public function pozisyonDahil(Request $request, Hesap $hesap, Varlik $varlik): JsonResponse
+    {
+        Gate::authorize('update', $hesap);
+        $veri = $request->validate(['dahil' => ['required', 'boolean']]);
+        if (! Islem::where('hesap_id', $hesap->id)->where('varlik_id', $varlik->id)->exists()) {
+            abort(422, 'Bu hesapta bu varlığa ait kayıt yok.');
+        }
+        if ($veri['dahil']) {
+            PozisyonAyari::where('hesap_id', $hesap->id)->where('varlik_id', $varlik->id)->delete();
+        } else {
+            PozisyonAyari::updateOrCreate(['hesap_id' => $hesap->id, 'varlik_id' => $varlik->id], ['dahil' => false]);
+        }
+
+        return response()->json([
+            'dahil' => (bool) $veri['dahil'],
+            'message' => $veri['dahil'] ? 'Genel toplama eklendi.' : 'Genel toplamdan ve zekâttan çıkarıldı.',
         ]);
     }
 

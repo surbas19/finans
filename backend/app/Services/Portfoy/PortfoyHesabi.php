@@ -6,6 +6,7 @@ use App\Enums\VarlikTuru;
 use App\Models\FiyatGecmisi;
 use App\Models\Hesap;
 use App\Models\Islem;
+use App\Models\PozisyonAyari;
 use App\Models\User;
 use App\Models\Varlik;
 use Carbon\CarbonInterface;
@@ -31,6 +32,23 @@ class PortfoyHesabi
     }
 
     /**
+     * Genel toplama ve zekâta dahil OLMAYAN yatırım satırları ("hesap_id-varlik_id" anahtarlı).
+     *
+     * @param  iterable<int>  $hesapIdleri
+     * @return array<string, true>
+     */
+    private function haricCiftler(iterable $hesapIdleri): array
+    {
+        $haric = [];
+        PozisyonAyari::whereIn('hesap_id', collect($hesapIdleri)->all())->where('dahil', false)->get(['hesap_id', 'varlik_id'])
+            ->each(function (PozisyonAyari $a) use (&$haric): void {
+                $haric[$a->hesap_id.'-'.$a->varlik_id] = true;
+            });
+
+        return $haric;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function hesapla(User $user, ?int $hesapId = null): array
@@ -43,6 +61,7 @@ class PortfoyHesabi
                 ->get()
         );
         $usd = $this->usdKuru();
+        $haric = $this->haricCiftler($hesaplar->modelKeys());
 
         /** @var array<string, Pozisyon> $pozisyonlar */
         $pozisyonlar = [];
@@ -59,21 +78,30 @@ class PortfoyHesabi
             }
         }
 
-        $satirlar = collect($pozisyonlar)->map(fn (Pozisyon $p): array => $this->degerle($p, $varliklar[$p->varlikId], $usd))->values();
+        $satirlar = collect($pozisyonlar)->map(fn (Pozisyon $p, string $anahtar): array => [
+            ...$this->degerle($p, $varliklar[$p->varlikId], $usd),
+            'dahil' => ! isset($haric[$anahtar]),
+        ])->values();
         $acik = $satirlar->filter(fn (array $s): bool => $s['miktar'] > Pozisyon::EPS)->values();
+        // Genel toplam, hesap toplamı, dağılım ve varlık toplamı yalnızca dahil olan satırlardan; hariç satır listede kalır
+        $dahilSatirlar = $satirlar->where('dahil', true)->values();
+        $acikDahil = $acik->where('dahil', true)->values();
 
         return [
             'usd_kuru' => $usd,
-            'toplam' => self::topla($satirlar),
+            'toplam' => self::topla($dahilSatirlar),
             'hesaplar' => $hesaplar->map(fn (Hesap $h): array => [
                 ...$h->ozet(),
-                ...self::topla($satirlar->where('hesap_id', $h->id)),
-                'varlik_sayisi' => $acik->where('hesap_id', $h->id)->count(),
-                'dagilim' => $this->dagilim($acik->where('hesap_id', $h->id)),
+                ...self::topla($dahilSatirlar->where('hesap_id', $h->id)),
+                'varlik_sayisi' => $acikDahil->where('hesap_id', $h->id)->count(),
+                'dagilim' => $this->dagilim($acikDahil->where('hesap_id', $h->id)),
             ])->values(),
-            'dagilim' => $this->dagilim($acik),
-            'varliklar' => $this->varlikBazinda($pozisyonlar, $varliklar, $usd),
-            'pozisyonlar' => $acik->sortByDesc(fn (array $s): float => $s['deger'] ?? -1)->values(),
+            'dagilim' => $this->dagilim($acikDahil),
+            'varliklar' => $this->varlikBazinda(array_diff_key($pozisyonlar, $haric), $varliklar, $usd),
+            'pozisyonlar' => $acik->sortBy([
+                fn (array $a, array $b): int => (int) $b['dahil'] <=> (int) $a['dahil'],
+                fn (array $a, array $b): int => ($b['deger'] ?? -1) <=> ($a['deger'] ?? -1),
+            ])->values(),
         ];
     }
 
@@ -91,8 +119,11 @@ class PortfoyHesabi
     public function gecmis(User $user, ?int $hesapId, CarbonInterface $baslangic, CarbonInterface $bitis): array
     {
         $hesapIdleri = $this->hesaplar($user, $hesapId)->pluck('id');
+        $haric = $this->haricCiftler($hesapIdleri);
+        // Genel toplama dahil olmayan satırların işlemleri seriye alınmaz (grafik toplamla tutarlı)
         $islemler = self::sirala(
             Islem::whereIn('hesap_id', $hesapIdleri)->with('varlik.fiyat')->get()
+                ->reject(fn (Islem $i): bool => isset($haric[$i->hesap_id.'-'.$i->varlik_id]))
         );
         if ($islemler->isEmpty()) {
             return [];
@@ -382,6 +413,7 @@ class PortfoyHesabi
         return collect($toplam)
             ->map(fn (Pozisyon $p): array => [
                 ...$this->degerle($p, $varliklar[$p->varlikId], $usd),
+                'dahil' => true,
                 'hesap_sayisi' => collect($pozisyonlar)->filter(fn (Pozisyon $x): bool => $x->varlikId === $p->varlikId && $x->miktar() > Pozisyon::EPS)->count(),
             ])
             ->filter(fn (array $s): bool => $s['miktar'] > Pozisyon::EPS)

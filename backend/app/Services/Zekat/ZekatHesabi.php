@@ -54,7 +54,9 @@ class ZekatHesabi
             $kural = $ayar->turKurali($tur);
             $hesapAd = (string) ($hesapAdlari[$p['hesap_id']] ?? '');
             $neden = null;
-            if (! ($bayrak[$p['hesap_id']] ?? true)) {
+            if (! ($p['dahil'] ?? true)) {
+                $neden = 'Yatırım toplamına dahil değil';
+            } elseif (! ($bayrak[$p['hesap_id']] ?? true)) {
                 $neden = 'Hesap zekât hesabına dahil değil';
             } elseif (! $kural['dahil'] || $kural['yuzde'] <= 0) {
                 $neden = 'Bu varlık türü zekât hesabına dahil değil';

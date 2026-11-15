@@ -54,6 +54,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::get('ozet/gecmis', PerformansController::class)->name('ozet.gecmis');
 
         Route::put('hesaplar/sira', [HesapController::class, 'sirala'])->name('hesaplar.sira');
+        Route::put('hesaplar/{hesap}/pozisyonlar/{varlik}', [HesapController::class, 'pozisyonDahil'])->name('hesaplar.pozisyon.dahil');
         Route::apiResource('hesaplar', HesapController::class)->parameters(['hesaplar' => 'hesap']);
 
         Route::post('islemler/toplu', [IslemController::class, 'toplu'])->name('islemler.toplu');
