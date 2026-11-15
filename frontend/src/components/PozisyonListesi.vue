@@ -104,40 +104,45 @@ function altSatir(p: Pozisyon): string {
           </template>
         </span>
       </RouterLink>
-      <!-- Başka hesaba aktar (bireysel emeklilik aktarılamaz) -->
-      <button
-        v-if="degistirilebilir && p.hesap_id !== null && p.varlik.tur !== 'bes'"
-        type="button"
-        class="flex w-9 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100 sm:w-11"
-        :aria-label="`${p.varlik.ad} başka hesaba aktarılsın`"
-        data-test="aktar-dugmesi"
-        @click="emit('aktar', p)"
-      >
-        <i class="pi pi-arrow-right-arrow-left text-base" />
-        <span class="hidden text-[10px] leading-none font-semibold sm:block">Aktar</span>
-      </button>
-      <!-- Genel toplama dahil: kapalıysa satır toplamlara ve zekâta girmez -->
-      <button
+      <!-- Satır eylemleri: telefonda alt alta, geniş ekranda yan yana -->
+      <div
         v-if="degistirilebilir && p.hesap_id !== null"
-        type="button"
-        class="flex w-9 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100 sm:ml-1 sm:w-11"
-        :aria-label="
-          p.dahil === false
-            ? `${p.varlik.ad} genel toplama eklensin`
-            : `${p.varlik.ad} genel toplamdan çıkarılsın`
-        "
-        :aria-pressed="p.dahil !== false"
-        data-test="dahil-dugmesi"
-        @click="emit('dahilDegistir', p, p.dahil === false)"
+        class="flex shrink-0 flex-col sm:flex-row"
       >
-        <i
-          :class="p.dahil === false ? 'pi pi-eye-slash' : 'pi pi-eye text-primary-600'"
-          class="text-base"
-        />
-        <span class="hidden text-[10px] leading-none font-semibold sm:block">{{
-          p.dahil === false ? 'Hariç' : 'Dahil'
-        }}</span>
-      </button>
+        <!-- Başka hesaba aktar (bireysel emeklilik aktarılamaz) -->
+        <button
+          v-if="p.varlik.tur !== 'bes'"
+          type="button"
+          class="flex w-9 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100 sm:w-11"
+          :aria-label="`${p.varlik.ad} başka hesaba aktarılsın`"
+          data-test="aktar-dugmesi"
+          @click="emit('aktar', p)"
+        >
+          <i class="pi pi-arrow-right-arrow-left text-base" />
+          <span class="hidden text-[10px] leading-none font-semibold sm:block">Aktar</span>
+        </button>
+        <!-- Genel toplama dahil: kapalıysa satır toplamlara ve zekâta girmez -->
+        <button
+          type="button"
+          class="flex w-9 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-surface-500 transition-colors hover:bg-surface-100 sm:ml-1 sm:w-11"
+          :aria-label="
+            p.dahil === false
+              ? `${p.varlik.ad} genel toplama eklensin`
+              : `${p.varlik.ad} genel toplamdan çıkarılsın`
+          "
+          :aria-pressed="p.dahil !== false"
+          data-test="dahil-dugmesi"
+          @click="emit('dahilDegistir', p, p.dahil === false)"
+        >
+          <i
+            :class="p.dahil === false ? 'pi pi-eye-slash' : 'pi pi-eye text-primary-600'"
+            class="text-base"
+          />
+          <span class="hidden text-[10px] leading-none font-semibold sm:block">{{
+            p.dahil === false ? 'Hariç' : 'Dahil'
+          }}</span>
+        </button>
+      </div>
     </li>
   </ul>
 </template>
