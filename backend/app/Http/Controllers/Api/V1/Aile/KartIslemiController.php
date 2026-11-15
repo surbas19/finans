@@ -12,6 +12,7 @@ use App\Services\Aile\KartIslemKurallari;
 use App\Services\Aile\KategoriBulucu;
 use App\Support\Donem;
 use App\Support\Kurus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,9 @@ class KartIslemiController extends Controller
             'tur' => ['nullable', Rule::enum(KartIslemTuru::class)],
             'ekstre_id' => ['nullable', 'integer'],
             'durum' => ['nullable', Rule::enum(KartIslemDurumu::class)],
+            'tarih_bas' => ['nullable', 'date_format:Y-m-d'],
+            'tarih_bit' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tarih_bas'],
+            'ara' => ['nullable', 'string', 'max:100'],
         ]);
         $ay = $veri['ay'] ?? null;
         $sorgu = KartIslemi::hanenin($request->user())
@@ -56,7 +60,10 @@ class KartIslemiController extends Controller
             ->when(($veri['kategori_id'] ?? null) === 'yok', fn ($q) => $q->whereNull('kategori_id'))
             ->when(is_numeric($veri['kategori_id'] ?? null), fn ($q) => $q->where('kategori_id', (int) $veri['kategori_id']))
             ->when($veri['tur'] ?? null, fn ($q, $t) => $q->where('tur', $t))
-            ->when($veri['ekstre_id'] ?? null, fn ($q, $id) => $q->where('ekstre_id', $id));
+            ->when($veri['ekstre_id'] ?? null, fn ($q, $id) => $q->where('ekstre_id', $id))
+            ->when($veri['tarih_bas'] ?? null, fn ($q, $t) => $q->whereDate('islem_tarihi', '>=', $t))
+            ->when($veri['tarih_bit'] ?? null, fn ($q, $t) => $q->whereDate('islem_tarihi', '<=', $t))
+            ->when(trim((string) ($veri['ara'] ?? '')) !== '', fn ($q) => $this->aramaUygula($q, (string) $veri['ara']));
         $islemler = $sorgu->with('ekstre:id,kesim_tarihi')->orderByDesc('islem_tarihi')->orderByDesc('id')->limit(1000)->get();
 
         $haric = $islemler->filter(fn (KartIslemi $i): bool => $i->tur->giderYonu() === 0);
@@ -69,6 +76,42 @@ class KartIslemiController extends Controller
                 'adet' => $islemler->count(),
             ],
         ]);
+    }
+
+    /**
+     * Arama: her kelime (AND) açıklamada, kategori adında ya da kart adında geçer (LIKE, harf duyarsız) veya tutar
+     * biçimindeyse (1.250,50) tutara eşittir.
+     *
+     * @param  Builder<KartIslemi>  $sorgu
+     */
+    private function aramaUygula($sorgu, string $ara): void
+    {
+        foreach (preg_split('/\s+/u', trim($ara), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $kelime) {
+            $desen = '%'.addcslashes($kelime, '%_\\').'%';
+            $tutar = $this->tutarKelimesi($kelime);
+            $sorgu->where(function ($q) use ($desen, $tutar): void {
+                $q->where('kart_islemleri.aciklama', 'like', $desen)
+                    ->orWhereHas('kategori', fn ($k) => $k->where('ad', 'like', $desen))
+                    ->orWhereHas('kart', fn ($k) => $k->where('ad', 'like', $desen));
+                if ($tutar !== null) {
+                    $q->orWhere('kart_islemleri.tutar', $tutar);
+                }
+            });
+        }
+    }
+
+    /** "1.250,50", "1250.5", "250" → "1250.50"; tutar gibi görünmüyorsa null */
+    private function tutarKelimesi(string $kelime): ?string
+    {
+        if (preg_match('/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/', $kelime)) {
+            $kelime = str_replace(',', '.', str_replace('.', '', $kelime));
+        } elseif (preg_match('/^\d+([.,]\d{1,2})?$/', $kelime)) {
+            $kelime = str_replace(',', '.', $kelime);
+        } else {
+            return null;
+        }
+
+        return Kurus::decimal(Kurus::kurus($kelime));
     }
 
     public function store(Request $request, KategoriBulucu $bulucu): JsonResponse

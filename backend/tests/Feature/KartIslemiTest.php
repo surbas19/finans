@@ -168,6 +168,42 @@ class KartIslemiTest extends TestCase
             ->assertJsonPath('uyarilar.son_odemeler.0.donem_borcu', 4500);
     }
 
+    public function test_tarih_araligi_ve_arama_suzgeci(): void
+    {
+        $this->islem(['aciklama' => 'MIGROS KADIKOY', 'tutar' => 1250.5, 'islem_tarihi' => '2026-11-05']);
+        $this->islem(['aciklama' => 'Shell 100% indirim_x', 'tutar' => 300, 'islem_tarihi' => '2026-11-12']);
+        $this->islem(['aciklama' => 'TEKNOSA', 'tutar' => 700, 'islem_tarihi' => '2026-10-20']);
+        $url = '/api/v1/aile/kart-islemleri';
+
+        // Tarih aralığı: uçlar dahil, tek gün, açık uçlu
+        $this->getJson("{$url}?tarih_bas=2026-11-05&tarih_bit=2026-11-12")->assertJsonCount(2, 'islemler');
+        $this->getJson("{$url}?tarih_bas=2026-11-05&tarih_bit=2026-11-05")->assertJsonCount(1, 'islemler')
+            ->assertJsonPath('islemler.0.aciklama', 'MIGROS KADIKOY');
+        $this->getJson("{$url}?tarih_bas=2026-11-06")->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?tarih_bit=2026-10-31")->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?tarih_bas=2026-11-12&tarih_bit=2026-11-05")->assertJsonValidationErrors('tarih_bit');
+
+        // Arama: açıklama (harf duyarsız), çok kelime (AND), tutar, kategori / kart adı, % ve _ düz karakter
+        $this->getJson("{$url}?ara=migros")->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?ara=migros+kadikoy")->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?ara=migros+teknosa")->assertJsonCount(0, 'islemler');
+        $this->getJson("{$url}?ara=1.250,50")->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?ara=700")->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?ara=Bonus")->assertJsonCount(3, 'islemler');
+        $this->getJson("{$url}?ara=".urlencode('100%'))->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?ara=".urlencode('%'))->assertJsonCount(1, 'islemler');
+        $this->getJson("{$url}?ara=".urlencode('_'))->assertJsonCount(1, 'islemler');
+        // Toplam arama ve tarihe göre
+        $this->getJson("{$url}?ara=shell")->assertJsonPath('toplam.gider', 300)->assertJsonPath('toplam.adet', 1);
+        $this->getJson("{$url}?ara=migros&tarih_bas=2026-11-06")->assertJsonCount(0, 'islemler');
+        $this->getJson("{$url}?ara=".str_repeat('a', 101))->assertJsonValidationErrors('ara');
+
+        // Başka hane aynı kelimeyle göremez
+        $this->actingAs(User::factory()->create());
+        $this->getJson("{$url}?ara=migros")->assertOk()->assertJsonCount(0, 'islemler');
+        $this->getJson("{$url}?ara=Bonus&tarih_bas=2026-01-01")->assertOk()->assertJsonCount(0, 'islemler');
+    }
+
     public function test_baska_hane_kartlari_ve_islemleri_goremez(): void
     {
         $islem = $this->islem([]);
