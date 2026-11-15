@@ -63,11 +63,12 @@ describe('ZekatSonucKarti', () => {
   const kur = (s: ZekatSonucu, tahmini = false) =>
     mount(ZekatSonucKarti, { props: { sonuc: s, tahmini }, global: { plugins: [PrimeVue] } })
 
-  it('nisab üstünde zekât tutarını ve sabit uyarıyı gösterir', () => {
+  it('nisab üstünde zekât tutarını gösterir; uyarı kartta tekrarlanmaz', () => {
     const w = kur(sonuc({ eksik_veri: false, eksikler: [] }))
     expect(w.get('[data-test="zekat-tutar"]').text()).toContain('15.000,00')
     expect(w.get('[data-test="zekat-nisab"]').text()).toContain('505.134,00')
-    expect(w.get('[data-test="zekat-uyari"]').text()).toBe(ZEKAT_UYARISI)
+    expect(w.find('[data-test="zekat-uyari"]').exists()).toBe(false)
+    expect(w.text()).not.toContain(ZEKAT_UYARISI)
     expect(w.find('[data-test="zekat-eksik"]').exists()).toBe(false)
     expect(w.find('[data-test="zekat-tahmini"]').exists()).toBe(false)
   })
@@ -85,7 +86,7 @@ describe('ZekatSonucKarti', () => {
     expect(w.get('[data-test="zekat-kalemler"]').text()).toContain('THYAO')
   })
 
-  it('anlık hesapta (kalemlerGoster=false) varlık ayrıntıları yok; özet, eksik veri uyarısı ve sabit uyarı var', () => {
+  it('anlık hesapta (kalemlerGoster=false) varlık ayrıntıları yok; özet ve eksik veri uyarısı var', () => {
     const w = mount(ZekatSonucKarti, {
       props: { sonuc: sonuc(), kalemlerGoster: false },
       global: { plugins: [PrimeVue] },
@@ -94,7 +95,6 @@ describe('ZekatSonucKarti', () => {
     expect(w.text()).not.toContain('THYAO adı')
     expect(w.get('[data-test="zekat-tutar"]').text()).toContain('15.000,00')
     expect(w.find('[data-test="zekat-eksik"]').exists()).toBe(true)
-    expect(w.get('[data-test="zekat-uyari"]').text()).toBe(ZEKAT_UYARISI)
   })
 
   it('zekât günü dışında hesaplanınca tahmini uyarısı verir; hesaba girmeyen kalem gri ve nedenli', () => {

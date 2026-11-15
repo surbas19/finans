@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Message from 'primevue/message'
-import { ZEKAT_UYARISI, type ZekatKalemi, type ZekatSonucu } from '@/api/aile'
+import { type ZekatKalemi, type ZekatSonucu } from '@/api/aile'
 import { miktar, tl } from '@/utils/bicim'
 
 /**
  * Zekât sonucu: brüt, borç, net, nisab, zekât; kalemler hesaba göre; fiyatı olmayan kalem uyarısı (sıfır sayılmaz).
- * Hem canlı önizleme hem kayıtlı yıl (değişmez anlık görüntü) için kullanılır. Sabit uyarı her zaman görünür.
+ * Hem canlı önizleme hem kayıtlı yıl (değişmez anlık görüntü) için kullanılır. "Dini hüküm değildir" uyarısı sayfanın en üstünde (ZekatView) bir kez gösterilir.
  */
 const props = withDefaults(
   defineProps<{
@@ -156,12 +156,5 @@ const olcutEtiketi = computed(() => (props.sonuc.nisab.olcut === 'gumus' ? 'güm
     <ul v-if="sonuc.notlar?.length" class="list-disc pl-5 text-xs text-surface-500">
       <li v-for="(n, i) in sonuc.notlar" :key="i">{{ n }}</li>
     </ul>
-
-    <p
-      class="rounded-2xl bg-amber-50 p-3 text-xs font-medium text-amber-900"
-      data-test="zekat-uyari"
-    >
-      {{ ZEKAT_UYARISI }}
-    </p>
   </section>
 </template>

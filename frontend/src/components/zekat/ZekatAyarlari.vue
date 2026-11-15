@@ -164,8 +164,7 @@ async function borcSil(b: ZekatElleBorcu): Promise<void> {
   <UygulamaPenceresi v-model:visible="gorunur" baslik="Zekât ayarları" :genislik="40">
     <form class="flex flex-col gap-5" @submit.prevent="kaydet">
       <p class="rounded-2xl bg-surface-50 p-3 text-xs text-surface-600">
-        Buradaki değerler başlangıç değeridir, dini hüküm değildir. İsterseniz değiştirin; din
-        görevlisine danışın.
+        Buradaki değerler başlangıç değeridir. İsterseniz değiştirin.
       </p>
 
       <fieldset class="flex flex-col gap-3">

@@ -119,6 +119,12 @@ describe('Zekât ekranı: otomatik anlık hesap', () => {
       html.indexOf('data-test="zekat-verilen-bolumu"'),
     )
     expect(w.find('[data-test="zekat-kaydet"]').exists()).toBe(true)
+    // "Dini hüküm değildir" uyarısı sayfada yalnız bir kez (en üstte)
+    expect(w.findAll('[data-test="zekat-sabit-uyari"]')).toHaveLength(1)
+    expect(w.text().split('dini hüküm değildir').length - 1).toBe(1)
+    expect(html.indexOf('data-test="zekat-sabit-uyari"')).toBeLessThan(
+      html.indexOf('data-test="anlik-hesap-baslik"'),
+    )
     w.unmount()
   })
 
