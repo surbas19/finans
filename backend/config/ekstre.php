@@ -8,6 +8,7 @@ return [
     // Yapay zekâya gönderilebilecek en büyük PDF (MB): base64 + JSON bellekte ~4 katı yer kaplar
     'ai_max_mb' => (int) env('EKSTRE_AI_MAX_MB', 8),
 
-    // Yapay zekâ taslağı onaylanıp Bütçe'ye aktarılabilir mi (testler geçene kadar kapalı tutuldu)
-    'ai_aktarim' => (bool) env('EKSTRE_AI_AKTARIM', false),
+    // Yapay zekâ taslağı onaylanıp Bütçe'ye aktarılabilir mi (false: yalnızca önizleme). Referans testleri
+    // (GarantiReferansEkstreTest, YapayZekaEkstreTest) geçtikten sonra açıldı.
+    'ai_aktarim' => (bool) env('EKSTRE_AI_AKTARIM', true),
 ];

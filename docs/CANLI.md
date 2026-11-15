@@ -24,6 +24,7 @@ Varsayılan **kapalı**. Açmak için cPanel Dosya Yöneticisi'nde `finans-app/.
 - **Nasıl çalışır:** analiz arka planda yürür (OpenAI arka plan modu; dakikalık cron `ekstre:ai-isle` takılanı devralır). Sonuç PHP'de doğrulanır ve her zaman taslaktır; uygulamada onaylanmadan Bütçe'ye yazılmaz.
 - **Maliyet:** her analiz, sayfa görüntüleri ve metniyle token harcar (birkaç sayfalık ekstrede birkaç kuruş–birkaç lira; modele göre değişir).
 - Banka hesabı ekstresi yalnızca önizlenir; PDF'i analizden sonra silinir.
+- `EKSTRE_AI_AKTARIM=false` yapılırsa kart ekstresinin yapay zekâ taslağı yalnızca önizlenir (onaylanıp Bütçe'ye aktarılamaz); PDF okuyucunun taslağı etkilenmez.
 
 ## Yayın (güncelleme)
 Windows'ta proje kökündeki **`yayinla.bat`**'a çift tıklayın: menüden "Yayınla" ya da "Yalnızca denetle" seçilir (`yayinla.bat yayinla` / `yayinla.bat denetle` sormadan çalışır). Laragon'daki PHP 8.3 ve Composer'ı kendisi bulur, Git Bash ile aşağıdaki betiği çalıştırır. `canli-paket/ftp.env` yoksa ya da şifre boşsa dosyayı Not Defteri'nde açar. GitHub'a gönderilmemiş commit varsa uyarır (yayından sonra `git push`).

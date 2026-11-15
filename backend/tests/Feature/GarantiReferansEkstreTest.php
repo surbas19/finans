@@ -6,13 +6,16 @@ use App\Models\HaneUyesi;
 use App\Models\KartIslemi;
 use App\Models\User;
 use App\Services\Aile\HaneYonetimi;
+use App\Services\AIStatement\StatementAnalyzer;
 use App\Services\Ekstre\EkstreAyristirici;
 use App\Services\Ekstre\EkstreMutabakati;
 use App\Services\Ekstre\PdfMetinOkuyucu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\GarantiAiYaniti;
 use Tests\Support\OrnekPdf;
 use Tests\TestCase;
 
@@ -44,6 +47,53 @@ class GarantiReferansEkstreTest extends TestCase
         $s = self::veri('sayfalar');
 
         return OrnekPdf::yaz($degistir ? $degistir($s['sayfalar']) : $s['sayfalar'], false, $s['satir_araligi']);
+    }
+
+    public function test_yapay_zeka_yolu_her_satiri_dogrular_capraz_uyumlu_ve_aktarilir(): void
+    {
+        Carbon::setTestNow('2026-11-14 10:00:00');
+        Storage::fake('local');
+        $adres = 'https://openai.test/v1/responses';
+        config(['services.openai.key' => 'test-anahtar', 'services.openai.url' => $adres, 'ekstre.ai_aktarim' => true]);
+        $beklenen = self::veri('beklenen');
+        $pdf = $this->pdf();
+        $ai = GarantiAiYaniti::olustur($beklenen, app(StatementAnalyzer::class)->sayfaMetinleri($pdf)['sayfa_metinleri']);
+        Http::fake([$adres => Http::response(['id' => 'resp_g', 'status' => 'completed', 'output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode($ai)]]]]])]);
+
+        $ben = User::factory()->create();
+        app(HaneYonetimi::class)->hazirla($ben);
+        $this->actingAs($ben);
+        $banka = $this->postJson('/api/v1/aile/bankalar', ['ad' => 'Garanti BBVA'])->json('banka.id');
+        $kart = $this->postJson('/api/v1/aile/kartlar', ['banka_id' => $banka, 'sahip_uye_id' => HaneUyesi::where('user_id', $ben->id)->value('id'), 'ad' => 'Bonus'])->json('kart.id');
+        $id = $this->post('/api/v1/aile/ekstreler', ['kart_id' => $kart, 'dosya' => UploadedFile::fake()->createWithContent('ekstre.pdf', $pdf), 'yapay_zeka' => '1'], ['Accept' => 'application/json'])
+            ->assertCreated()->json('ekstre.id');
+
+        $cevap = $this->getJson("/api/v1/aile/ekstreler/{$id}")->assertOk()
+            ->assertJsonPath('ai_calisma.durum', 'basarili')
+            ->assertJsonPath('ai_calisma.kabul_satir', 75)
+            ->assertJsonPath('ai_calisma.reddedilen_satir', 0)
+            ->assertJsonPath('ekstre.banka_profili', 'ai')
+            ->assertJsonPath('ekstre.donem_borcu', 100632.22)
+            ->assertJsonPath('ekstre.denetim.durum', 'tutuyor')
+            ->assertJsonPath('ekstre.denetim.capraz.durum', 'uyumlu')
+            ->assertJsonPath('ekstre.denetim.capraz.secilen', 'ai')
+            ->assertJsonPath('ekstre.denetim.kesim_teyit_gerekli', false)
+            ->assertJsonPath('ekstre.denetim.ai.bonus_hareketi', 4)
+            ->assertJsonPath('ekstre.denetim.ai.sayfa_denetimi.sorunlu_sayfa', 0);
+        // Her satır tek tek (PDF okuyucunun beklenen sonucu ile aynı)
+        $satirlar = $cevap->json('satirlar');
+        $this->assertCount(75, $satirlar);
+        foreach ($beklenen['satirlar'] as $i => $b) {
+            $s = $satirlar[$i];
+            $this->assertSame(
+                [$b['sayfa'], $b['islem_tarihi'], $b['aciklama'], (float) $b['tutar'], $b['tur'], $b['taksit_no'], $b['taksit_sayisi'], $b['taksit_toplam'] !== null ? (float) $b['taksit_toplam'] : null, false],
+                [$s['sayfa'], $s['islem_tarihi'], $s['aciklama'], (float) $s['tutar'], $s['tur'], $s['taksit_no'], $s['taksit_sayisi'], $s['taksit_toplam'] !== null ? (float) $s['taksit_toplam'] : null, $s['okuma']['inceleme']],
+                "Satır {$b['sira']}",
+            );
+        }
+        $this->assertSame(['tamam', 'tamam', 'tamam', 'tamam'], array_column($cevap->json('ekstre.denetim.ai.sayfa_denetimi.sayfalar'), 'durum'));
+
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.eklenen', 75)->assertJsonPath('rapor.atlanan', 0);
     }
 
     public function test_php_okuyucu_her_satiri_tek_tek_dogru_okur_ve_mutabakat_tutar(): void
