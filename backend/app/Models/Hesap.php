@@ -20,14 +20,14 @@ class Hesap extends Model
 
     protected $table = 'hesaplar';
 
-    protected $fillable = ['user_id', 'ad', 'tur', 'renk', 'sira', 'not'];
+    protected $fillable = ['user_id', 'ad', 'tur', 'renk', 'sira', 'not', 'zekata_dahil', 'zekat_notu'];
 
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return ['tur' => HesapTuru::class];
+        return ['tur' => HesapTuru::class, 'zekata_dahil' => 'boolean'];
     }
 
     /**
@@ -72,6 +72,8 @@ class Hesap extends Model
             'renk' => $this->renk,
             'sira' => $this->sira,
             'not' => $this->not,
+            'zekata_dahil' => $this->zekata_dahil ?? true,
+            'zekat_notu' => $this->zekat_notu,
         ];
     }
 }

@@ -18,6 +18,7 @@ use App\Models\HarcamaKategorisi;
 use App\Models\Kart;
 use App\Models\KartIslemi;
 use App\Models\Tasarruf;
+use App\Services\Zekat\ZekatHatirlatici;
 use App\Support\Donem;
 use App\Support\Kurus;
 use Illuminate\Support\Collection;
@@ -33,7 +34,7 @@ class ButceRaporu
     /** Kategori dağılımında ekstre borcu ile satır toplamı arasındaki fark (devreden borç, ödeme, bonus…) */
     private const EKSTREDEKI_DIGER = -1;
 
-    public function __construct(private GelirTakvimi $takvim, private GiderTakvimi $giderTakvimi) {}
+    public function __construct(private GelirTakvimi $takvim, private GiderTakvimi $giderTakvimi, private ZekatHatirlatici $zekat) {}
 
     /**
      * @return array<string, mixed>
@@ -242,6 +243,8 @@ class ButceRaporu
             'fark' => Kurus::tl($fark),
             // Tasarruf gider değildir: Gelir − Gider − Tasarruf = Kalan
             'kalan' => Kurus::tl($fark - $kurus($tasarruf['toplam'])),
+            // Yalnızca bilgi: verilen zekât gider / kalan hesabına girmez
+            'zekat' => $this->zekat->verilen($haneId, $donem),
         ];
     }
 
@@ -320,6 +323,8 @@ class ButceRaporu
                 'kart_ad' => $e->kart->ad,
                 'gun' => (int) $bugun->diffInDays($e->son_odeme_tarihi, false),
             ])->values(),
+            // Zekât hatırlatmaları (gün yaklaşıyor / geçti / ödenmemiş zekât); Bütçe toplamlarına girmez
+            'zekat' => $this->zekat->uyarilar($haneId),
         ];
     }
 
