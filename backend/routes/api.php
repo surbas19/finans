@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Aile\KategoriController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufController;
+use App\Http\Controllers\Api\V1\Aile\TasarrufGunuController;
 use App\Http\Controllers\Api\V1\Aile\ZekatAyarController;
 use App\Http\Controllers\Api\V1\Aile\ZekatBorcController;
 use App\Http\Controllers\Api\V1\Aile\ZekatController;
@@ -88,6 +89,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::get('tasarruflar', [TasarrufController::class, 'index'])->name('tasarruflar.index');
             Route::post('tasarruflar', [TasarrufController::class, 'store'])->name('tasarruflar.store');
             Route::delete('tasarruflar/{tasarruf}', [TasarrufController::class, 'destroy'])->name('tasarruflar.destroy');
+            Route::apiResource('tasarruf-gunleri', TasarrufGunuController::class)->except('show')->parameters(['tasarruf-gunleri' => 'gun']);
 
             Route::apiResource('bankalar', BankaController::class)->except('show')->parameters(['bankalar' => 'banka']);
             Route::apiResource('kartlar', KartController::class)->parameters(['kartlar' => 'kart']);

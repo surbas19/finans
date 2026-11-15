@@ -45,6 +45,7 @@ class TasarrufController extends Controller
             'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
             'varlik_id' => ['required', 'integer', Rule::exists('varliklar', 'id')],
             'uye_id' => ['nullable', 'integer', Rule::exists('hane_uyeleri', 'id')->where('hane_id', $haneId)],
+            'gun_id' => ['nullable', 'integer', Rule::exists('tasarruf_gunleri', 'id')->where('hane_id', $haneId)],
             'miktar' => ['required', 'numeric', 'gt:0', 'max:1000000000000'],
             'birim_fiyat' => [Rule::requiredIf(! $sabit), 'nullable', 'numeric', 'gt:0', 'max:1000000000000'],
             'komisyon' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
@@ -72,14 +73,18 @@ class TasarrufController extends Controller
 
             return Tasarruf::create([
                 'hane_id' => $request->user()->hane_id, 'uye_id' => $veri['uye_id'] ?? null, 'hesap_id' => $islem->hesap_id,
-                'islem_id' => $islem->id, 'tarih' => $veri['tarih'], 'donem' => substr((string) Carbon::parse($veri['tarih'])->toDateString(), 0, 7),
+                'islem_id' => $islem->id, 'gun_id' => $veri['gun_id'] ?? null, 'tarih' => $veri['tarih'], 'donem' => substr((string) Carbon::parse($veri['tarih'])->toDateString(), 0, 7),
                 'tutar_tl' => Kurus::decimal($tutar), 'not' => $veri['not'] ?? null, 'olusturan_id' => $request->user()->id,
             ]);
         });
 
+        // Aynı gün için o ay ikinci alım engellenmez (iki alım gerçekten yapılmış olabilir) ama uyarılır
+        $tekrar = $tasarruf->gun_id !== null && Tasarruf::where('gun_id', $tasarruf->gun_id)->where('donem', $tasarruf->donem)->whereKeyNot($tasarruf->id)->exists();
+
         return response()->json([
-            'tasarruf' => $tasarruf->load(['hesap', 'islem.varlik'])->ozet(),
+            'tasarruf' => $tasarruf->load(['hesap', 'islem.varlik', 'gun'])->ozet(),
             'message' => Donem::etiket($tasarruf->donem).' tasarrufu kaydedildi.',
+            'uyari' => $tekrar ? 'Bu gün için '.Donem::etiket($tasarruf->donem).' ayında zaten bir alım kaydı vardı; ikincisi de eklendi.' : null,
         ], 201);
     }
 

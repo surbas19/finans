@@ -34,7 +34,7 @@ class ButceRaporu
     /** Kategori dağılımında ekstre borcu ile satır toplamı arasındaki fark (devreden borç, ödeme, bonus…) */
     private const EKSTREDEKI_DIGER = -1;
 
-    public function __construct(private GelirTakvimi $takvim, private GiderTakvimi $giderTakvimi, private ZekatHatirlatici $zekat) {}
+    public function __construct(private GelirTakvimi $takvim, private GiderTakvimi $giderTakvimi, private ZekatHatirlatici $zekat, private GunTakvimi $gunTakvimi) {}
 
     /**
      * @return array<string, mixed>
@@ -285,6 +285,8 @@ class ButceRaporu
             'faturalar' => $this->faturaOzeti($haneId, $donem),
             // Toplamlar kuruşun yüzde biri (x/100): iki haneyle metne çevrilince kuruş tam geri gelir
             'tasarruf' => $tasarruf,
+            // Altın / döviz günleri: bu ay beklenen / yapılan alımlar (bilgi; toplamlara girmez)
+            'gunler' => $this->gunTakvimi->ayinGunleri($haneId, $donem),
             'fark' => Kurus::tl($fark),
             // Tasarruf gider değildir: Gelir − Gider − Tasarruf = Kalan
             'kalan' => Kurus::tl($fark - $kurus($tasarruf['toplam'])),
@@ -300,7 +302,7 @@ class ButceRaporu
      */
     public function tasarrufOzeti(int $haneId, string $donem): array
     {
-        $kayitlar = Tasarruf::where('hane_id', $haneId)->where('donem', $donem)->with(['hesap', 'islem.varlik'])
+        $kayitlar = Tasarruf::where('hane_id', $haneId)->where('donem', $donem)->with(['hesap', 'islem.varlik', 'gun'])
             ->orderByDesc('tarih')->orderByDesc('id')->get();
 
         return [

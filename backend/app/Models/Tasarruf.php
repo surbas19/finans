@@ -16,7 +16,7 @@ class Tasarruf extends Model
 
     protected $table = 'tasarruflar';
 
-    protected $fillable = ['hane_id', 'uye_id', 'hesap_id', 'islem_id', 'tarih', 'donem', 'tutar_tl', 'not', 'olusturan_id'];
+    protected $fillable = ['hane_id', 'uye_id', 'hesap_id', 'islem_id', 'gun_id', 'tarih', 'donem', 'tutar_tl', 'not', 'olusturan_id'];
 
     /**
      * @return array<string, string>
@@ -32,6 +32,14 @@ class Tasarruf extends Model
     public function islem(): BelongsTo
     {
         return $this->belongsTo(Islem::class);
+    }
+
+    /**
+     * @return BelongsTo<TasarrufGunu, $this>
+     */
+    public function gun(): BelongsTo
+    {
+        return $this->belongsTo(TasarrufGunu::class, 'gun_id');
     }
 
     /**
@@ -53,6 +61,8 @@ class Tasarruf extends Model
             'hesap_id' => $this->hesap_id,
             'hesap_ad' => $this->hesap?->ad,
             'islem_id' => $this->islem_id,
+            'gun_id' => $this->gun_id,
+            'gun_ad' => $this->gun?->ad,
             'varlik_id' => $this->islem?->varlik_id,
             'varlik_ad' => $this->islem?->varlik?->ad,
             'varlik_tur' => $this->islem?->varlik?->tur->value,
