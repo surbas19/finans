@@ -1,23 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import DatePicker from 'primevue/datepicker'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
+import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
-import SelectButton from 'primevue/selectbutton'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
-import AySecici from '@/components/aile/AySecici.vue'
 import KartIslemFormu from '@/components/aile/KartIslemFormu.vue'
 import KartIslemListesi from '@/components/aile/KartIslemListesi.vue'
 import { aileApi, KART_ISLEM_TURLERI, type KartIslemi, type KartIslemTuru } from '@/api/aile'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAileStore } from '@/stores/aile'
-import { tl } from '@/utils/bicim'
-import { buAy, gecerliDonem } from '@/utils/donem'
+import { tl, tarihMetni } from '@/utils/bicim'
+import { donemdenTarih, gecerliDonem } from '@/utils/donem'
 
 /**
- * Kart işlemleri: ay (rapor ayı / işlem tarihi / ekstre dönemi), kişi, banka, kart, kategori, tür süzgeçleri;
- * toplamlar raporun kuralıyla (kart borcu ödemesi, transfer, nakit avans gider değil). Süzgeçler adreste.
+ * Kart işlemleri: arama (açıklama, kategori, kart, tutar), tarih ya da tarih aralığı (işlem tarihine göre), kişi,
+ * banka, kart, kategori, tür süzgeçleri. Toplamlar raporun kuralıyla (kart borcu ödemesi, transfer, nakit avans gider
+ * değil). Süzgeçler adreste.
  */
 const aile = useAileStore()
 const route = useRoute()
@@ -26,13 +29,41 @@ const sonIstek = useSonIstek()
 
 const sayi = (d: unknown): number | null =>
   d !== undefined && d !== null && d !== '' && !Number.isNaN(Number(d)) ? Number(d) : null
+const TARIH_DESENI = /^\d{4}-\d{2}-\d{2}$/
+const metindenTarih = (m: unknown): Date | null => {
+  if (typeof m !== 'string' || !TARIH_DESENI.test(m)) return null
+  const [y, a, g] = m.split('-').map(Number) as [number, number, number]
+
+  return new Date(y, a - 1, g)
+}
+/** Ayın ilk ve son günü */
+function ayAraligi(ay: string): [Date, Date] {
+  const ilk = donemdenTarih(ay)
+
+  return [ilk, new Date(ilk.getFullYear(), ilk.getMonth() + 1, 0)]
+}
+function buAyAraligi(): [Date, Date] {
+  const s = new Date()
+
+  return [
+    new Date(s.getFullYear(), s.getMonth(), 1),
+    new Date(s.getFullYear(), s.getMonth() + 1, 0),
+  ]
+}
+
 const q = route.query
-const ay = ref(gecerliDonem(String(q.ay ?? '')) ? String(q.ay) : buAy())
-const donemTuru = ref<'rapor' | 'islem' | 'ekstre'>(
-  ['islem', 'ekstre'].includes(String(q.donem_turu))
-    ? (String(q.donem_turu) as 'islem' | 'ekstre')
-    : 'rapor',
-)
+function baslangicAraligi(): Date[] | null {
+  const bas = metindenTarih(q.tarih_bas)
+  const bit = metindenTarih(q.tarih_bit)
+  if (bas || bit) return bit ? [bas ?? bit, bit] : [bas!]
+  // Özet'ten gelen eski bağlantı (?ay=2026-11): o ayın tamamı
+  if (gecerliDonem(String(q.ay ?? ''))) return ayAraligi(String(q.ay))
+
+  return q.ara || q.kart_id ? null : buAyAraligi()
+}
+
+const ara = ref(String(q.ara ?? ''))
+const aralik = ref<Date[] | null>(baslangicAraligi())
 const uyeId = ref<number | null>(sayi(q.uye_id))
 const bankaId = ref<number | null>(sayi(q.banka_id))
 const kartId = ref<number | null>(sayi(q.kart_id))
@@ -46,22 +77,55 @@ const toplam = ref<{ gider: number; gidere_girmeyen: number; adet: number } | nu
 const formAcik = ref(false)
 const duzenlenen = ref<KartIslemi | null>(null)
 
-const DONEM_TURLERI = [
-  { deger: 'rapor', etiket: 'Özet ayı' },
-  { deger: 'islem', etiket: 'İşlem tarihi' },
-  { deger: 'ekstre', etiket: 'Ekstre dönemi' },
-]
 const TURLER = (Object.keys(KART_ISLEM_TURLERI) as KartIslemTuru[]).map((t) => ({
   deger: t,
   etiket: KART_ISLEM_TURLERI[t].etiket,
 }))
 const kategoriSecenekleri = computed(() => [{ id: 'yok', ad: 'Kategorisiz' }, ...aile.kategoriler])
 
+/** Seçilen aralığın başı / sonu; tek tarih seçilirse (bitiş henüz yok) tek gün */
+const tarihBas = computed(() => (aralik.value?.[0] ? tarihMetni(aralik.value[0]) : null))
+const tarihBit = computed(() => {
+  const [bas, bit] = aralik.value ?? []
+
+  return bit ? tarihMetni(bit) : bas ? tarihMetni(bas) : null
+})
+const suzgecVar = computed(
+  () =>
+    ara.value.trim() !== '' ||
+    aralik.value !== null ||
+    [uyeId, bankaId, kartId, kategoriId, tur].some((r) => r.value !== null),
+)
+
+const HIZLI = [
+  { etiket: 'Bu ay', sec: (): [Date, Date] => buAyAraligi() },
+  {
+    etiket: 'Geçen ay',
+    sec: (): [Date, Date] => {
+      const s = new Date()
+
+      return [
+        new Date(s.getFullYear(), s.getMonth() - 1, 1),
+        new Date(s.getFullYear(), s.getMonth(), 0),
+      ]
+    },
+  },
+  {
+    etiket: 'Son 30 gün',
+    sec: (): [Date, Date] => {
+      const s = new Date()
+
+      return [new Date(s.getFullYear(), s.getMonth(), s.getDate() - 29), s]
+    },
+  },
+]
+
 async function yukle(): Promise<void> {
   const veri = await sonIstek(() =>
     aileApi.kartIslemleri({
-      ay: ay.value,
-      donem_turu: donemTuru.value,
+      tarih_bas: tarihBas.value,
+      tarih_bit: tarihBit.value,
+      ara: ara.value.trim() || null,
       uye_id: uyeId.value,
       banka_id: bankaId.value,
       kart_id: kartId.value,
@@ -79,11 +143,13 @@ onMounted(async () => {
   await yukle()
 })
 
-watch([ay, donemTuru, uyeId, bankaId, kartId, kategoriId, tur], () => {
+let zamanlayici: ReturnType<typeof setTimeout> | undefined
+function adresVeYukle(): void {
   void router.replace({
     query: {
-      ay: ay.value,
-      donem_turu: donemTuru.value === 'rapor' ? undefined : donemTuru.value,
+      tarih_bas: tarihBas.value ?? undefined,
+      tarih_bit: tarihBit.value ?? undefined,
+      ara: ara.value.trim() || undefined,
       uye_id: uyeId.value ?? undefined,
       banka_id: bankaId.value ?? undefined,
       kart_id: kartId.value ?? undefined,
@@ -91,9 +157,27 @@ watch([ay, donemTuru, uyeId, bankaId, kartId, kategoriId, tur], () => {
       tur: tur.value ?? undefined,
     },
   })
-  islemler.value = null
   void yukle()
+}
+
+// Yazarken 300 ms bekler (her tuşta istek atılmaz); liste önceki sonucu tutar, arama kutusu odağını kaybetmez
+watch(ara, () => {
+  clearTimeout(zamanlayici)
+  zamanlayici = setTimeout(adresVeYukle, 300)
 })
+// Tarih aralığı: ikinci tarih seçilince (ya da temizlenince) süzülür; tek tarih seçili beklerken tek gün sayılır
+watch([aralik, uyeId, bankaId, kartId, kategoriId, tur], () => {
+  if (aralik.value && aralik.value.length === 2 && aralik.value[1] === null) return
+  clearTimeout(zamanlayici)
+  adresVeYukle()
+})
+onBeforeUnmount(() => clearTimeout(zamanlayici))
+
+function temizle(): void {
+  ara.value = ''
+  aralik.value = null
+  uyeId.value = bankaId.value = kartId.value = kategoriId.value = tur.value = null
+}
 
 function sec(i: KartIslemi | null): void {
   duzenlenen.value = i
@@ -103,24 +187,46 @@ function sec(i: KartIslemi | null): void {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <AySecici v-model="ay" />
-      <Button
-        label="İşlem ekle"
-        icon="pi pi-plus"
-        :disabled="!aile.kartlar.length"
-        @click="sec(null)"
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <IconField class="min-w-0 flex-1">
+        <InputIcon class="pi pi-search" />
+        <InputText
+          v-model="ara"
+          type="search"
+          placeholder="Ara: açıklama, kategori, kart, tutar"
+          aria-label="İşlem ara"
+          class="w-full"
+          data-test="islem-ara"
+        />
+      </IconField>
+      <DatePicker
+        v-model="aralik"
+        selection-mode="range"
+        date-format="dd.mm.yy"
+        placeholder="Tarih ya da aralık"
+        :manual-input="false"
+        show-button-bar
+        show-icon
+        icon-display="input"
+        append-to="body"
+        aria-label="Tarih ya da tarih aralığı"
+        class="w-full sm:w-64"
+        data-test="islem-tarih"
       />
     </div>
-    <SelectButton
-      v-model="donemTuru"
-      :options="DONEM_TURLERI"
-      option-label="etiket"
-      option-value="deger"
-      :allow-empty="false"
-      aria-label="Hangi aya göre"
-      class="w-full sm:w-auto [&>.p-togglebutton]:flex-1"
-    />
+    <div class="flex gap-2 overflow-x-auto" data-test="hizli-tarih">
+      <Button
+        v-for="h in HIZLI"
+        :key="h.etiket"
+        :label="h.etiket"
+        size="small"
+        severity="secondary"
+        rounded
+        outlined
+        class="shrink-0"
+        @click="aralik = h.sec()"
+      />
+    </div>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
       <Select
         v-model="uyeId"
@@ -187,7 +293,8 @@ function sec(i: KartIslemi | null): void {
       </div>
       <p class="col-span-3 text-[11px] text-surface-500">
         Gider: harcama ve faiz / ücret eklenir, iade düşülür. Kart borcu ödemesi, transfer ve nakit
-        avans gider sayılmaz (ekstredeki harcamalar zaten sayıldı).
+        avans gider sayılmaz (ekstredeki harcamalar zaten sayıldı). Tarih işlem tarihine göredir;
+        Bütçe Özet'te kart gideri ekstre kesim ayına yazıldığından aylık toplam farklı olabilir.
       </p>
     </section>
 
@@ -198,10 +305,20 @@ function sec(i: KartIslemi | null): void {
       <BosDurum
         v-else-if="!islemler.length"
         kucuk
-        baslik="Bu süzgeçte işlem yok"
-        aciklama="Ekstre yükleyin ya da işlemi elle ekleyin."
+        :baslik="suzgecVar ? 'Eşleşen işlem yok' : 'Henüz işlem yok'"
+        :aciklama="suzgecVar ? undefined : 'Ekstre yükleyin; işlemler buraya gelir.'"
         ikon="pi pi-credit-card"
-      />
+      >
+        <Button
+          v-if="suzgecVar"
+          label="Süzgeçleri temizle"
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          outlined
+          data-test="suzgec-temizle"
+          @click="temizle"
+        />
+      </BosDurum>
       <KartIslemListesi v-else :islemler="islemler" kart-goster @sec="sec" />
     </section>
 

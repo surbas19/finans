@@ -784,6 +784,11 @@ export interface KartIslemSuzgeci {
   tur?: KartIslemTuru | null
   ekstre_id?: number | null
   durum?: KartIslemDurumu | null
+  /** İşlem tarihi aralığı (YYYY-AA-GG, uçlar dahil) */
+  tarih_bas?: string | null
+  tarih_bit?: string | null
+  /** Arama: açıklama, kategori, kart adı ya da tutar */
+  ara?: string | null
 }
 
 /** Boş süzgeç alanları istekten çıkar */
