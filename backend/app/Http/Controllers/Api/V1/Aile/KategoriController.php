@@ -31,8 +31,10 @@ class KategoriController extends Controller
     public function store(Request $request): JsonResponse
     {
         $haneId = $request->user()->hane_id;
+        $veri = $this->dogrula($request, null);
         $kategori = HarcamaKategorisi::create([
-            ...$this->dogrula($request, null),
+            ...$veri,
+            'renk' => $veri['renk'] ?? HarcamaKategorisi::sonrakiRenk((int) $haneId),
             'hane_id' => $haneId,
             'sira' => (int) HarcamaKategorisi::where('hane_id', $haneId)->max('sira') + 1,
         ]);

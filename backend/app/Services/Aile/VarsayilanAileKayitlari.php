@@ -14,7 +14,7 @@ use App\Support\Metin;
  */
 class VarsayilanAileKayitlari
 {
-    public const GELIR_TURLERI = ['Maaş', 'Kira geliri', 'Serbest çalışma', 'Ek iş', 'Prim / ikramiye', 'Faiz / temettü', 'Emekli maaşı', 'Diğer'];
+    public const GELIR_TURLERI = ['Maaş', 'Ek ders', 'Kira geliri', 'Serbest çalışma', 'Ek iş', 'Prim / ikramiye', 'Faiz / temettü', 'Emekli maaşı', 'Diğer'];
 
     /** ad => [ikon, renk, fatura mı, kurallar] */
     private const KATEGORILER = [

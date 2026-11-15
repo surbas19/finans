@@ -81,13 +81,12 @@ class GelirTest extends TestCase
     public function test_gelir_turu_eklenir_adi_degisir_kullanilan_silinmez(): void
     {
         $this->actingAs($this->ben);
-        // Yeni hanede varsayılan 8 tür, sırasıyla
-        $this->getJson('/api/v1/aile/gelir-turleri')->assertOk()->assertJsonCount(8, 'turler')
-            ->assertJsonPath('turler.0.ad', 'Maaş')->assertJsonPath('turler.7.ad', 'Diğer');
-
-        $ekDers = $this->postJson('/api/v1/aile/gelir-turleri', ['ad' => ' Ek ders '])->assertCreated()
-            ->assertJsonPath('tur.ad', 'Ek ders')->assertJsonPath('tur.sira', 9)->json('tur.id');
-        $this->postJson('/api/v1/aile/gelir-turleri', ['ad' => 'EK DERS'])->assertJsonValidationErrors('ad');
+        // Yeni hanede varsayılan 9 tür, sırasıyla; "Ek ders" Maaş'ın hemen ardından
+        $turler = $this->getJson('/api/v1/aile/gelir-turleri')->assertOk()->assertJsonCount(9, 'turler')
+            ->assertJsonPath('turler.0.ad', 'Maaş')->assertJsonPath('turler.1.ad', 'Ek ders')->assertJsonPath('turler.8.ad', 'Diğer');
+        $ekDers = $turler->json('turler.1.id');
+        // Aynı ad (harf büyüklüğü / boşluk fark etmez) tekrar eklenemez
+        $this->postJson('/api/v1/aile/gelir-turleri', ['ad' => ' EK DERS '])->assertJsonValidationErrors('ad');
         $this->postJson('/api/v1/aile/gelir-turleri', ['ad' => 'x'])->assertJsonValidationErrors('ad');
 
         // Gelirde ve kaynakta kullanılır; raporda adıyla görünür, ad değişince rapor da değişir
@@ -107,7 +106,7 @@ class GelirTest extends TestCase
 
         // Başka hane: kendi varsayılanlarını görür, bu haneninkine dokunamaz, kullanamaz; aynı adı kendisi ekleyebilir
         $yabanci = User::factory()->create();
-        $this->actingAs($yabanci)->getJson('/api/v1/aile/gelir-turleri')->assertJsonCount(8, 'turler');
+        $this->actingAs($yabanci)->getJson('/api/v1/aile/gelir-turleri')->assertJsonCount(9, 'turler');
         $this->actingAs($yabanci)->putJson("/api/v1/aile/gelir-turleri/{$ekDers}", ['ad' => 'X'])->assertForbidden();
         $this->actingAs($yabanci)->deleteJson("/api/v1/aile/gelir-turleri/{$this->tur['Diğer']}")->assertForbidden();
         $this->actingAs($yabanci)->postJson('/api/v1/aile/gelir-turleri', ['ad' => 'Ek ders (lise)'])->assertCreated();

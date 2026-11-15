@@ -14,6 +14,22 @@ class HarcamaKategorisi extends Model
 
     protected $fillable = ['hane_id', 'ad', 'ikon', 'renk', 'sira', 'fatura'];
 
+    /** Kategori renkleri (ön yüzdeki kart paletiyle aynı 12 PrimeVue rengi) */
+    public const RENKLER = ['teal', 'sky', 'blue', 'indigo', 'violet', 'pink', 'rose', 'red', 'orange', 'amber', 'emerald', 'slate'];
+
+    /** Hanede henüz kullanılmayan ilk palet rengi (tükenince sırayla döner): her kategori ayrışan bir renk alır */
+    public static function sonrakiRenk(int $haneId): string
+    {
+        $kullanilan = static::where('hane_id', $haneId)->pluck('renk')->filter()->all();
+        foreach (self::RENKLER as $renk) {
+            if (! in_array($renk, $kullanilan, true)) {
+                return $renk;
+            }
+        }
+
+        return self::RENKLER[count($kullanilan) % count(self::RENKLER)];
+    }
+
     /**
      * @return array<string, string>
      */

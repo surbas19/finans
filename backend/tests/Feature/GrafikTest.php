@@ -55,7 +55,6 @@ class GrafikTest extends TestCase
     public function test_gelir_kirilimi_toplam_tur_ve_kisi(): void
     {
         $es = HaneUyesi::create(['hane_id' => $this->ben->hane_id, 'ad' => 'Eşim', 'aktif' => true, 'sira' => 9]);
-        $this->postJson('/api/v1/aile/gelir-turleri', ['ad' => 'Ek ders'])->assertCreated();
         $this->gelir('2026-11', 30000, 'Maaş');
         $this->gelir('2026-11', 2000, 'Ek ders');
         $this->gelir('2026-11', 25000, 'Maaş', $es->id);

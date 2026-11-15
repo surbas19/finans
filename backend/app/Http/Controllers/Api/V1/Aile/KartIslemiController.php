@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Api\V1\Aile;
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
 use App\Http\Controllers\Controller;
+use App\Models\Ekstre;
+use App\Models\HarcamaKategorisi;
+use App\Models\Kart;
 use App\Models\KartIslemi;
 use App\Services\Aile\ButceRaporu;
 use App\Services\Aile\FaturaEslestirici;
 use App\Services\Aile\KartIslemKurallari;
+use App\Services\Aile\KategoriAtayici;
 use App\Services\Aile\KategoriBulucu;
 use App\Support\Donem;
 use App\Support\Kurus;
@@ -43,8 +47,12 @@ class KartIslemiController extends Controller
             'tarih_bas' => ['nullable', 'date_format:Y-m-d'],
             'tarih_bit' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tarih_bas'],
             'ara' => ['nullable', 'string', 'max:100'],
+            'guncel' => ['nullable', 'boolean'],
         ]);
         $ay = $veri['ay'] ?? null;
+        // Süzgeçsiz varsayılan görünüm: her kartın güncel ekstre dönemi (arama, tarih, ay, ekstre verilmişse tüm dönemler)
+        $guncel = (bool) ($veri['guncel'] ?? false) && ! $ay && empty($veri['tarih_bas']) && empty($veri['tarih_bit'])
+            && trim((string) ($veri['ara'] ?? '')) === '' && empty($veri['ekstre_id']);
         $sorgu = KartIslemi::hanenin($request->user())
             ->where('kart_islemleri.durum', $veri['durum'] ?? KartIslemDurumu::Onayli->value)
             ->when($ay, function ($q) use ($ay, $veri): void {
@@ -63,7 +71,8 @@ class KartIslemiController extends Controller
             ->when($veri['ekstre_id'] ?? null, fn ($q, $id) => $q->where('ekstre_id', $id))
             ->when($veri['tarih_bas'] ?? null, fn ($q, $t) => $q->whereDate('islem_tarihi', '>=', $t))
             ->when($veri['tarih_bit'] ?? null, fn ($q, $t) => $q->whereDate('islem_tarihi', '<=', $t))
-            ->when(trim((string) ($veri['ara'] ?? '')) !== '', fn ($q) => $this->aramaUygula($q, (string) $veri['ara']));
+            ->when(trim((string) ($veri['ara'] ?? '')) !== '', fn ($q) => $this->aramaUygula($q, (string) $veri['ara']))
+            ->when($guncel, fn ($q) => $this->guncelDonem($q, (int) $request->user()->hane_id));
         $islemler = $sorgu->with('ekstre:id,kesim_tarihi')->orderByDesc('islem_tarihi')->orderByDesc('id')->limit(1000)->get();
 
         $haric = $islemler->filter(fn (KartIslemi $i): bool => $i->tur->giderYonu() === 0);
@@ -74,7 +83,61 @@ class KartIslemiController extends Controller
                 'gider' => Kurus::tl($islemler->reduce(fn (int $t, KartIslemi $i): int => $t + $this->rapor->giderEtkisi($i), 0)),
                 'gidere_girmeyen' => Kurus::tl($haric->reduce(fn (int $t, KartIslemi $i): int => $t + Kurus::kurus($i->tutar), 0)),
                 'adet' => $islemler->count(),
+                // Kart başına (grup başlığı): gider, satır sayısı, ekstre dönemi
+                'kartlar' => $islemler->groupBy('kart_id')->map(fn ($grup, $kartId): array => [
+                    'kart_id' => (int) $kartId,
+                    'gider' => Kurus::tl($grup->reduce(fn (int $t, KartIslemi $i): int => $t + $this->rapor->giderEtkisi($i), 0)),
+                    'adet' => $grup->count(),
+                    'ekstre_donemi' => $grup->map(fn (KartIslemi $i): ?string => $i->ekstre?->donemEtiketi())->filter()->first(),
+                ])->values(),
             ],
+        ]);
+    }
+
+    /**
+     * Güncel ekstre dönemi: her kartın en yeni onaylı ekstresinin satırları + o kartın henüz ekstreye girmemiş
+     * (son kesimden sonraki) elle satırları.
+     *
+     * @param  Builder<KartIslemi>  $sorgu
+     */
+    private function guncelDonem($sorgu, int $haneId): void
+    {
+        $son = Ekstre::where('hane_id', $haneId)->where('durum', 'onaylandi')->orderByDesc('kesim_tarihi')->orderByDesc('id')
+            ->get(['id', 'kart_id', 'kesim_tarihi'])->unique('kart_id')->keyBy('kart_id');
+        $sorgu->where(function ($q) use ($son, $haneId): void {
+            $q->whereIn('kart_islemleri.ekstre_id', $son->pluck('id')->all());
+            foreach (Kart::where('hane_id', $haneId)->pluck('id') as $kartId) {
+                $esik = $son[$kartId]->kesim_tarihi ?? null;
+                $q->orWhere(fn ($e) => $e->where('kart_islemleri.kart_id', $kartId)->whereNull('kart_islemleri.ekstre_id')
+                    ->when($esik, fn ($x) => $x->whereDate('islem_tarihi', '>', $esik->toDateString())));
+            }
+        });
+    }
+
+    /**
+     * İşleme kategori ata (kategori_id null: kategorisiz); açıklaması aynı olan hanenin bütün kart satırları da aynı
+     * kategoriye geçer ve açıklama kural olarak kaydedilir (sonraki ekstrelerde otomatik).
+     */
+    public function kategori(Request $request, KartIslemi $islem, KategoriAtayici $atayici): JsonResponse
+    {
+        Gate::authorize('hane-kaydi', $islem);
+        $veri = $request->validate(['kategori_id' => ['nullable', 'integer']]);
+        $kategori = null;
+        if (($veri['kategori_id'] ?? null) !== null) {
+            $kategori = HarcamaKategorisi::where('hane_id', $islem->hane_id)->find($veri['kategori_id']);
+            if ($kategori === null) {
+                throw ValidationException::withMessages(['kategori_id' => 'Kategori bulunamadı.']);
+            }
+        }
+        $sayi = $atayici->ata($islem, $kategori);
+
+        return response()->json([
+            'islem' => $islem->fresh()->ozet(),
+            'guncellenen' => $sayi,
+            'kategori_ad' => $kategori?->ad,
+            'message' => $kategori
+                ? ($sayi > 1 ? "{$sayi} işlem \"{$kategori->ad}\" olarak işaretlendi." : "İşlem \"{$kategori->ad}\" olarak işaretlendi.")
+                : ($sayi > 1 ? "{$sayi} işlemin kategorisi kaldırıldı." : 'İşlemin kategorisi kaldırıldı.'),
         ]);
     }
 
