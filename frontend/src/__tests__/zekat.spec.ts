@@ -85,6 +85,18 @@ describe('ZekatSonucKarti', () => {
     expect(w.get('[data-test="zekat-kalemler"]').text()).toContain('THYAO')
   })
 
+  it('anlık hesapta (kalemlerGoster=false) varlık ayrıntıları yok; özet, eksik veri uyarısı ve sabit uyarı var', () => {
+    const w = mount(ZekatSonucKarti, {
+      props: { sonuc: sonuc(), kalemlerGoster: false },
+      global: { plugins: [PrimeVue] },
+    })
+    expect(w.find('[data-test="zekat-kalemler"]').exists()).toBe(false)
+    expect(w.text()).not.toContain('THYAO adı')
+    expect(w.get('[data-test="zekat-tutar"]').text()).toContain('15.000,00')
+    expect(w.find('[data-test="zekat-eksik"]').exists()).toBe(true)
+    expect(w.get('[data-test="zekat-uyari"]').text()).toBe(ZEKAT_UYARISI)
+  })
+
   it('zekât günü dışında hesaplanınca tahmini uyarısı verir; hesaba girmeyen kalem gri ve nedenli', () => {
     const s = sonuc()
     s.kalemler[0]!.dahil_edilen = false

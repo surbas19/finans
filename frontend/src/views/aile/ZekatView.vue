@@ -26,15 +26,16 @@ import { dogrulamaHatalari, hataMesaji } from '@/api/http'
 import { tarih, tl } from '@/utils/bicim'
 
 /**
- * Zekât: portföydeki hesapların toplam değeri üzerinden hesap ve takip. Akış: ayarlar → hesapla → anlık görüntüyü
- * kaydet → kesinleştir → ödeme ekle → yıl geçmişi. Değerleme Portföy ile aynı kaynaktan gelir (ayrı hesap yok).
+ * Zekât: portföydeki hesapların toplam değeri üzerinden hesap ve takip. Ekran açılınca anlık hesap otomatik yapılır
+ * (düğme yok, varlık ayrıntısı gösterilmez). Akış: ayarlar → anlık görüntüyü kaydet → kesinleştir → ödeme ekle →
+ * yıl geçmişi. Değerleme Portföy ile aynı kaynaktan gelir (ayrı hesap yok).
  */
 const toast = useToast()
 const confirm = useConfirm()
 const ayar = ref<ZekatAyarYaniti | null>(null)
 const yillar = ref<ZekatYili[]>([])
 const sonuc = ref<ZekatHesabiYaniti | null>(null)
-const hesapliyor = ref(false)
+const hesapliyor = ref(true)
 const hata = ref('')
 const kaydediliyor = ref(false)
 
@@ -59,9 +60,12 @@ async function yukle(): Promise<void> {
 }
 
 onMounted(() => {
-  void yukle().catch((e) => {
-    hata.value = hataMesaji(e)
-  })
+  void yukle()
+    .catch((e) => {
+      hata.value = hataMesaji(e)
+    })
+    // Anlık hesap otomatik: ekran açılınca portföyün şu anki değeriyle
+    .finally(() => void hesapla())
 })
 
 async function hesapla(): Promise<void> {
@@ -213,6 +217,7 @@ async function odemeKaydedildi(): Promise<void> {
 async function ayarKaydedildi(yanit: ZekatAyarYaniti): Promise<void> {
   ayar.value = yanit
   sonuc.value = null
+  await hesapla()
 }
 
 const gunMetni = computed(() => {
@@ -267,13 +272,6 @@ const gunMetni = computed(() => {
             outlined
             @click="ayarAcik = true"
           />
-          <Button
-            label="Hesapla"
-            icon="pi pi-calculator"
-            :loading="hesapliyor"
-            data-test="zekat-hesapla"
-            @click="hesapla"
-          />
         </div>
       </section>
 
@@ -281,8 +279,15 @@ const gunMetni = computed(() => {
         hata
       }}</Message>
 
+      <Skeleton v-if="hesapliyor && !sonuc" height="9rem" border-radius="1.5rem" />
       <template v-if="sonuc">
-        <ZekatSonucKarti :sonuc="sonuc" :tahmini="sonuc.tahmini" />
+        <h2 class="bolum-etiketi" data-test="anlik-hesap-baslik">Anlık zekât hesabı</h2>
+        <ZekatSonucKarti
+          :sonuc="sonuc"
+          :tahmini="sonuc.tahmini"
+          :kalemler-goster="false"
+          data-test="anlik-hesap"
+        />
         <div class="flex flex-wrap justify-end gap-2">
           <Button
             label="Anlık görüntüyü kaydet"

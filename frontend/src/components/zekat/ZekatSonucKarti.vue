@@ -13,8 +13,10 @@ const props = withDefaults(
     sonuc: ZekatSonucu
     /** Zekât günü dışında hesaplandı: sonuç tahmindir */
     tahmini?: boolean
+    /** Hesaba göre varlık ayrıntıları (anlık hesapta gösterilmez; kayıtlı yıl penceresinde gösterilir) */
+    kalemlerGoster?: boolean
   }>(),
-  { tahmini: false },
+  { tahmini: false, kalemlerGoster: true },
 )
 
 const hesaplar = computed(() => {
@@ -114,7 +116,7 @@ const olcutEtiketi = computed(() => (props.sonuc.nisab.olcut === 'gumus' ? 'güm
       </ul>
     </div>
 
-    <div class="flex flex-col gap-3" data-test="zekat-kalemler">
+    <div v-if="kalemlerGoster" class="flex flex-col gap-3" data-test="zekat-kalemler">
       <div v-for="h in hesaplar" :key="h.ad" class="kart p-4">
         <div class="mb-1 flex items-baseline justify-between gap-2">
           <h3 class="min-w-0 truncate font-bold text-surface-900">{{ h.ad }}</h3>
