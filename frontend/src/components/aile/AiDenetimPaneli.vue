@@ -65,7 +65,13 @@ async function kopyala(): Promise<void> {
     data-test="ai-denetimi"
     class="mt-3 flex flex-col gap-2 rounded-2xl bg-sky-50 p-3 text-xs text-sky-900"
   >
-    <p class="font-semibold">
+    <p v-if="ai.harici" class="font-semibold" data-test="harici-rozet">
+      <span class="rounded-full bg-sky-200 px-2 py-0.5">Harici JSON ile okundu</span>
+      <template v-if="ai.metinsiz"> · PDF'siz: kaynak satırlar doğrulanamadı</template>
+      <template v-if="ai.banka"> · {{ ai.banka }}</template>
+      <template v-if="sayfa"> · {{ sayfa.pdf_sayfa }} sayfa</template>
+    </p>
+    <p v-else class="font-semibold">
       Yapay zekâ okudu ({{ ai.model }})
       <template v-if="ai.banka"> · {{ ai.banka }}</template>
       <template v-if="ai.tur"> · {{ TUR[ai.tur] ?? ai.tur }}</template>
@@ -89,7 +95,7 @@ async function kopyala(): Promise<void> {
     </p>
 
     <!-- Çapraz kontrol -->
-    <div v-if="capraz" data-test="capraz">
+    <div v-if="capraz && !ai.harici" data-test="capraz">
       <p v-if="capraz.durum === 'uyumlu'" class="text-emerald-800">
         PDF okuyucu ile yapay zekâ uyumlu: {{ capraz.ai.satir }} satır, toplamlar aynı.
       </p>

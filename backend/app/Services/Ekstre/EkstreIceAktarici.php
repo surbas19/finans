@@ -85,6 +85,31 @@ class EkstreIceAktarici
     }
 
     /**
+     * Boş taslak ekstre (dış yapay zekâ JSON'u için): satırları ve dönem alanlarını StatementImporter yazar. PDF
+     * verilmişse dosya normal yoldan saklanmıştır (`$yol`); yoksa `$ozet` JSON'un özetidir (aynı JSON ikinci kez
+     * alınmaz). Dönem alanları doldurulana kadar "okunamayan"dır.
+     *
+     * @param  array{ad: string, boyut: int}|null  $pdf
+     */
+    public function bosTaslakOlustur(User $user, Kart $kart, string $ozet, int $sayfaSayisi, ?array $pdf = null, ?string $yol = null): Ekstre
+    {
+        return Ekstre::create([
+            'hane_id' => $user->hane_id,
+            'kart_id' => $kart->id,
+            'durum' => EkstreDurumu::Taslak,
+            'alan_kaynaklari' => [],
+            'okunamayan' => ['donem_baslangic', 'kesim_tarihi', 'son_odeme_tarihi', 'donem_borcu', 'asgari_odeme'],
+            'denetim' => [],
+            'dosya_yolu' => $yol,
+            'dosya_adi' => $pdf['ad'] ?? null,
+            'dosya_boyutu' => $pdf['boyut'] ?? null,
+            'sayfa_sayisi' => $sayfaSayisi,
+            'dosya_ozeti' => $ozet,
+            'olusturan_id' => $user->id,
+        ]);
+    }
+
+    /**
      * @param  array{ozet: string, ad: string, boyut: int}  $pdf
      * @param  array{alanlar: array<string, string|null>, okunamayan: list<string>, satirlar: list<array<string, mixed>>}  $sonuc
      */

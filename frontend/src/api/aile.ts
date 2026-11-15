@@ -583,6 +583,25 @@ export const aileApi = {
     http
       .get<{ ekstreler: Ekstre[] }>('/aile/ekstreler', { params: temiz({ kart_id: kartId }) })
       .then((r) => r.data.ekstreler),
+  /** Dış yapay zekâya (ChatGPT, Claude, Gemini…) verilecek istem (şemadan sunucuda birleştirilir) */
+  ekstreIstemi: () =>
+    http.get<{ istem: string; sema_surumu: string }>('/aile/ekstre-istemi').then((r) => r.data),
+  /** Dış yapay zekânın verdiği standart JSON → taslak ekstre; PDF isteğe bağlı (sunucuda kalır, dışarı gitmez) */
+  ekstreJsonIle: (kartId: number, json: string, dosya?: File | null) => {
+    const veri = new FormData()
+    veri.append('kart_id', String(kartId))
+    veri.append('json', json)
+    if (dosya) veri.append('dosya', dosya)
+
+    return http
+      .post<{
+        ekstre: Ekstre
+        ozet: { satir: number; inceleme: number; reddedilen: number }
+        uyarilar: string[]
+        message: string
+      }>('/aile/ekstreler/json-ile', veri)
+      .then((r) => r.data)
+  },
   /** Kart ekstresi; `yapayZeka`: kullanıcının açık onayıyla PDF yapay zekâ analizine gider (analiz hemen başlar) */
   ekstreYukle: (kartId: number, dosya: File, yapayZeka = false) => {
     const veri = new FormData()
@@ -896,5 +915,8 @@ export interface EkstreAiDenetimi {
   sayfa_denetimi: SayfaDenetimi
   /** PDF okuyucunun satırları korunduysa yapay zekâ sonucu yalnızca öneri */
   oneri?: boolean
+  /** Kullanıcının dış yapay zekâdan yapıştırdığı JSON (model: "harici"); `metinsiz`: PDF yok, kaynak satırlar doğrulanamadı */
+  harici?: boolean
+  metinsiz?: boolean
   mutabakat?: { durum: string; fark: string | null } | null
 }

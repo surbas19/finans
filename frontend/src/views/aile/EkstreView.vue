@@ -315,7 +315,7 @@ function sil(): void {
         <!-- Yapay zekâ: başlat / ilerleme / iptal (yalnızca anahtar tanımlıysa, her seferinde onayla) -->
         <AiAnalizPaneli
           :ekstre-id="ekstre.id"
-          :ai-acik="aiAcik"
+          :ai-acik="aiAcik && ekstre.dosya_var"
           :taslak="taslak"
           :ilk-calisma="aiCalisma"
           :onceki-analiz-var="!!ekstre.denetim?.ai"

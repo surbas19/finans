@@ -94,6 +94,9 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::get('ekstreler', [EkstreController::class, 'index'])->name('ekstreler.index');
             Route::post('ekstreler', [EkstreController::class, 'store'])->middleware('throttle:ekstre')->name('ekstreler.store');
             Route::post('ekstreler/elle', [EkstreController::class, 'elle'])->name('ekstreler.elle');
+            // Dış yapay zekâ: istem kopyala → JSON yapıştır ({ekstre} rotalarından önce)
+            Route::get('ekstre-istemi', [EkstreController::class, 'istem'])->name('ekstre-istemi');
+            Route::post('ekstreler/json-ile', [EkstreController::class, 'jsonIle'])->middleware('throttle:ekstre')->name('ekstreler.json-ile');
             Route::get('ekstreler/{ekstre}', [EkstreController::class, 'show'])->name('ekstreler.show');
             Route::put('ekstreler/{ekstre}', [EkstreController::class, 'update'])->name('ekstreler.update');
             Route::delete('ekstreler/{ekstre}', [EkstreController::class, 'destroy'])->name('ekstreler.destroy');

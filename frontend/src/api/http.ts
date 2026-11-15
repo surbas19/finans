@@ -62,3 +62,14 @@ export function hataMesaji(error: unknown): string {
 
   return 'Beklenmeyen bir hata oluştu.'
 }
+
+/** 422 yanıtında bir alanın TÜM hata mesajları (ör. yapıştırılan JSON'daki satır satır hatalar) */
+export function dogrulamaListesi(error: unknown, alan: string): string[] {
+  if (error instanceof AxiosError && error.response?.status === 422) {
+    const hatalar = (error.response.data?.errors ?? {}) as Record<string, string[]>
+
+    return hatalar[alan] ?? []
+  }
+
+  return []
+}

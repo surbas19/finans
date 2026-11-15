@@ -9,6 +9,8 @@ use App\Models\Ekstre;
 use App\Models\Kart;
 use App\Models\KartIslemi;
 use App\Services\AIStatement\EkstreAiIsleyici;
+use App\Services\AIStatement\HariciIstem;
+use App\Services\AIStatement\HariciJsonAktarici;
 use App\Services\AIStatement\OpenAIClient;
 use App\Services\AIStatement\YapayZekaHatasi;
 use App\Services\Ekstre\EkstreIceAktarici;
@@ -98,6 +100,37 @@ class EkstreController extends Controller
         $ekstre = $this->aktarici->elleOlustur($request->user(), Kart::findOrFail($veri['kart_id']), $veri);
 
         return response()->json(['ekstre' => $ekstre->ozet(), 'message' => $ekstre->donemEtiketi().' ekstresi tutarla eklendi.'], 201);
+    }
+
+    /** Dış yapay zekâya (ChatGPT, Claude, Gemini…) verilecek istem; kişisel veri ve anahtar içermez */
+    public function istem(HariciIstem $istem): JsonResponse
+    {
+        return response()->json(['istem' => $istem->olustur(), 'sema_surumu' => HariciIstem::SEMA_SURUMU]);
+    }
+
+    /**
+     * Dış yapay zekâ JSON'u (standart şema v2) → taslak ekstre. PDF isteğe bağlıdır: verilirse kaynak satırlar sunucuda
+     * doğrulanır (PDF hiçbir dış servise gitmez), verilmezse metinsiz kaynak modu çalışır. OPENAI_API_KEY gerekmez.
+     */
+    public function jsonIle(Request $request, HariciJsonAktarici $aktarici): JsonResponse
+    {
+        $mb = (int) config('ekstre.max_mb');
+        $veri = $request->validate([
+            'kart_id' => ['required', 'integer', Rule::exists('kartlar', 'id')->where('hane_id', $request->user()->hane_id)],
+            'json' => ['required', 'string'],
+            'dosya' => ['nullable', 'file', 'max:'.($mb * 1024), 'mimetypes:application/pdf'],
+        ], ['dosya.mimetypes' => 'Yalnızca PDF eklenebilir.', 'dosya.max' => "PDF en çok {$mb} MB olabilir.", 'json.required' => 'Yapay zekânın verdiği JSON\'u yapıştırın.'], ['kart_id' => 'kart', 'dosya' => 'dosya']);
+        $sonuc = $aktarici->taslakOlustur($request->user(), Kart::findOrFail($veri['kart_id']), $veri['json'], $request->file('dosya'));
+        $ozet = $sonuc['ozet'];
+
+        return response()->json([
+            'ekstre' => $sonuc['ekstre']->ozet(),
+            'ozet' => $ozet,
+            'uyarilar' => $sonuc['uyarilar'],
+            'message' => "JSON okundu: {$ozet['satir']} satır incelemeye hazır"
+                .($ozet['inceleme'] > 0 ? " ({$ozet['inceleme']} satır kontrol bekliyor)" : '')
+                .($ozet['reddedilen'] > 0 ? ", {$ozet['reddedilen']} satır alınmadı" : '').'.',
+        ], 201);
     }
 
     public function show(Ekstre $ekstre): JsonResponse

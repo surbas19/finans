@@ -19,7 +19,7 @@ const ekstreler = ref<Ekstre[] | null>(null)
 const hesaplar = ref<(HesapEkstresi & { ai_calisma: AiCalisma | null })[]>([])
 const yukleAcik = ref(false)
 const elleAcik = ref(false)
-const yukleTuru = ref<'kart' | 'banka'>('kart')
+const yukleTuru = ref<'kart' | 'banka' | 'yapistir'>('kart')
 
 async function yukle(): Promise<void> {
   await aile.yukle()
@@ -31,7 +31,7 @@ onMounted(yukle)
 
 const aiAcik = computed(() => aile.hane?.yetenekler?.ai_acik ?? false)
 
-function ac(tur: 'kart' | 'banka'): void {
+function ac(tur: 'kart' | 'banka' | 'yapistir'): void {
   yukleTuru.value = tur
   yukleAcik.value = true
 }
@@ -57,6 +57,16 @@ function hesapDurumu(h: HesapEkstresi & { ai_calisma: AiCalisma | null }): {
         icon="pi pi-upload"
         :disabled="!aile.kartlar.length"
         @click="ac('kart')"
+      />
+      <!-- Dış yapay zekâ: sunucuda OpenAI anahtarı gerekmez -->
+      <Button
+        label="Dış yapay zekâ (JSON)"
+        icon="pi pi-clipboard"
+        severity="secondary"
+        outlined
+        :disabled="!aile.kartlar.length"
+        data-test="dis-ai-ekstre"
+        @click="ac('yapistir')"
       />
       <Button
         label="Tutarla ekstre gir"
@@ -101,8 +111,9 @@ function hesapDurumu(h: HesapEkstresi & { ai_calisma: AiCalisma | null }): {
                   >{{ aile.kartAdi(e.kart_id) }} · {{ e.donem_etiketi ?? 'Dönem okunamadı' }}</span
                 >
                 <span class="block truncate text-xs text-surface-500"
-                  >{{ e.satir_sayisi ?? 0 }} satır<template v-if="e.banka_profili === 'ai'">
-                    · yapay zekâ okudu</template
+                  >{{ e.satir_sayisi ?? 0 }} satır<template v-if="e.denetim?.ai?.harici">
+                    · harici JSON ile okundu</template
+                  ><template v-else-if="e.banka_profili === 'ai'"> · yapay zekâ okudu</template
                   ><template v-if="e.olusturuldu"> · {{ tarih(e.olusturuldu) }}</template></span
                 >
               </span>
