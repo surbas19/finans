@@ -776,7 +776,7 @@ export interface ZekatUyarisi {
 
 export interface KartIslemSuzgeci {
   ay?: string | null
-  donem_turu?: 'rapor' | 'islem' | 'ekstre'
+  donem_turu?: 'rapor' | 'islem' | 'ekstre' | null
   uye_id?: number | null
   banka_id?: number | null
   kart_id?: number | null

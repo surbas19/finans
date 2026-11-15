@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Accordion from 'primevue/accordion'
 import AccordionContent from 'primevue/accordioncontent'
@@ -12,6 +12,7 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
+import AySecici from '@/components/aile/AySecici.vue'
 import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import KartIslemFormu from '@/components/aile/KartIslemFormu.vue'
 import KartIslemListesi from '@/components/aile/KartIslemListesi.vue'
@@ -31,7 +32,7 @@ import { donemEtiketi, gecerliDonem } from '@/utils/donem'
 /**
  * Kart işlemleri: bütün ekstre işlemleri kart adının altında akordiyon (süzgeçsizken ilk kart açık). Süzgeç (arama,
  * kişi, banka, kart, kategori, tür; Bütçe Özet'ten gelince ay çipi) uygulanınca bütün kart grupları açık gelir.
- * Tarih seçici yoktur. Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
+ * Ekstre dönemi seçici (‹ Kasım 2026 ›, varsayılan en yeni ekstre dönemi, "Tümü"): kesim ayına göre geri / ileri. Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
  */
 const aile = useAileStore()
 const route = useRoute()
@@ -44,6 +45,11 @@ const q = route.query
 const ara = ref(String(q.ara ?? ''))
 /** Bütçe Özet'ten gelen ay (rapor ayı) süzgeci; çip ile kaldırılır */
 const ay = ref<string | null>(gecerliDonem(String(q.ay ?? '')) ? String(q.ay) : null)
+/** Ekstre dönemi (kesim ayı) seçici: null = bütün dönemler. Varsayılan en yeni ekstre dönemi */
+const donem = ref<string | null>(null)
+/** Seçilebilecek en yeni ekstre dönemi (onaylı ekstrelerin kesim ayı) */
+const enYeni = ref<string | null>(null)
+let hazir = false
 const uyeId = ref<number | null>(sayi(q.uye_id))
 const bankaId = ref<number | null>(sayi(q.banka_id))
 const kartId = ref<number | null>(sayi(q.kart_id))
@@ -67,6 +73,15 @@ const TURLER = (Object.keys(KART_ISLEM_TURLERI) as KartIslemTuru[]).map((t) => (
   etiket: KART_ISLEM_TURLERI[t].etiket,
 }))
 const kategoriSecenekleri = computed(() => [{ id: 'yok', ad: 'Kategorisiz' }, ...aile.kategoriler])
+
+/** AySecici modeli: seçim yapınca Özet ay çipi kalkar */
+const donemModeli = computed({
+  get: () => donem.value ?? enYeni.value ?? '',
+  set: (v: string) => {
+    ay.value = null
+    donem.value = v
+  },
+})
 
 const suzgecVar = computed(
   () =>
@@ -94,7 +109,8 @@ const gruplar = computed(() => {
 async function yukle(): Promise<void> {
   const veri = await sonIstek(() =>
     aileApi.kartIslemleri({
-      ay: ay.value,
+      ay: ay.value ?? donem.value,
+      donem_turu: ay.value === null && donem.value !== null ? 'ekstre' : null,
       ara: ara.value.trim() || null,
       uye_id: uyeId.value,
       banka_id: bankaId.value,
@@ -116,7 +132,30 @@ async function yukle(): Promise<void> {
 
 onMounted(async () => {
   await aile.yukle()
+  try {
+    const ekstreler = await aileApi.ekstreler()
+    const donemler = ekstreler
+      .filter((e) => e.durum === 'onaylandi' && gecerliDonem(e.donem))
+      .map((e) => e.donem)
+      .sort()
+    enYeni.value = donemler[donemler.length - 1] ?? null
+  } catch {
+    enYeni.value = null
+  }
+  // Başlangıç: adresteki dönem ('tumu' = hepsi) > Özet ay çipi (dönem seçilmez) > en yeni ekstre dönemi
+  const adresDonem = String(q.donem ?? '')
+  donem.value =
+    adresDonem === 'tumu'
+      ? null
+      : gecerliDonem(adresDonem)
+        ? adresDonem
+        : ay.value !== null
+          ? null
+          : enYeni.value
   await yukle()
+  // İlk atamalar süzgeç değişikliği sayılmasın (çift istek olmasın)
+  await nextTick()
+  hazir = true
 })
 
 let zamanlayici: ReturnType<typeof setTimeout> | undefined
@@ -124,6 +163,7 @@ function adresVeYukle(): void {
   void router.replace({
     query: {
       ay: ay.value ?? undefined,
+      donem: ay.value === null ? (donem.value ?? 'tumu') : undefined,
       ara: ara.value.trim() || undefined,
       uye_id: uyeId.value ?? undefined,
       banka_id: bankaId.value ?? undefined,
@@ -138,10 +178,12 @@ function adresVeYukle(): void {
 
 // Yazarken 300 ms bekler (her tuşta istek atılmaz); liste önceki sonucu tutar, arama kutusu odağını kaybetmez
 watch(ara, () => {
+  if (!hazir) return
   clearTimeout(zamanlayici)
   zamanlayici = setTimeout(adresVeYukle, 300)
 })
-watch([ay, uyeId, bankaId, kartId, kategoriId, tur], () => {
+watch([ay, donem, uyeId, bankaId, kartId, kategoriId, tur], () => {
+  if (!hazir) return
   clearTimeout(zamanlayici)
   adresVeYukle()
 })
@@ -150,6 +192,7 @@ onBeforeUnmount(() => clearTimeout(zamanlayici))
 function temizle(): void {
   ara.value = ''
   ay.value = null
+  donem.value = enYeni.value
   uyeId.value = bankaId.value = kartId.value = kategoriId.value = tur.value = null
 }
 
@@ -178,6 +221,36 @@ function kategoriSec(i: KartIslemi): void {
           data-test="islem-ara"
         />
       </IconField>
+      <div class="flex items-center gap-2" data-test="donem-secici">
+        <AySecici
+          v-if="donem !== null"
+          v-model="donemModeli"
+          :ileri-sinir="enYeni ?? undefined"
+          class="min-w-0 flex-1 justify-between sm:flex-none"
+        />
+        <Button
+          v-else
+          label="Ekstre dönemi seç"
+          icon="pi pi-calendar"
+          severity="secondary"
+          outlined
+          rounded
+          class="min-w-0 flex-1 sm:flex-none"
+          :disabled="!enYeni"
+          data-test="donem-sec"
+          @click="donemModeli = enYeni!"
+        />
+        <Button
+          v-if="donem !== null"
+          label="Tümü"
+          severity="secondary"
+          text
+          rounded
+          size="small"
+          data-test="donem-tumu"
+          @click="donem = null"
+        />
+      </div>
     </div>
     <button
       v-if="ay"

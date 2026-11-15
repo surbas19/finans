@@ -88,7 +88,8 @@ class KartIslemiController extends Controller
                     'kart_id' => (int) $kartId,
                     'gider' => Kurus::tl($grup->reduce(fn (int $t, KartIslemi $i): int => $t + $this->rapor->giderEtkisi($i), 0)),
                     'adet' => $grup->count(),
-                    'ekstre_donemi' => $grup->map(fn (KartIslemi $i): ?string => $i->ekstre?->donemEtiketi())->filter()->first(),
+                    // Grup tek ekstre dönemindense etiketi; birden çok dönem varsa (tüm dönemler) boş
+                    'ekstre_donemi' => ($donemler = $grup->map(fn (KartIslemi $i): ?string => $i->ekstre?->donemEtiketi())->filter()->unique()->values())->count() === 1 ? $donemler->first() : null,
                 ])->values(),
             ],
         ]);

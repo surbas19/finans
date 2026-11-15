@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-15) Bütçe → İşlemler: ekstre dönemi seçici (‹ Kasım 2026 ›, Tümü); grup başlığında dönem yalnız tek dönemse. Testler: ön yüz 130.
 - (2026-11-15) Bütçe → İşlemler: tarih seçici kaldırıldı, bütün ekstre işlemleri kart akordiyonlarında listeleniyor; Özet bağlantısındaki ay çip olarak. Testler: ön yüz 129.
 - (2026-11-15) Bütçe → İşlemler: kart başına akordiyon (güncel ekstre dönemi, süzgeçte hepsi açık), kısayol çipleri kalktı; satıra basılı tutunca kategori seçimi + yeni kategori, aynı açıklamalı tüm işlemler ve kural, sol yumuşak gradient şerit; gelir türü "Ek ders" Maaş'ın ardında ([planlar/islem-kategori-akordiyon.md](planlar/islem-kategori-akordiyon.md)). Testler: ön yüz 129, arka uç 243.
 - (2026-11-15) Dönem dönem çizgi grafikler ([planlar/donem-grafikleri.md](planlar/donem-grafikleri.md)): Faturalar (toplam + tür, Tutar / gelire oran %), Kartlar (toplam + kart başına dönem sonu ödeme, kart renkleri), Gelir (maaş / ek ders türü seçimi, toplam + kişi başına); hareketli, modern, mobil öncelikli; yıl seçici. Testler: ön yüz 121, arka uç GrafikTest 4.
