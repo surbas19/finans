@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Aile\KategoriController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufController;
+use App\Http\Controllers\Api\V1\Aile\TasarrufOzetController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufGunuController;
 use App\Http\Controllers\Api\V1\Aile\ZekatAyarController;
 use App\Http\Controllers\Api\V1\Aile\ZekatBorcController;
@@ -89,6 +90,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('gider-kaynaklari', GiderKaynagiController::class)->except('show')->parameters(['gider-kaynaklari' => 'kaynak']);
             Route::apiResource('duzenli-giderler', DuzenliGiderController::class)->except('show')->parameters(['duzenli-giderler' => 'gider']);
 
+            Route::get('tasarruf-ozeti', TasarrufOzetController::class)->name('tasarruf.ozeti');
             Route::get('tasarruflar', [TasarrufController::class, 'index'])->name('tasarruflar.index');
             Route::post('tasarruflar', [TasarrufController::class, 'store'])->name('tasarruflar.store');
             Route::delete('tasarruflar/{tasarruf}', [TasarrufController::class, 'destroy'])->name('tasarruflar.destroy');

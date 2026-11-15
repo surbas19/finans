@@ -296,6 +296,58 @@ class ButceRaporu
     }
 
     /**
+     * Yılın 12 ayı: gelir, gider, tasarruf ve oranları (gelire göre %; gelir 0 ise null) ile ayın tasarruf kalemleri.
+     * Başkasına verilen gün alımları da ayın tasarruf kalemlerindedir (hesaplarda yoktur).
+     *
+     * @return array<string, mixed>
+     */
+    public function tasarrufDonemleri(int $haneId, int $yil): array
+    {
+        $kurus = fn (float $tl): int => Kurus::kurus(number_format($tl, 2, '.', ''));
+        $oran = fn (int $pay, int $gelir): ?float => $gelir > 0 ? round($pay / $gelir * 100, 1) : null;
+        $aylar = [];
+        $toplam = ['gelir' => 0, 'gider' => 0, 'tasarruf' => 0];
+        for ($ay = 1; $ay <= 12; $ay++) {
+            $donem = sprintf('%04d-%02d', $yil, $ay);
+            $gelir = $kurus($this->gelirOzeti($haneId, $donem)['toplam']);
+            $gider = $kurus($this->giderOzeti($haneId, $donem)['toplam']);
+            $tasarruf = $this->tasarrufOzeti($haneId, $donem);
+            $tas = $kurus($tasarruf['toplam']);
+            $kalan = $gelir - $gider - $tas;
+            $toplam['gelir'] += $gelir;
+            $toplam['gider'] += $gider;
+            $toplam['tasarruf'] += $tas;
+            $aylar[] = [
+                'donem' => $donem,
+                'etiket' => Donem::etiket($donem),
+                'gelir' => Kurus::tl($gelir),
+                'gider' => Kurus::tl($gider),
+                'tasarruf' => Kurus::tl($tas),
+                'kalan' => Kurus::tl($kalan),
+                'gider_orani' => $oran($gider, $gelir),
+                'tasarruf_orani' => $oran($tas, $gelir),
+                'kalan_orani' => $oran($kalan, $gelir),
+                'kalemler' => $tasarruf['kalemler'],
+            ];
+        }
+        $kalanYil = $toplam['gelir'] - $toplam['gider'] - $toplam['tasarruf'];
+
+        return [
+            'yil' => $yil,
+            'aylar' => $aylar,
+            'toplam' => [
+                'gelir' => Kurus::tl($toplam['gelir']),
+                'gider' => Kurus::tl($toplam['gider']),
+                'tasarruf' => Kurus::tl($toplam['tasarruf']),
+                'kalan' => Kurus::tl($kalanYil),
+                'gider_orani' => $oran($toplam['gider'], $toplam['gelir']),
+                'tasarruf_orani' => $oran($toplam['tasarruf'], $toplam['gelir']),
+                'kalan_orani' => $oran($kalanYil, $toplam['gelir']),
+            ],
+        ];
+    }
+
+    /**
      * Ayın tasarrufu: portföy hesabına yazılan alışlar (tarihin ayı). Gider toplamına girmez.
      *
      * @return array<string, mixed>
