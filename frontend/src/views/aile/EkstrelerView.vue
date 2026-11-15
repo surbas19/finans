@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -108,7 +109,8 @@ function hesapDurumu(h: HesapEkstresi & { ai_calisma: AiCalisma | null }): {
             >
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-semibold text-surface-900"
-                  >{{ aile.kartAdi(e.kart_id) }} · {{ e.donem_etiketi ?? 'Dönem okunamadı' }}</span
+                  ><KartEtiketi :kart-id="e.kart_id" /> ·
+                  {{ e.donem_etiketi ?? 'Dönem okunamadı' }}</span
                 >
                 <span class="block truncate text-xs text-surface-500"
                   >{{ e.satir_sayisi ?? 0 }} satır<template v-if="e.denetim?.ai?.harici">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -86,8 +87,8 @@ async function bagla(i: KartIslemi): Promise<void> {
           <span class="min-w-0 flex-1">
             <span class="block truncate text-sm font-semibold">{{ i.aciklama }}</span>
             <span class="block text-xs text-surface-500"
-              >{{ tarih(i.islem_tarihi) }} · {{ aile.kartAdi(i.kart_id) }}</span
-            >
+              >{{ tarih(i.islem_tarihi) }} · <KartEtiketi :kart-id="i.kart_id"
+            /></span>
           </span>
           <span class="text-sm font-semibold tabular-nums">{{ tl(i.tutar) }}</span>
           <Button

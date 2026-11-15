@@ -5,7 +5,6 @@ import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
-import AySecici from '@/components/aile/AySecici.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import GelirKaynagiFormu from '@/components/aile/GelirKaynagiFormu.vue'
 import {
@@ -21,14 +20,14 @@ import {
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAileStore } from '@/stores/aile'
 import { bugun, tarih, tl } from '@/utils/bicim'
-import { buAy, donemEtiketi } from '@/utils/donem'
+import { donemEtiketi } from '@/utils/donem'
 
 /**
  * Gelirler: seçilen ayın gerçekleşen gelirleri kişi kişi (tür ve kaynakla), düzenli / düzensiz ayrımı; beklenen
  * (henüz alınmamış) düzenli gelirler ayrı ve toplama katılmadan; gelir kaynakları.
  */
 const aile = useAileStore()
-const donem = ref(buAy())
+const props = defineProps<{ donem: string }>()
 const gelirler = ref<Gelir[] | null>(null)
 const ozet = ref<GelirOzeti | null>(null)
 const kaynaklar = ref<GelirKaynagi[]>([])
@@ -42,7 +41,7 @@ const duzenlenenKaynak = ref<GelirKaynagi | null>(null)
 
 async function yukle(): Promise<void> {
   const veri = await sonIstek(() =>
-    Promise.all([aileApi.gelirler({ donem: donem.value }), aileApi.kaynaklar()]),
+    Promise.all([aileApi.gelirler({ donem: props.donem }), aileApi.kaynaklar()]),
   )
   if (veri === undefined) return
   gelirler.value = veri[0].gelirler
@@ -54,12 +53,15 @@ onMounted(async () => {
   await aile.yukle()
   await yukle()
 })
-watch(donem, () => {
-  // Önceki ayın toplamı yeni ayın adıyla görünmesin
-  gelirler.value = null
-  ozet.value = null
-  void yukle()
-})
+watch(
+  () => props.donem,
+  () => {
+    // Önceki ayın toplamı yeni ayın adıyla görünmesin
+    gelirler.value = null
+    ozet.value = null
+    void yukle()
+  },
+)
 
 const kisiler = computed(() =>
   (ozet.value?.kisiler ?? []).map((k) => ({
@@ -71,7 +73,7 @@ const kisiler = computed(() =>
 
 function gelirEkle(on?: Partial<GelirGirdisi>): void {
   duzenlenen.value = null
-  varsayilan.value = { donem: donem.value, ...on }
+  varsayilan.value = { donem: props.donem, ...on }
   gelirFormuAcik.value = true
 }
 
@@ -107,8 +109,7 @@ function kaynakAdi(id: number | null): string {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <AySecici v-model="donem" :ileri-sinir="null" />
+    <div class="flex flex-wrap items-center justify-end gap-3">
       <div class="flex flex-wrap gap-2">
         <Button label="Gelir ekle" icon="pi pi-plus" @click="gelirEkle()" />
         <Button

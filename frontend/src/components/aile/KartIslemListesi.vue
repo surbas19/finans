@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { KART_ISLEM_TURLERI, type KartIslemi } from '@/api/aile'
 import { useAileStore } from '@/stores/aile'
 import { tarih, tl } from '@/utils/bicim'
@@ -39,7 +40,7 @@ function isaret(i: KartIslemi): string {
         <span class="min-w-0 flex-1">
           <span class="block truncate font-semibold text-surface-900">{{ i.aciklama }}</span>
           <span class="flex flex-wrap gap-x-1.5 text-xs text-surface-500">
-            <span v-if="kartGoster">{{ aile.kartAdi(i.kart_id) }}</span>
+            <KartEtiketi v-if="kartGoster" :kart-id="i.kart_id" />
             <span v-if="aile.kategori(i.kategori_id)"
               >· {{ aile.kategori(i.kategori_id)!.ad }}</span
             >

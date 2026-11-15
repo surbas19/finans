@@ -2,15 +2,16 @@
 import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
-import Tag from 'primevue/tag'
 import BosDurum from '@/components/BosDurum.vue'
-import KisiEtiketi from '@/components/KisiEtiketi.vue'
+import KaydirmaliPaneller from '@/components/KaydirmaliPaneller.vue'
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import KartFormu from '@/components/aile/KartFormu.vue'
-import { aileApi, type Ekstre } from '@/api/aile'
+import { aileApi, type Ekstre, type Kart } from '@/api/aile'
 import { useAileStore } from '@/stores/aile'
 import { tarih, tl } from '@/utils/bicim'
+import { kartDegradesi } from '@/utils/kartRengi'
 
 /**
  * Bankalar ve kartları; incelemeyi bekleyen ekstreler en üstte. Kart sayfasında ekstreler, işlemler ve faturalar.
@@ -21,11 +22,23 @@ const kartFormuAcik = ref(false)
 const yukleAcik = ref(false)
 const elleAcik = ref(false)
 const yukleTuru = ref<'kart' | 'yapistir'>('kart')
+/** Kartın kendi düğmelerinden açılınca o kart önceden seçili gelir; üstteki genel düğmelerde null */
+const islemKartId = ref<number | null>(null)
+/** Kaydırıcıda görünen kart sırası */
+const sira = ref(0)
 
-function yukleAc(tur: 'kart' | 'yapistir'): void {
+function yukleAc(tur: 'kart' | 'yapistir', kartId: number | null = null): void {
   yukleTuru.value = tur
+  islemKartId.value = kartId
   yukleAcik.value = true
 }
+
+function elleAc(kartId: number | null = null): void {
+  islemKartId.value = kartId
+  elleAcik.value = true
+}
+
+const bankaAdi = (k: Kart): string => aile.bankaAdi(k.banka_id)
 
 async function yukle(): Promise<void> {
   await aile.yukle()
@@ -34,10 +47,9 @@ async function yukle(): Promise<void> {
 onMounted(yukle)
 
 const bekleyenler = computed(() => (ekstreler.value ?? []).filter((e) => e.durum === 'taslak'))
-const bankalar = computed(() =>
-  aile.bankalar
-    .map((b) => ({ ...b, kartlar: aile.kartlar.filter((k) => k.banka_id === b.id) }))
-    .filter((b) => b.kartlar.length > 0),
+/** Kartlar banka sırasıyla, aynı bankanın kartları yan yana */
+const kartlar = computed(() =>
+  [...aile.kartlar].sort((a, b) => a.banka_id - b.banka_id || a.id - b.id),
 )
 
 function sonEkstre(kartId: number): Ekstre | undefined {
@@ -77,7 +89,7 @@ function sonEkstre(kartId: number): Ekstre | undefined {
         outlined
         :disabled="!aile.kartlar.length"
         data-test="elle-ekstre"
-        @click="elleAcik = true"
+        @click="elleAc()"
       />
       <Button
         label="Kart ekle"
@@ -97,8 +109,9 @@ function sonEkstre(kartId: number): Ekstre | undefined {
             class="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 ring-1 ring-amber-200"
           >
             <span class="min-w-0">
-              <span class="block truncate font-semibold"
-                >{{ aile.kartAdi(e.kart_id) }} · {{ e.donem_etiketi ?? 'Dönem okunamadı' }}</span
+              <span class="flex items-center gap-1 truncate font-semibold"
+                ><KartEtiketi :kart-id="e.kart_id" /> ·
+                {{ e.donem_etiketi ?? 'Dönem okunamadı' }}</span
               >
               <span class="block text-xs text-surface-500"
                 >{{ e.satir_sayisi }} satır · {{ e.dosya_adi }}</span
@@ -124,47 +137,95 @@ function sonEkstre(kartId: number): Ekstre | undefined {
       <Button label="Kart ekle" icon="pi pi-plus" @click="kartFormuAcik = true" />
     </BosDurum>
     <template v-else>
-      <section v-for="b in bankalar" :key="b.id" class="kart p-4 sm:p-5">
-        <h2 class="bolum-etiketi mb-2">{{ b.ad }}</h2>
-        <ul class="divide-y divide-surface-100">
-          <li v-for="k in b.kartlar" :key="k.id">
+      <KaydirmaliPaneller
+        v-model:sira="sira"
+        :ogeler="kartlar"
+        :sutun="3"
+        :anahtar="(k) => k.id"
+        :etiket="(k) => k.ad"
+        data-test="kart-kaydirici"
+      >
+        <template #panel="{ oge: k }">
+          <div class="flex flex-col gap-2" data-test="kart-paneli">
+            <!-- Kredi kartı görünümü: kartın rengi; dokununca kart sayfası -->
             <RouterLink
               :to="{ name: 'aile-kart', params: { id: k.id } }"
-              class="flex items-center gap-3 py-3"
+              class="block rounded-3xl p-5 text-white shadow-md"
+              :class="k.aktif ? '' : 'opacity-60 grayscale'"
+              :style="{ background: kartDegradesi(k) }"
               data-test="kart-satiri"
             >
-              <span
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface-100 text-surface-600"
-              >
-                <i class="pi pi-credit-card" />
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="flex items-center gap-2">
-                  <span class="truncate font-semibold text-surface-900">{{ k.ad }}</span>
-                  <Tag v-if="!k.aktif" value="Pasif" severity="secondary" />
-                </span>
-                <span class="block text-xs text-surface-500">
-                  <KisiEtiketi :kisi="aile.uye(k.sahip_uye_id)" />
-                  <template v-if="k.kesim_gunu"> · kesim {{ k.kesim_gunu }}</template>
-                  <template v-if="k.son_odeme_gunu"> · son ödeme {{ k.son_odeme_gunu }}</template>
-                </span>
-              </span>
-              <span v-if="sonEkstre(k.id)" class="text-right text-xs text-surface-500">
-                <span class="block font-semibold text-surface-900 tabular-nums">{{
-                  tl(sonEkstre(k.id)!.donem_borcu)
+              <span class="flex items-start justify-between gap-2">
+                <span class="truncate text-xs font-semibold tracking-wide uppercase opacity-90">{{
+                  bankaAdi(k)
                 }}</span>
-                <template v-if="sonEkstre(k.id)!.son_odeme_tarihi"
-                  >son ödeme {{ tarih(sonEkstre(k.id)!.son_odeme_tarihi) }}</template
+                <span v-if="!k.aktif" class="rounded-full bg-white/25 px-2 py-0.5 text-[11px]"
+                  >Pasif</span
+                >
+                <i v-else class="pi pi-credit-card text-lg opacity-90" />
+              </span>
+              <span class="mt-8 block truncate text-xl font-bold">{{ k.ad }}</span>
+              <span class="mt-0.5 block truncate text-xs opacity-90">
+                {{ aile.uyeAdi(k.sahip_uye_id) }}
+                <template v-if="k.kesim_gunu"> · kesim {{ k.kesim_gunu }}</template>
+                <template v-if="k.son_odeme_gunu"> · son ödeme {{ k.son_odeme_gunu }}</template>
+              </span>
+              <span class="mt-4 flex items-end justify-between gap-3">
+                <span v-if="sonEkstre(k.id)">
+                  <span class="block text-[11px] opacity-80">Son ekstre borcu</span>
+                  <span class="block text-lg font-semibold tabular-nums">{{
+                    tl(sonEkstre(k.id)!.donem_borcu)
+                  }}</span>
+                </span>
+                <span v-else class="text-xs opacity-80">Henüz ekstre yok</span>
+                <span
+                  v-if="sonEkstre(k.id)?.son_odeme_tarihi"
+                  class="text-right text-[11px] opacity-90"
+                  >son ödeme<br />{{ tarih(sonEkstre(k.id)!.son_odeme_tarihi) }}</span
                 >
               </span>
             </RouterLink>
-          </li>
-        </ul>
-      </section>
+            <!-- Bu karta ekstre girişi -->
+            <div class="grid grid-cols-3 gap-2">
+              <Button
+                label="PDF yükle"
+                icon="pi pi-upload"
+                size="small"
+                severity="secondary"
+                outlined
+                data-test="kart-ekstre-yukle"
+                @click="yukleAc('kart', k.id)"
+              />
+              <Button
+                label="JSON ile"
+                icon="pi pi-clipboard"
+                size="small"
+                severity="secondary"
+                outlined
+                data-test="kart-ekstre-json"
+                @click="yukleAc('yapistir', k.id)"
+              />
+              <Button
+                label="Tutarla"
+                icon="pi pi-pencil"
+                size="small"
+                severity="secondary"
+                outlined
+                data-test="kart-ekstre-elle"
+                @click="elleAc(k.id)"
+              />
+            </div>
+          </div>
+        </template>
+      </KaydirmaliPaneller>
     </template>
 
     <KartFormu v-model:visible="kartFormuAcik" @kaydedildi="yukle" />
-    <EkstreYukleDialog v-model:visible="yukleAcik" :baslangic-turu="yukleTuru" />
-    <ElleEkstreDialog v-model:visible="elleAcik" />
+    <EkstreYukleDialog
+      v-model:visible="yukleAcik"
+      :kart-id="islemKartId"
+      :baslangic-turu="yukleTuru"
+    />
+    <ElleEkstreDialog v-model:visible="elleAcik" :kart-id="islemKartId" />
   </div>
 </template>

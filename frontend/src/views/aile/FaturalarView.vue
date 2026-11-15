@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
@@ -199,7 +200,7 @@ async function coz(f: Fatura): Promise<void> {
         <div class="mt-2 flex flex-wrap items-center gap-2 text-xs sm:pl-13">
           <template v-if="f.kart_islemi">
             <span class="text-surface-600">
-              <i class="pi pi-credit-card" /> {{ aile.kartAdi(f.kart_islemi.kart_id) }} ·
+              <i class="pi pi-credit-card" /> <KartEtiketi :kart-id="f.kart_islemi.kart_id" /> ·
               {{ tarih(f.kart_islemi.islem_tarihi) }} · {{ f.kart_islemi.aciklama }} ·
               {{ tl(f.kart_islemi.tutar) }}
             </span>

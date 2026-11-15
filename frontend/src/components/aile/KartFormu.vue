@@ -7,10 +7,12 @@ import Message from 'primevue/message'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import FormAlani from '@/components/FormAlani.vue'
+import RenkSecici from '@/components/aile/RenkSecici.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import { aileApi, type Kart } from '@/api/aile'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAileStore } from '@/stores/aile'
+import { KART_RENKLERI, kartRengi, sonrakiKartRengi } from '@/utils/kartRengi'
 
 /**
  * Kredi kartı: banka, görünen ad, sahibi, kesim ve son ödeme günü. Kart numarası, son 4 hane ve CVV istenmez.
@@ -30,8 +32,9 @@ watch(gorunur, (acik) => {
   yeniBanka.value = ''
   const k = props.kart
   form.value = k
-    ? { ...k }
+    ? { ...k, renk: kartRengi(k) }
     : {
+        renk: sonrakiKartRengi(aile.kartlar.map((x) => x.renk)),
         banka_id: aile.bankalar[0]?.id,
         sahip_uye_id: aile.hane?.ben_uye_id ?? undefined,
         ad: '',
@@ -165,6 +168,13 @@ async function kaydet(): Promise<void> {
           :use-grouping="false"
           suffix="%"
         />
+      </FormAlani>
+      <FormAlani
+        etiket="Kart rengi"
+        :hata="hatalar.renk"
+        ipucu="Kartlar, taksitler ve işlemlerde bu renkle görünür"
+      >
+        <RenkSecici v-model="form.renk" :renkler="KART_RENKLERI" />
       </FormAlani>
       <label v-if="kart" class="flex items-center gap-2 text-sm text-surface-700">
         <ToggleSwitch v-model="form.aktif" /> Kullanımda

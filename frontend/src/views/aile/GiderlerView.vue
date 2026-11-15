@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
-import AySecici from '@/components/aile/AySecici.vue'
 import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import GiderFormu from '@/components/aile/GiderFormu.vue'
 import GiderKaynagiFormu from '@/components/aile/GiderKaynagiFormu.vue'
@@ -20,7 +20,7 @@ import {
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAileStore } from '@/stores/aile'
 import { bugun, tarih, tl } from '@/utils/bicim'
-import { buAy, donemEtiketi } from '@/utils/donem'
+import { donemEtiketi } from '@/utils/donem'
 
 /**
  * Giderler: seçilen ayın gideri tek yerde. Kredi kartları (ekstre harcamaları, kart başına toplam ve son ödeme),
@@ -28,7 +28,7 @@ import { buAy, donemEtiketi } from '@/utils/donem'
  * Kartla ödenen gider kart ekstresine girer; aynı ödeme ayrıca girilmez.
  */
 const aile = useAileStore()
-const donem = ref(buAy())
+const props = defineProps<{ donem: string }>()
 const ozet = ref<AylikOzet | null>(null)
 const kaynaklar = ref<GiderKaynagi[]>([])
 const sonIstek = useSonIstek()
@@ -42,7 +42,7 @@ const elleAcik = ref(false)
 
 async function yukle(): Promise<void> {
   const veri = await sonIstek(() =>
-    Promise.all([aileApi.ozet(donem.value), aileApi.giderKaynaklari()]),
+    Promise.all([aileApi.ozet(props.donem), aileApi.giderKaynaklari()]),
   )
   if (veri === undefined) return
   ozet.value = veri[0]
@@ -53,17 +53,20 @@ onMounted(async () => {
   await aile.yukle()
   await yukle()
 })
-watch(donem, () => {
-  ozet.value = null
-  void yukle()
-})
+watch(
+  () => props.donem,
+  () => {
+    ozet.value = null
+    void yukle()
+  },
+)
 
 /** Kart gideri = kesimi bu aya düşen onaylı ekstrenin dönem borcu (sunucu hesaplar) */
 const kartlar = computed(() => ozet.value?.gider.kartlar ?? [])
 
 function giderEkle(on?: Partial<DuzenliGiderGirdisi>): void {
   duzenlenen.value = null
-  varsayilan.value = { donem: donem.value, ...on }
+  varsayilan.value = { donem: props.donem, ...on }
   giderFormuAcik.value = true
 }
 
@@ -97,8 +100,7 @@ function kaynakAdi(id: number | null): string {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <AySecici v-model="donem" :ileri-sinir="null" />
+    <div class="flex flex-wrap items-center justify-end gap-3">
       <div class="flex flex-wrap gap-2">
         <Button label="Gider ekle" icon="pi pi-plus" @click="giderEkle()" />
         <Button
@@ -156,8 +158,8 @@ function kaynakAdi(id: number | null): string {
               <RouterLink
                 :to="{ name: 'aile-kart', params: { id: k.kart_id } }"
                 class="block truncate font-semibold text-surface-900"
-                >{{ k.ad }}</RouterLink
-              >
+                ><KartEtiketi :kart-id="k.kart_id" :ad="k.ad"
+              /></RouterLink>
               <span class="block text-xs text-surface-500">
                 <KisiEtiketi :kisi="aile.uye(k.sahip_uye_id)" />
                 <template v-if="k.ekstre">

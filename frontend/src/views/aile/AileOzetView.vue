@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
@@ -23,15 +24,18 @@ import {
 } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useSonIstek } from '@/composables/useSonIstek'
+import { useAuthStore } from '@/stores/auth'
 import { useAileStore } from '@/stores/aile'
 import { bugun, tarih, tl } from '@/utils/bicim'
 import { buAy } from '@/utils/donem'
+import { kartRengiCss } from '@/utils/kartRengi'
 
 /**
  * Bütçe aylık özeti: kişi kişi ve hane geliri (beklenenler ayrı), kategorilere göre gider, fatura toplamları (hizmet
  * ayı), gelir − gider; uyarılar. Toplamların hangi kurala göre hesaplandığı sayfada açıklanır.
  */
 const aile = useAileStore()
+const auth = useAuthStore()
 const router = useRouter()
 const sonIstek = useSonIstek()
 const donem = ref(buAy())
@@ -70,7 +74,7 @@ const uyariVar = computed(
     (ozet.value.uyarilar.gecikmis_faturalar.length > 0 ||
       ozet.value.uyarilar.bekleyen_faturalar.length > 0 ||
       ozet.value.uyarilar.son_odemeler.length > 0 ||
-      (ozet.value.uyarilar.zekat?.length ?? 0) > 0),
+      (auth.yonetici && (ozet.value.uyarilar.zekat?.length ?? 0) > 0)),
 )
 
 const grafik = computed(() => {
@@ -191,16 +195,17 @@ const gunMetni = (gun: number | null | undefined) =>
         >
           <i class="pi pi-credit-card" />
           <span class="min-w-0 flex-1 truncate"
-            >{{ e.kart_ad }} son ödeme {{ tarih(e.son_odeme_tarihi) }}</span
+            ><KartEtiketi :kart-id="e.kart_id" :ad="e.kart_ad" /> son ödeme
+            {{ tarih(e.son_odeme_tarihi) }}</span
           >
           <span class="font-semibold whitespace-nowrap"
             >{{ tl(e.donem_borcu) }} · {{ gunMetni(e.gun) }}</span
           >
         </RouterLink>
         <RouterLink
-          v-for="z in ozet.uyarilar.zekat ?? []"
+          v-for="z in auth.yonetici ? (ozet.uyarilar.zekat ?? []) : []"
           :key="`z${z.tur}${z.yil_id ?? ''}`"
-          :to="{ name: 'aile-zekat' }"
+          :to="{ name: 'yonetim', query: { sekme: 'zekat' } }"
           class="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
           data-test="zekat-uyari"
         >
@@ -253,7 +258,7 @@ const gunMetni = (gun: number | null | undefined) =>
           Kalan = gelir − gider − tasarruf (tasarruf öncesi fark {{ tl(ozet.fark) }}).
         </p>
         <p
-          v-if="ozet.zekat && ozet.zekat.adet > 0"
+          v-if="auth.yonetici && ozet.zekat && ozet.zekat.adet > 0"
           class="col-span-2 text-xs text-emerald-800 sm:col-span-4"
           data-test="ozet-zekat"
         >
@@ -314,7 +319,9 @@ const gunMetni = (gun: number | null | undefined) =>
       <section v-if="ozet.gider.beklenenler.length" class="kart p-4">
         <div class="mb-1 flex items-baseline justify-between">
           <h2 class="bolum-etiketi">Beklenen giderler</h2>
-          <RouterLink :to="{ name: 'aile-giderler' }" class="text-sm font-semibold text-primary-600"
+          <RouterLink
+            :to="{ name: 'aile-gelir-gider', query: { panel: 'gider' } }"
+            class="text-sm font-semibold text-primary-600"
             >Giderler</RouterLink
           >
         </div>
@@ -462,13 +469,15 @@ const gunMetni = (gun: number | null | undefined) =>
           <li
             v-for="t in ozet.gider.taksitler"
             :key="t.islem_id"
-            class="flex items-center justify-between gap-3 py-2"
+            class="flex items-center justify-between gap-3 border-l-4 py-2 pl-3"
+            :style="{ borderLeftColor: kartRengiCss(aile.kart(t.kart_id)) }"
+            data-test="taksit-satiri"
           >
             <span class="min-w-0">
               <span class="block truncate font-semibold">{{ t.aciklama }}</span>
               <span class="block text-xs text-surface-500">
-                {{ t.taksit_no }}/{{ t.taksit_sayisi }} · toplam borç {{ tl(t.toplam_borc)
-                }}{{ t.toplam_tahmini ? ' (yaklaşık)' : '' }}
+                <KartEtiketi :kart-id="t.kart_id" /> · {{ t.taksit_no }}/{{ t.taksit_sayisi }} ·
+                toplam borç {{ tl(t.toplam_borc) }}{{ t.toplam_tahmini ? ' (yaklaşık)' : '' }}
               </span>
             </span>
             <span class="text-right">

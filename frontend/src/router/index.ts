@@ -71,16 +71,22 @@ export const rotalar: RouteRecordRaw[] = [
             meta: { baslik: 'Bütçe' },
           },
           {
+            // Gelir ve Gider tek sekmede, yana kaydırmalı iki panel
+            path: 'gelir-gider',
+            name: 'aile-gelir-gider',
+            component: () => import('@/views/aile/GelirGiderView.vue'),
+            meta: { baslik: 'Gelir / Gider' },
+          },
+          // Eski adresler yeni sekmeye yönlenir
+          {
             path: 'gelirler',
             name: 'aile-gelirler',
-            component: () => import('@/views/aile/GelirlerView.vue'),
-            meta: { baslik: 'Gelirler' },
+            redirect: { name: 'aile-gelir-gider', query: { panel: 'gelir' } },
           },
           {
             path: 'giderler',
             name: 'aile-giderler',
-            component: () => import('@/views/aile/GiderlerView.vue'),
-            meta: { baslik: 'Giderler' },
+            redirect: { name: 'aile-gelir-gider', query: { panel: 'gider' } },
           },
           {
             path: 'kartlar',
@@ -128,10 +134,10 @@ export const rotalar: RouteRecordRaw[] = [
             meta: { baslik: 'Faturalar' },
           },
           {
+            // Zekât Yönetim'in bir sekmesidir (yalnızca yönetici); eski adres oraya yönlenir
             path: 'zekat',
             name: 'aile-zekat',
-            component: () => import('@/views/aile/ZekatView.vue'),
-            meta: { baslik: 'Zekât' },
+            redirect: { name: 'yonetim', query: { sekme: 'zekat' } },
           },
           {
             path: 'ayarlar',

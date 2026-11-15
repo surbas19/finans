@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
@@ -26,6 +27,7 @@ import {
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAileStore } from '@/stores/aile'
+import { kartRengiCss } from '@/utils/kartRengi'
 import { tarihMetni, tl } from '@/utils/bicim'
 
 /**
@@ -100,6 +102,8 @@ const incelemeBekleyen = computed(() =>
 )
 /** Yapay zekâ taslağı ve aktarım kapalı: yalnızca önizleme */
 const yalnizOnizleme = computed(() => ekstre.value?.banka_profili === 'ai' && !aiAktarim.value)
+/** Üstteki ve alttaki Onayla düğmesinin ortak kapalı koşulu */
+const onayEngelli = computed(() => aiSuruyor.value || yalnizOnizleme.value)
 const gorunenSatirlar = computed(() =>
   goster.value === 'inceleme'
     ? satirlar.value.filter((s) => s.okuma?.inceleme)
@@ -214,18 +218,33 @@ function sil(): void {
     <Message v-if="bulunamadi" severity="error">Ekstre bulunamadı.</Message>
     <Skeleton v-else-if="!ekstre" height="12rem" border-radius="1.5rem" />
     <template v-else>
-      <section class="kart p-4 sm:p-5">
+      <section
+        class="kart border-t-4 p-4 sm:p-5"
+        :style="{ borderTopColor: kartRengiCss(kart ?? { id: ekstre.kart_id }) }"
+      >
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="min-w-0">
-            <h2 class="truncate text-lg font-bold text-surface-900">
-              {{ kart?.ad }} · {{ ekstre.donem_etiketi ?? 'Dönem okunamadı' }}
+            <h2 class="flex items-center gap-1 truncate text-lg font-bold text-surface-900">
+              <KartEtiketi :kart-id="ekstre.kart_id" :ad="kart?.ad" /> ·
+              {{ ekstre.donem_etiketi ?? 'Dönem okunamadı' }}
             </h2>
             <p class="text-xs text-surface-500">
               {{ ekstre.dosya_adi
               }}<template v-if="ekstre.sayfa_sayisi"> · {{ ekstre.sayfa_sayisi }} sayfa</template>
             </p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Üstte de Onayla: uzun satır listesini kaydırmadan onaylanabilir (aynı onay penceresi) -->
+            <Button
+              v-if="taslak"
+              label="Onayla"
+              icon="pi pi-check"
+              size="small"
+              :loading="onaylaniyor"
+              :disabled="onayEngelli"
+              data-test="onayla-ust"
+              @click="onayla"
+            />
             <Tag
               :value="taslak ? 'İnceleme bekliyor' : 'Onaylandı'"
               :severity="taslak ? 'warn' : 'success'"
@@ -466,7 +485,8 @@ function sil(): void {
           :label="`Onayla (${dahil.length} satır)`"
           icon="pi pi-check"
           :loading="onaylaniyor"
-          :disabled="aiSuruyor || yalnizOnizleme"
+          :disabled="onayEngelli"
+          data-test="onayla-alt"
           @click="onayla"
         />
         <Button label="Ekstreyi sil" icon="pi pi-trash" severity="danger" text @click="sil" />

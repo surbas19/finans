@@ -7,9 +7,9 @@ import Textarea from 'primevue/textarea'
 import ToggleSwitch from 'primevue/toggleswitch'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import FormAlani from '@/components/FormAlani.vue'
+import RenkSecici from '@/components/aile/RenkSecici.vue'
 import {
   finansApi,
-  HESAP_RENKLERI,
   HESAP_TURLERI,
   type HesapGirdisi,
   type HesapOzeti,
@@ -93,19 +93,7 @@ async function kaydet(): Promise<void> {
         />
       </FormAlani>
       <FormAlani etiket="Renk" :hata="hatalar.renk">
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="r in HESAP_RENKLERI"
-            :key="r"
-            type="button"
-            class="h-8 w-8 rounded-full border-2 transition-transform"
-            :class="form.renk === r ? 'scale-110 border-surface-900' : 'border-transparent'"
-            :style="{ background: `var(--p-${r}-500)` }"
-            :aria-label="`Renk ${r}`"
-            :aria-pressed="form.renk === r"
-            @click="form.renk = r"
-          />
-        </div>
+        <RenkSecici v-model="form.renk" />
       </FormAlani>
       <FormAlani
         etiket="Not"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import InputText from 'primevue/inputtext'
@@ -17,6 +18,7 @@ import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
 import FormAlani from '@/components/FormAlani.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
+import ZekatView from '@/views/aile/ZekatView.vue'
 import {
   finansApi,
   type KaynakDurumu,
@@ -34,7 +36,12 @@ import { neZaman, tarihSaat } from '@/utils/bicim'
  */
 const auth = useAuthStore()
 const toast = useToast()
-const sekme = ref('kaynaklar')
+const route = useRoute()
+/** `?sekme=zekat` ile zekât sekmesi açık başlar (eski zekât adresi ve Bütçe uyarısı buraya gelir) */
+const SEKMELER = ['kaynaklar', 'kullanicilar', 'zekat']
+const sekme = ref(
+  SEKMELER.includes(String(route.query.sekme)) ? String(route.query.sekme) : 'kaynaklar',
+)
 const kullanicilar = ref<YonetimKullanicisi[]>([])
 const kaynaklar = ref<KaynakDurumu[]>([])
 const guncelleniyor = ref(false)
@@ -141,6 +148,7 @@ async function sifreKaydet(): Promise<void> {
         <TabList>
           <Tab value="kaynaklar">Fiyat kaynakları</Tab>
           <Tab value="kullanicilar">Kullanıcılar</Tab>
+          <Tab value="zekat" data-test="sekme-zekat">Zekât</Tab>
         </TabList>
         <TabPanels>
           <TabPanel value="kaynaklar">
@@ -238,6 +246,9 @@ async function sifreKaydet(): Promise<void> {
                 </div>
               </li>
             </ul>
+          </TabPanel>
+          <TabPanel value="zekat">
+            <ZekatView />
           </TabPanel>
         </TabPanels>
       </Tabs>

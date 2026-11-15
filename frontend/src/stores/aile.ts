@@ -64,6 +64,7 @@ export const useAileStore = defineStore('aile', () => {
   const uyeAdi = (id: number | null | undefined) => uye(id)?.ad ?? ''
   const kartAdi = (id: number | null | undefined) =>
     kartlar.value.find((k) => k.id === id)?.ad ?? ''
+  const kart = (id: number | null | undefined) => kartlar.value.find((k) => k.id === id)
   const bankaAdi = (id: number | null | undefined) =>
     bankalar.value.find((b) => b.id === id)?.ad ?? ''
   const kategori = (id: number | null | undefined) => kategoriler.value.find((k) => k.id === id)
@@ -87,6 +88,7 @@ export const useAileStore = defineStore('aile', () => {
     uye,
     uyeAdi,
     kartAdi,
+    kart,
     bankaAdi,
     kategori,
     saglayici,

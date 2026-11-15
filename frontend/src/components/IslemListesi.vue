@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import type { ZekatOdemesi } from '@/api/aile'
 import { islemEtiketi, type Islem } from '@/api/finans'
 import VarlikAdi from '@/components/VarlikAdi.vue'
 import { useIslemSil } from '@/composables/useIslemSil'
@@ -15,8 +17,36 @@ const props = defineProps<{
   islemler: Islem[]
   /** Satırda hesap adı gösterilsin (tüm işlemler sayfası) */
   hesapGoster?: boolean
+  /** Verilen zekât ödemeleri: aynı listede tarihe göre karışır, "Zekât" rozetiyle */
+  zekatOdemeleri?: ZekatOdemesi[]
 }>()
-const emit = defineEmits<{ duzenle: [islem: Islem]; silindi: [] }>()
+const emit = defineEmits<{
+  duzenle: [islem: Islem]
+  silindi: []
+  zekatSil: [odeme: ZekatOdemesi]
+}>()
+
+type Satir =
+  | { tur: 'islem'; anahtar: string; tarih: string; islem: Islem }
+  | { tur: 'zekat'; anahtar: string; tarih: string; odeme: ZekatOdemesi }
+
+/** İşlemler ve zekât ödemeleri en yeni üstte; aynı günde önce işlemler (sıralama kararlı) */
+const satirlar = computed<Satir[]>(() =>
+  [
+    ...props.islemler.map((islem): Satir => ({
+      tur: 'islem',
+      anahtar: `i${islem.id}`,
+      tarih: islem.tarih,
+      islem,
+    })),
+    ...(props.zekatOdemeleri ?? []).map((odeme): Satir => ({
+      tur: 'zekat',
+      anahtar: `z${odeme.id}`,
+      tarih: odeme.tarih,
+      odeme,
+    })),
+  ].sort((a, b) => b.tarih.localeCompare(a.tarih)),
+)
 
 const { sil } = useIslemSil()
 
@@ -54,78 +84,125 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
 
 <template>
   <ul class="divide-y divide-surface-100">
-    <li v-for="i in islemler" :key="i.id">
-      <!-- Telefon -->
-      <button
-        type="button"
-        class="flex min-h-14 w-full items-center gap-3 py-3 text-left transition-colors active:bg-surface-50 sm:hidden"
-        :aria-label="`${tarih(i.tarih)} ${islemEtiketi(i.tur, i.varlik?.tur)} ${i.varlik ? `${i.varlik.kod} ${i.varlik.ad}` : ''}: düzenle`"
-        data-test="islem-karti"
-        @click="emit('duzenle', i)"
-      >
-        <span class="min-w-0 flex-1">
-          <span class="flex items-center gap-2">
-            <Tag
-              :value="islemEtiketi(i.tur, i.varlik?.tur)"
-              :severity="TUR_RENGI[i.tur]"
-              class="shrink-0"
-            />
-            <VarlikAdi v-if="i.varlik" :kod="i.varlik.kod" :ad="i.varlik.ad" />
+    <li v-for="s in satirlar" :key="s.anahtar">
+      <template v-if="s.tur === 'islem'">
+        <!-- Telefon -->
+        <button
+          type="button"
+          class="flex min-h-14 w-full items-center gap-3 py-3 text-left transition-colors active:bg-surface-50 sm:hidden"
+          :aria-label="`${tarih(s.islem.tarih)} ${islemEtiketi(s.islem.tur, s.islem.varlik?.tur)} ${s.islem.varlik ? `${s.islem.varlik.kod} ${s.islem.varlik.ad}` : ''}: düzenle`"
+          data-test="islem-karti"
+          @click="emit('duzenle', s.islem)"
+        >
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center gap-2">
+              <Tag
+                :value="islemEtiketi(s.islem.tur, s.islem.varlik?.tur)"
+                :severity="TUR_RENGI[s.islem.tur]"
+                class="shrink-0"
+              />
+              <VarlikAdi v-if="s.islem.varlik" :kod="s.islem.varlik.kod" :ad="s.islem.varlik.ad" />
+            </span>
+            <span class="mt-1 line-clamp-2 text-xs text-surface-500 tabular-nums">
+              {{ ayrintiMetni(s.islem, true) }}
+            </span>
+            <span v-if="s.islem.not" class="mt-0.5 block truncate text-xs text-surface-400">{{
+              s.islem.not
+            }}</span>
           </span>
-          <span class="mt-1 line-clamp-2 text-xs text-surface-500 tabular-nums">
-            {{ ayrintiMetni(i, true) }}
+          <span class="flex shrink-0 items-center gap-1.5">
+            <span class="font-semibold whitespace-nowrap text-surface-900 tabular-nums">
+              {{ tl(s.islem.tutar) }}
+            </span>
+            <s.islem class="pi pi-angle-right text-sm text-surface-400" />
           </span>
-          <span v-if="i.not" class="mt-0.5 block truncate text-xs text-surface-400">{{
-            i.not
-          }}</span>
-        </span>
-        <span class="flex shrink-0 items-center gap-1.5">
-          <span class="font-semibold whitespace-nowrap text-surface-900 tabular-nums">
-            {{ tl(i.tutar) }}
-          </span>
-          <i class="pi pi-angle-right text-sm text-surface-400" />
-        </span>
-      </button>
+        </button>
 
-      <!-- Masaüstü -->
-      <div class="hidden items-center gap-3 py-3 sm:flex">
-        <div class="w-20 shrink-0 text-xs text-surface-500 tabular-nums">{{ tarih(i.tarih) }}</div>
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <Tag
-              :value="islemEtiketi(i.tur, i.varlik?.tur)"
-              :severity="TUR_RENGI[i.tur]"
-              class="shrink-0"
+        <!-- Masaüstü -->
+        <div class="hidden items-center gap-3 py-3 sm:flex">
+          <div class="w-20 shrink-0 text-xs text-surface-500 tabular-nums">
+            {{ tarih(s.islem.tarih) }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <Tag
+                :value="islemEtiketi(s.islem.tur, s.islem.varlik?.tur)"
+                :severity="TUR_RENGI[s.islem.tur]"
+                class="shrink-0"
+              />
+              <VarlikAdi v-if="s.islem.varlik" :kod="s.islem.varlik.kod" :ad="s.islem.varlik.ad" />
+            </div>
+            <div class="mt-0.5 truncate text-xs text-surface-500">
+              {{ ayrintiMetni(s.islem, false) }}
+            </div>
+            <div v-if="s.islem.not" class="mt-0.5 truncate text-xs text-surface-400">
+              {{ s.islem.not }}
+            </div>
+          </div>
+          <div class="shrink-0 text-right font-semibold text-surface-900 tabular-nums">
+            {{ tl(s.islem.tutar) }}
+          </div>
+          <div class="flex shrink-0">
+            <Button
+              icon="pi pi-pencil"
+              text
+              rounded
+              size="small"
+              aria-label="Düzenle"
+              @click="emit('duzenle', s.islem)"
             />
-            <VarlikAdi v-if="i.varlik" :kod="i.varlik.kod" :ad="i.varlik.ad" />
+            <Button
+              icon="pi pi-trash"
+              text
+              rounded
+              size="small"
+              severity="danger"
+              aria-label="Sil"
+              @click="sil(s.islem, () => emit('silindi'))"
+            />
           </div>
-          <div class="mt-0.5 truncate text-xs text-surface-500">
-            {{ ayrintiMetni(i, false) }}
-          </div>
-          <div v-if="i.not" class="mt-0.5 truncate text-xs text-surface-400">{{ i.not }}</div>
         </div>
-        <div class="shrink-0 text-right font-semibold text-surface-900 tabular-nums">
-          {{ tl(i.tutar) }}
-        </div>
-        <div class="flex shrink-0">
-          <Button
-            icon="pi pi-pencil"
-            text
-            rounded
-            size="small"
-            aria-label="Düzenle"
-            @click="emit('duzenle', i)"
-          />
-          <Button
-            icon="pi pi-trash"
-            text
-            rounded
-            size="small"
-            severity="danger"
-            aria-label="Sil"
-            @click="sil(i, () => emit('silindi'))"
-          />
-        </div>
+      </template>
+
+      <!-- Verilen zekât: telefonda dokununca silme onayı, masaüstünde silme düğmesi -->
+      <div v-else class="flex min-h-14 items-center gap-3 py-3" data-test="zekat-satiri">
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 items-center gap-3 text-left sm:cursor-default"
+          :aria-label="`${tarih(s.odeme.tarih)} verilen zekât ${tl(s.odeme.tutar)}: sil`"
+          @click="emit('zekatSil', s.odeme)"
+        >
+          <span class="w-20 shrink-0 text-xs text-surface-500 tabular-nums max-sm:hidden">{{
+            tarih(s.odeme.tarih)
+          }}</span>
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center gap-2">
+              <Tag value="Zekât" severity="warn" class="shrink-0" />
+              <span class="truncate font-semibold text-surface-900">{{
+                s.odeme.alici || 'Verilen zekât'
+              }}</span>
+            </span>
+            <span class="mt-1 block truncate text-xs text-surface-500 tabular-nums">
+              <span class="sm:hidden">{{ tarih(s.odeme.tarih) }}</span>
+              <template v-if="s.odeme.not">
+                <span class="sm:hidden"> · </span>{{ s.odeme.not }}
+              </template>
+            </span>
+          </span>
+          <span class="shrink-0 font-semibold whitespace-nowrap text-surface-900 tabular-nums">
+            {{ tl(s.odeme.tutar) }}
+          </span>
+        </button>
+        <Button
+          class="max-sm:hidden"
+          icon="pi pi-trash"
+          text
+          rounded
+          size="small"
+          severity="danger"
+          aria-label="Zekât ödemesini sil"
+          @click="emit('zekatSil', s.odeme)"
+        />
       </div>
     </li>
   </ul>

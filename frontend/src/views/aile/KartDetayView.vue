@@ -10,6 +10,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import BosDurum from '@/components/BosDurum.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
+import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import KartFormu from '@/components/aile/KartFormu.vue'
 import KartIslemFormu from '@/components/aile/KartIslemFormu.vue'
@@ -18,6 +19,7 @@ import { aileApi, type Ekstre, type Fatura, type Kart, type KartIslemi } from '@
 import { hataMesaji } from '@/api/http'
 import { useAileStore } from '@/stores/aile'
 import { tarih, tl } from '@/utils/bicim'
+import { kartRengiCss } from '@/utils/kartRengi'
 
 /**
  * Kart sayfası: ekstreler (dönem, borç, son ödeme, ödendi), son işlemler ve bu kartla ödenen faturalar.
@@ -35,6 +37,13 @@ const faturalar = ref<Fatura[]>([])
 const bulunamadi = ref(false)
 const kartFormuAcik = ref(false)
 const yukleAcik = ref(false)
+const yukleTuru = ref<'kart' | 'yapistir'>('kart')
+const elleAcik = ref(false)
+
+function yukleAc(tur: 'kart' | 'yapistir'): void {
+  yukleTuru.value = tur
+  yukleAcik.value = true
+}
 const islemFormuAcik = ref(false)
 const duzenlenen = ref<KartIslemi | null>(null)
 
@@ -93,7 +102,10 @@ function kartiSil(): void {
   <div class="flex flex-col gap-4">
     <Message v-if="bulunamadi" severity="error">Kart bulunamadı.</Message>
     <template v-else>
-      <section class="kart p-4 sm:p-5">
+      <section
+        class="kart border-t-4 p-4 sm:p-5"
+        :style="{ borderTopColor: kart ? kartRengiCss(kart) : undefined }"
+      >
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="min-w-0">
             <Skeleton v-if="!kart" width="10rem" height="1.5rem" />
@@ -130,7 +142,28 @@ function kartiSil(): void {
           </div>
         </div>
         <div class="mt-3 flex flex-wrap gap-2">
-          <Button label="Ekstre yükle" icon="pi pi-upload" @click="yukleAcik = true" />
+          <Button
+            label="Ekstre yükle"
+            icon="pi pi-upload"
+            data-test="kart-ekstre-yukle"
+            @click="yukleAc('kart')"
+          />
+          <Button
+            label="Dış yapay zekâ (JSON)"
+            icon="pi pi-clipboard"
+            severity="secondary"
+            outlined
+            data-test="kart-ekstre-json"
+            @click="yukleAc('yapistir')"
+          />
+          <Button
+            label="Tutarla ekstre gir"
+            icon="pi pi-pencil"
+            severity="secondary"
+            outlined
+            data-test="kart-ekstre-elle"
+            @click="elleAcik = true"
+          />
           <Button
             label="İşlem ekle"
             icon="pi pi-plus"
@@ -220,7 +253,8 @@ function kartiSil(): void {
     </template>
 
     <KartFormu v-model:visible="kartFormuAcik" :kart="kart" @kaydedildi="yukle" />
-    <EkstreYukleDialog v-model:visible="yukleAcik" :kart-id="id" />
+    <EkstreYukleDialog v-model:visible="yukleAcik" :kart-id="id" :baslangic-turu="yukleTuru" />
+    <ElleEkstreDialog v-model:visible="elleAcik" :kart-id="id" />
     <KartIslemFormu
       v-model:visible="islemFormuAcik"
       :islem="duzenlenen"
