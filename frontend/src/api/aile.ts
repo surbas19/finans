@@ -703,6 +703,21 @@ export interface ZekatOdemesi {
   not: string | null
 }
 
+/** "Ramazan'dan Ramazan'a" zekât yılı: gereken (zekât hesaplanmışsa), verilen, kalan ve ödemeler */
+export interface ZekatDonemi {
+  baslangic: string
+  bitis: string
+  etiket: string
+  hicri: boolean
+  guncel: boolean
+  yil: { id: number; durum: 'taslak' | 'kesinlesti'; nisab_ustu: boolean } | null
+  gereken: number | null
+  verilen: number
+  kalan: number | null
+  fazla: number | null
+  odemeler: ZekatOdemesi[]
+}
+
 export interface ZekatOdemeGirdisi {
   zekat_yili_id: number | null
   uye_id?: number | null
@@ -874,6 +889,8 @@ export const aileApi = {
   zekatBorcuSil: (id: number) => http.delete(`/aile/zekat/borclar/${id}`),
   zekatOdemeleri: () =>
     http.get<{ odemeler: ZekatOdemesi[] }>('/aile/zekat/odemeler').then((r) => r.data.odemeler),
+  zekatDonemleri: () =>
+    http.get<{ donemler: ZekatDonemi[] }>('/aile/zekat/donemler').then((r) => r.data.donemler),
   zekatOdemeEkle: (veri: ZekatOdemeGirdisi) =>
     http.post<{ odeme: ZekatOdemesi }>('/aile/zekat/odemeler', veri).then((r) => r.data.odeme),
   zekatOdemeSil: (id: number) => http.delete(`/aile/zekat/odemeler/${id}`),

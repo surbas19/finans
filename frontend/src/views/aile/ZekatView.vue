@@ -7,6 +7,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import ZekatAyarlari from '@/components/zekat/ZekatAyarlari.vue'
+import ZekatDonemleri from '@/components/zekat/ZekatDonemleri.vue'
 import ZekatOdemeFormu from '@/components/zekat/ZekatOdemeFormu.vue'
 import ZekatSonucKarti from '@/components/zekat/ZekatSonucKarti.vue'
 import ZekatYilListesi from '@/components/zekat/ZekatYilListesi.vue'
@@ -14,6 +15,8 @@ import {
   aileApi,
   ZEKAT_UYARISI,
   type ZekatAyarYaniti,
+  type ZekatDonemi,
+  type ZekatOdemesi,
   type ZekatHesabiYaniti,
   type ZekatSonucu,
   type ZekatYili,
@@ -37,14 +40,22 @@ const kaydediliyor = ref(false)
 
 const ayarAcik = ref(false)
 const odemeAcik = ref(false)
-const odemeYil = ref<ZekatYiliDetayi | null>(null)
+/** Ödeme formunun bağlı yılı (kesinleşmiş zekât yılı) ve önerilen tutar (kalan) */
+const odemeYilId = ref<number | null>(null)
+const odemeKalan = ref<number | null>(null)
+const donemler = ref<ZekatDonemi[]>([])
 const detay = ref<ZekatYiliDetayi | null>(null)
 const detayAcik = ref(false)
 
 async function yukle(): Promise<void> {
-  const [a, y] = await Promise.all([aileApi.zekatAyar(), aileApi.zekatYillari()])
+  const [a, y, d] = await Promise.all([
+    aileApi.zekatAyar(),
+    aileApi.zekatYillari(),
+    aileApi.zekatDonemleri(),
+  ])
   ayar.value = a
   yillar.value = y
+  donemler.value = d
 }
 
 onMounted(() => {
@@ -162,8 +173,26 @@ function taslakSil(): void {
 }
 
 function odemeEkle(): void {
-  odemeYil.value = detay.value
+  odemeYilId.value = detay.value?.id ?? null
+  odemeKalan.value = detay.value?.kalan ?? null
   odemeAcik.value = true
+}
+
+/** Zekât yılı bölümünden: kesinleşmiş yıla bağlanır, tutar önerisi kalan; yıl yoksa tarihe göre sunucu bağlar */
+function donemdeOdemeEkle(d: ZekatDonemi): void {
+  odemeYilId.value = d.yil?.durum === 'kesinlesti' ? d.yil.id : null
+  odemeKalan.value = d.kalan
+  odemeAcik.value = true
+}
+
+function genelOdemeEkle(): void {
+  odemeYilId.value = null
+  odemeKalan.value = null
+  odemeAcik.value = true
+}
+
+async function donemOdemeSil(o: ZekatOdemesi): Promise<void> {
+  await odemeSil(o.id)
 }
 
 async function odemeSil(id: number): Promise<void> {
@@ -265,6 +294,26 @@ const gunMetni = computed(() => {
         </div>
       </template>
 
+      <section class="flex flex-col gap-2" data-test="zekat-verilen-bolumu">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="bolum-etiketi">Verilen zekât (Ramazan'dan Ramazan'a)</h2>
+          <Button
+            label="Zekât ödemesi ekle"
+            icon="pi pi-heart"
+            size="small"
+            severity="secondary"
+            outlined
+            data-test="zekat-odemesi-ekle"
+            @click="genelOdemeEkle"
+          />
+        </div>
+        <p class="text-xs text-surface-500">
+          Zekât bir zekât gününden bir sonrakine kadar (Ramazan'dan Ramazan'a) toplanıp verilir; her
+          yılın gereken, verilen ve kalan tutarı burada görünür.
+        </p>
+        <ZekatDonemleri :donemler="donemler" @ekle="donemdeOdemeEkle" @sil="donemOdemeSil" />
+      </section>
+
       <section class="flex flex-col gap-2">
         <h2 class="bolum-etiketi">Yıl geçmişi</h2>
         <ZekatYilListesi :yillar="yillar" @sec="yilSec" />
@@ -279,8 +328,8 @@ const gunMetni = computed(() => {
     />
     <ZekatOdemeFormu
       v-model:visible="odemeAcik"
-      :yil-id="odemeYil?.id ?? null"
-      :kalan="odemeYil?.kalan ?? null"
+      :yil-id="odemeYilId"
+      :kalan="odemeKalan"
       @kaydedildi="odemeKaydedildi"
     />
 
