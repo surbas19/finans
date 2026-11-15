@@ -17,6 +17,7 @@ use App\Models\HaneUyesi;
 use App\Models\HarcamaKategorisi;
 use App\Models\Kart;
 use App\Models\KartIslemi;
+use App\Models\Tasarruf;
 use App\Support\Donem;
 use App\Support\Kurus;
 use Illuminate\Support\Collection;
@@ -177,6 +178,9 @@ class ButceRaporu
     {
         $gelir = $this->gelirOzeti($haneId, $donem);
         $gider = $this->giderOzeti($haneId, $donem);
+        $tasarruf = $this->tasarrufOzeti($haneId, $donem);
+        $kurus = fn (float $tl): int => Kurus::kurus(number_format($tl, 2, '.', ''));
+        $fark = $kurus($gelir['toplam']) - $kurus($gider['toplam']);
 
         return [
             'donem' => $donem,
@@ -185,7 +189,26 @@ class ButceRaporu
             'gider' => $gider,
             'faturalar' => $this->faturaOzeti($haneId, $donem),
             // Toplamlar kuruşun yüzde biri (x/100): iki haneyle metne çevrilince kuruş tam geri gelir
-            'fark' => Kurus::tl(Kurus::kurus(number_format($gelir['toplam'], 2, '.', '')) - Kurus::kurus(number_format($gider['toplam'], 2, '.', ''))),
+            'tasarruf' => $tasarruf,
+            'fark' => Kurus::tl($fark),
+            // Tasarruf gider değildir: Gelir − Gider − Tasarruf = Kalan
+            'kalan' => Kurus::tl($fark - $kurus($tasarruf['toplam'])),
+        ];
+    }
+
+    /**
+     * Ayın tasarrufu: portföy hesabına yazılan alışlar (tarihin ayı). Gider toplamına girmez.
+     *
+     * @return array<string, mixed>
+     */
+    public function tasarrufOzeti(int $haneId, string $donem): array
+    {
+        $kayitlar = Tasarruf::where('hane_id', $haneId)->where('donem', $donem)->with(['hesap', 'islem.varlik'])
+            ->orderByDesc('tarih')->orderByDesc('id')->get();
+
+        return [
+            'toplam' => Kurus::tl($kayitlar->reduce(fn (int $t, Tasarruf $s): int => $t + Kurus::kurus($s->tutar_tl), 0)),
+            'kalemler' => $kayitlar->map(fn (Tasarruf $s): array => $s->ozet())->values(),
         ];
     }
 

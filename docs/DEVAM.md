@@ -26,9 +26,9 @@ Gerçek PDF'ler yalnızca bu bilgisayarda (`C:\Users\surbas\Downloads`: Garanti 
 İstek (2026-11-15): düzenli giderler (eğitim, bakıcı…) + kartlar aylık dönemde; "Tasarruf yap" (altın / hisse / döviz → portföy hesabı, ay içinde görünür, Gelir − Gider − Tasarruf = Kalan); ekstreyi dosyasız, yalnızca tutarla girme.
 
 - [x] 1. Düzenli giderler (arka uç): migration `2026_11_15_000100`, `GiderKaynagi`, `DuzenliGider`, `GiderTakvimi`, controller'lar, `ButceRaporu` (gider.duzenli, gider.beklenenler), `GiderTest`
-- [ ] 2. Tasarruf (arka uç): `tasarruflar`, `TasarrufController`, rapor (`tasarruf`, `kalan`), test
-- [ ] 3. Elle ekstre (arka uç): `EkstreIceAktarici::elleOlustur`, `POST ekstreler/elle`, test
+- [x] 2. Tasarruf (arka uç): `tasarruflar`, `TasarrufController`, rapor (`tasarruf`, `kalan`), test
+- [x] 3. Elle ekstre (arka uç): `EkstreIceAktarici::elleOlustur`, `POST ekstreler/elle`, test
 - [ ] 4. Arayüz: Giderler sekmesi, Özet'te Gelir/Gider/Tasarruf/Kalan + beklenen giderler + "Tasarruf yap", "Elle ekstre gir"
 - [ ] 5. CLAUDE.md, ILERLEME, e2e, yayın onayı
 
-**Sıradaki adım:** 2. aşama. PHP: `C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64` PATH'e eklenir; MySQL elle başlatılır (açılışı ~1 dk).
+**Sıradaki adım:** 4. aşama (arayüz); API: gider-kaynaklari, duzenli-giderler, tasarruflar, ekstreler/elle, ozet (gider.duzenli, gider.beklenenler, tasarruf, kalan). PHP: `C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64` PATH'e eklenir; MySQL elle başlatılır (açılışı ~1 dk).

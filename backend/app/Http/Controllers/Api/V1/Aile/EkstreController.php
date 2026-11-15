@@ -80,6 +80,26 @@ class EkstreController extends Controller
         ], 201);
     }
 
+    /**
+     * Dosyasız ekstre: yalnızca kesim, son ödeme ve dönem borcu girilir; onaylı ekstre + tek gider satırı oluşur.
+     */
+    public function elle(Request $request): JsonResponse
+    {
+        $veri = $request->validate([
+            'kart_id' => ['required', 'integer', Rule::exists('kartlar', 'id')->where('hane_id', $request->user()->hane_id)],
+            'kesim_tarihi' => ['required', 'date', 'before_or_equal:today'],
+            'son_odeme_tarihi' => ['required', 'date', 'after_or_equal:kesim_tarihi'],
+            'donem_borcu' => ['required', 'numeric', 'gt:0', 'max:1000000000', 'decimal:0,2'],
+            'asgari_odeme' => ['nullable', 'numeric', 'gt:0', 'max:1000000000', 'decimal:0,2'],
+        ], [
+            'kesim_tarihi.before_or_equal' => 'Kesim tarihi bugünden ileri olamaz.',
+            'son_odeme_tarihi.after_or_equal' => 'Son ödeme tarihi kesim tarihinden önce olamaz.',
+        ], ['kart_id' => 'kart', 'kesim_tarihi' => 'kesim tarihi', 'son_odeme_tarihi' => 'son ödeme tarihi', 'donem_borcu' => 'dönem borcu', 'asgari_odeme' => 'asgari ödeme']);
+        $ekstre = $this->aktarici->elleOlustur($request->user(), Kart::findOrFail($veri['kart_id']), $veri);
+
+        return response()->json(['ekstre' => $ekstre->ozet(), 'message' => $ekstre->donemEtiketi().' ekstresi tutarla eklendi.'], 201);
+    }
+
     public function show(Ekstre $ekstre): JsonResponse
     {
         Gate::authorize('hane-kaydi', $ekstre);

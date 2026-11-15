@@ -17,6 +17,7 @@ use App\Services\Aile\KategoriBulucu;
 use App\Services\AIStatement\PdfUploadService;
 use App\Support\Kurus;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -451,6 +452,57 @@ class EkstreIceAktarici
             ])->save();
 
             return ['eklenen' => $eklenen, 'atlanan' => $atlanan, 'tekrar' => $tekrar, 'fatura' => $fatura];
+        });
+    }
+
+    /**
+     * Dosyasız (yalnızca tutarla) ekstre: onaylı ekstre kaydı + dönem borcu kadar tek harcama satırı (kesim tarihinde,
+     * rapor ayı kesim ayı). Kalem dökümü yoktur. Aynı kartın aynı kesim tarihi ikinci kez eklenmez.
+     *
+     * @param  array{kesim_tarihi: string, son_odeme_tarihi: string, donem_borcu: string|float|int, asgari_odeme?: string|float|int|null}  $veri
+     */
+    public function elleOlustur(User $user, Kart $kart, array $veri): Ekstre
+    {
+        $kesim = $veri['kesim_tarihi'];
+        if (Ekstre::where('kart_id', $kart->id)->where('onayli_kesim_tarihi', $kesim)->exists()) {
+            throw ValidationException::withMessages(['kesim_tarihi' => 'Bu kartın '.Carbon::parse($kesim)->format('d.m.Y').' kesimli ekstresi zaten kayıtlı. Aynı dönem ikinci kez eklenmez.']);
+        }
+        $borc = Kurus::decimal(Kurus::kurus($veri['donem_borcu']));
+        $asgari = isset($veri['asgari_odeme']) && $veri['asgari_odeme'] !== ''
+            ? Kurus::decimal(Kurus::kurus($veri['asgari_odeme']))
+            : self::asgariHesapla($kart, $borc);
+
+        return DB::transaction(function () use ($user, $kart, $veri, $kesim, $borc, $asgari): Ekstre {
+            $ekstre = Ekstre::create([
+                'hane_id' => $user->hane_id,
+                'kart_id' => $kart->id,
+                'durum' => EkstreDurumu::Onaylandi,
+                'kesim_tarihi' => $kesim,
+                'son_odeme_tarihi' => $veri['son_odeme_tarihi'],
+                'donem_borcu' => $borc,
+                'asgari_odeme' => $asgari,
+                'alan_kaynaklari' => ['kesim_tarihi' => 'kullanici', 'son_odeme_tarihi' => 'kullanici', 'donem_borcu' => 'kullanici', 'asgari_odeme' => isset($veri['asgari_odeme']) && $veri['asgari_odeme'] !== '' ? 'kullanici' : 'hesaplandi'],
+                'okunamayan' => [],
+                'banka_profili' => 'elle',
+                'onayli_kesim_tarihi' => $kesim,
+                'onaylayan_id' => $user->id,
+                'onaylandi_at' => now(),
+                'olusturan_id' => $user->id,
+            ]);
+            $islem = new KartIslemi([
+                'hane_id' => $user->hane_id,
+                'kart_id' => $kart->id,
+                'ekstre_id' => $ekstre->id,
+                'sira' => 1,
+                'islem_tarihi' => $kesim,
+                'aciklama' => 'Ekstre toplamı (elle)',
+                'tutar' => $borc,
+                'tur' => KartIslemTuru::Harcama,
+                'olusturan_id' => $user->id,
+            ]);
+            $this->kurallar->onayla($islem, $ekstre, 1);
+
+            return $ekstre;
         });
     }
 

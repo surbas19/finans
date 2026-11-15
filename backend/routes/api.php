@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Aile\KartIslemiController;
 use App\Http\Controllers\Api\V1\Aile\KategoriController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
+use App\Http\Controllers\Api\V1\Aile\TasarrufController;
 use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
 use App\Http\Controllers\Api\V1\IslemController;
@@ -80,6 +81,10 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('gider-kaynaklari', GiderKaynagiController::class)->except('show')->parameters(['gider-kaynaklari' => 'kaynak']);
             Route::apiResource('duzenli-giderler', DuzenliGiderController::class)->except('show')->parameters(['duzenli-giderler' => 'gider']);
 
+            Route::get('tasarruflar', [TasarrufController::class, 'index'])->name('tasarruflar.index');
+            Route::post('tasarruflar', [TasarrufController::class, 'store'])->name('tasarruflar.store');
+            Route::delete('tasarruflar/{tasarruf}', [TasarrufController::class, 'destroy'])->name('tasarruflar.destroy');
+
             Route::apiResource('bankalar', BankaController::class)->except('show')->parameters(['bankalar' => 'banka']);
             Route::apiResource('kartlar', KartController::class)->parameters(['kartlar' => 'kart']);
             Route::apiResource('kategoriler', KategoriController::class)->except('show')->parameters(['kategoriler' => 'kategori']);
@@ -88,6 +93,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('kart-islemleri', KartIslemiController::class)->except('show')->parameters(['kart-islemleri' => 'islem']);
             Route::get('ekstreler', [EkstreController::class, 'index'])->name('ekstreler.index');
             Route::post('ekstreler', [EkstreController::class, 'store'])->middleware('throttle:ekstre')->name('ekstreler.store');
+            Route::post('ekstreler/elle', [EkstreController::class, 'elle'])->name('ekstreler.elle');
             Route::get('ekstreler/{ekstre}', [EkstreController::class, 'show'])->name('ekstreler.show');
             Route::put('ekstreler/{ekstre}', [EkstreController::class, 'update'])->name('ekstreler.update');
             Route::delete('ekstreler/{ekstre}', [EkstreController::class, 'destroy'])->name('ekstreler.destroy');
