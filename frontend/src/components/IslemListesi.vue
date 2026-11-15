@@ -153,7 +153,7 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
                 />
               </span>
               <span class="mt-1 line-clamp-2 text-xs text-surface-500 tabular-nums">
-                {{ ayrintiMetni(s.islem, true) }}
+                {{ ayrintiMetni(s.islem, false) }}
               </span>
               <span v-if="s.islem.not" class="mt-0.5 block truncate text-xs text-surface-400">{{
                 s.islem.not
