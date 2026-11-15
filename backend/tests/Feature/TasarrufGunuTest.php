@@ -9,6 +9,7 @@ use App\Models\TasarrufGunu;
 use App\Models\User;
 use App\Models\Varlik;
 use App\Services\Aile\HaneYonetimi;
+use App\Services\Portfoy\PortfoyHesabi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -57,14 +58,16 @@ class TasarrufGunuTest extends TestCase
         $ozet = $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertOk();
         $ozet->assertJsonPath('gunler.0.durum', 'bekliyor')->assertJsonPath('tasarruf.toplam', 0);
 
-        // Ay gelince kullanıcı onaylar: alış portföye yazılır, tasarrufa girer, kime verildiği notta
+        // Ay gelince kullanıcı onaylar; kime verildiği notta yazılı: başkasına verildiği için hiçbir hesaba yazılmaz
         $kayit = $this->postJson('/api/v1/aile/tasarruflar', [
-            'hesap_id' => $this->hesap->id, 'varlik_id' => $this->altin->id, 'miktar' => 5, 'birim_fiyat' => 3000,
+            'varlik_id' => $this->altin->id, 'miktar' => 5, 'birim_fiyat' => 3000,
             'tarih' => '2026-11-10', 'gun_id' => $id, 'not' => 'Kasım: Ayşe teyzeye verildi',
         ])->assertCreated()->assertJsonPath('tasarruf.gun_id', $id)->assertJsonPath('tasarruf.gun_ad', 'Mahalle altın günü')
-            ->assertJsonPath('tasarruf.tutar', 15000)->assertJsonPath('uyari', null);
+            ->assertJsonPath('tasarruf.tutar', 15000)->assertJsonPath('tasarruf.hesaba_eklendi', false)
+            ->assertJsonPath('tasarruf.miktar', 5)->assertJsonPath('tasarruf.varlik_ad', 'GRAM adı')->assertJsonPath('uyari', null);
         $this->assertSame('Kasım: Ayşe teyzeye verildi', Tasarruf::find($kayit->json('tasarruf.id'))->not);
-        $this->assertSame(1, Islem::count());
+        $this->assertSame(0, Islem::count()); // portföye / hesaba hiçbir şey yazılmadı
+        $this->assertSame(0.0, (float) app(PortfoyHesabi::class)->hesapla($this->ben)['toplam']['deger']);
 
         $this->getJson('/api/v1/aile/ozet?ay=2026-11')
             ->assertJsonPath('gunler.0.durum', 'yapildi')->assertJsonPath('gunler.0.vadesi_geldi', false)
@@ -151,5 +154,37 @@ class TasarrufGunuTest extends TestCase
         $id = Tasarruf::count() === 0 ? TasarrufGunu::value('id') : 0;
         $this->postJson('/api/v1/aile/tasarruflar', ['hesap_id' => $this->hesap->id, 'varlik_id' => $this->altin->id, 'miktar' => 1, 'birim_fiyat' => 3000, 'tarih' => '2026-11-10', 'gun_id' => $id])->assertCreated();
         $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gunler.0.durum', 'yapildi');
+    }
+
+    public function test_notsuz_gun_alimi_hesaba_yazilir_notlu_olmayan_gun_disi_alimda_hesap_zorunlu_verilen_alim_silinir(): void
+    {
+        $id = $this->gunEkle();
+        $govde = ['varlik_id' => $this->altin->id, 'miktar' => 2, 'birim_fiyat' => 3000, 'tarih' => '2026-11-10'];
+
+        // Not boş → hesaba alış yazılır (önceki davranış); hesap zorunlu
+        $this->postJson('/api/v1/aile/tasarruflar', [...$govde, 'gun_id' => $id])->assertStatus(422)->assertJsonValidationErrors('hesap_id');
+        $this->postJson('/api/v1/aile/tasarruflar', [...$govde, 'gun_id' => $id, 'hesap_id' => $this->hesap->id])
+            ->assertCreated()->assertJsonPath('tasarruf.hesaba_eklendi', true)->assertJsonPath('tasarruf.miktar', 2);
+        $this->assertSame(1, Islem::count());
+        // Not dolu ama gün yok → normal tasarruf: hesap gerekir, hesaba yazılır
+        $this->postJson('/api/v1/aile/tasarruflar', [...$govde, 'not' => 'hediye'])->assertStatus(422)->assertJsonValidationErrors('hesap_id');
+
+        // Verilen alım: aylık tasarruf toplamında, hesapta yok; silince yalnız satır gider
+        $v = $this->postJson('/api/v1/aile/tasarruflar', [...$govde, 'gun_id' => $id, 'not' => 'Ayşe teyze'])->assertCreated()->json('tasarruf.id');
+        $this->assertSame(1, Islem::count());
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('tasarruf.toplam', 12000)->assertJsonCount(2, 'tasarruf.kalemler');
+        $this->deleteJson("/api/v1/aile/tasarruflar/{$v}")->assertOk();
+        $this->assertSame(1, Islem::count());
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('tasarruf.toplam', 6000);
+    }
+
+    public function test_baska_hane_verilen_alimi_goremez_silemez(): void
+    {
+        $id = $this->gunEkle();
+        $v = $this->postJson('/api/v1/aile/tasarruflar', ['varlik_id' => $this->altin->id, 'miktar' => 1, 'birim_fiyat' => 3000, 'tarih' => '2026-11-10', 'gun_id' => $id, 'not' => 'x'])->json('tasarruf.id');
+        $yabanci = User::factory()->create();
+        app(HaneYonetimi::class)->hazirla($yabanci);
+        $this->actingAs($yabanci)->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('tasarruf.toplam', 0);
+        $this->deleteJson("/api/v1/aile/tasarruflar/{$v}")->assertForbidden();
     }
 }

@@ -41,8 +41,10 @@ class TasarrufController extends Controller
         $haneId = $request->user()->hane_id;
         $varlikId = $request->input('varlik_id');
         $sabit = (is_numeric($varlikId) ? Varlik::whereKey((int) $varlikId)->first()?->tur : null)?->sabitFiyatli() ?? false;
+        // Gün alımında "kime verildi" notu doluysa alım başkasına verilmiştir: hiçbir hesaba yazılmaz, yalnız tasarruf toplamına girer
+        $verilen = filled($request->input('gun_id')) && filled(trim((string) $request->input('not')));
         $veri = $request->validate([
-            'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
+            'hesap_id' => [Rule::requiredIf(! $verilen), 'nullable', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
             'varlik_id' => ['required', 'integer', Rule::exists('varliklar', 'id')],
             'uye_id' => ['nullable', 'integer', Rule::exists('hane_uyeleri', 'id')->where('hane_id', $haneId)],
             'gun_id' => ['nullable', 'integer', Rule::exists('tasarruf_gunleri', 'id')->where('hane_id', $haneId)],
@@ -64,6 +66,17 @@ class TasarrufController extends Controller
         $komisyon = $sabit ? 0.0 : (float) ($veri['komisyon'] ?? 0);
         $tutar = Kurus::kurus(number_format((float) $veri['miktar'] * $birim + $komisyon, 2, '.', ''));
 
+        if ($verilen) {
+            $tasarruf = Tasarruf::create([
+                'hane_id' => $request->user()->hane_id, 'uye_id' => $veri['uye_id'] ?? null, 'hesap_id' => null, 'islem_id' => null,
+                'varlik_id' => (int) $veri['varlik_id'], 'miktar' => $veri['miktar'], 'gun_id' => $veri['gun_id'],
+                'tarih' => $veri['tarih'], 'donem' => substr((string) Carbon::parse($veri['tarih'])->toDateString(), 0, 7),
+                'tutar_tl' => Kurus::decimal($tutar), 'not' => trim((string) $veri['not']), 'olusturan_id' => $request->user()->id,
+            ]);
+
+            return $this->yanit($tasarruf);
+        }
+
         $tasarruf = DB::transaction(function () use ($veri, $request, $birim, $komisyon, $tutar): Tasarruf {
             $islem = Islem::create([
                 'user_id' => $request->user()->id, 'hesap_id' => (int) $veri['hesap_id'], 'varlik_id' => (int) $veri['varlik_id'],
@@ -73,17 +86,22 @@ class TasarrufController extends Controller
 
             return Tasarruf::create([
                 'hane_id' => $request->user()->hane_id, 'uye_id' => $veri['uye_id'] ?? null, 'hesap_id' => $islem->hesap_id,
-                'islem_id' => $islem->id, 'gun_id' => $veri['gun_id'] ?? null, 'tarih' => $veri['tarih'], 'donem' => substr((string) Carbon::parse($veri['tarih'])->toDateString(), 0, 7),
+                'islem_id' => $islem->id, 'varlik_id' => $islem->varlik_id, 'miktar' => $islem->miktar, 'gun_id' => $veri['gun_id'] ?? null, 'tarih' => $veri['tarih'], 'donem' => substr((string) Carbon::parse($veri['tarih'])->toDateString(), 0, 7),
                 'tutar_tl' => Kurus::decimal($tutar), 'not' => $veri['not'] ?? null, 'olusturan_id' => $request->user()->id,
             ]);
         });
 
+        return $this->yanit($tasarruf);
+    }
+
+    private function yanit(Tasarruf $tasarruf): JsonResponse
+    {
         // Aynı gün için o ay ikinci alım engellenmez (iki alım gerçekten yapılmış olabilir) ama uyarılır
         $tekrar = $tasarruf->gun_id !== null && Tasarruf::where('gun_id', $tasarruf->gun_id)->where('donem', $tasarruf->donem)->whereKeyNot($tasarruf->id)->exists();
 
         return response()->json([
-            'tasarruf' => $tasarruf->load(['hesap', 'islem.varlik', 'gun'])->ozet(),
-            'message' => Donem::etiket($tasarruf->donem).' tasarrufu kaydedildi.',
+            'tasarruf' => $tasarruf->load(['hesap', 'islem.varlik', 'varlik', 'gun'])->ozet(),
+            'message' => Donem::etiket($tasarruf->donem).' tasarrufu kaydedildi.'.($tasarruf->islem_id === null ? ' (Hiçbir hesaba eklenmedi.)' : ''),
             'uyari' => $tekrar ? 'Bu gün için '.Donem::etiket($tasarruf->donem).' ayında zaten bir alım kaydı vardı; ikincisi de eklendi.' : null,
         ], 201);
     }
@@ -92,6 +110,12 @@ class TasarrufController extends Controller
     {
         Gate::authorize('hane-kaydi', $tasarruf);
         $islem = $tasarruf->islem;
+        if ($islem === null) {
+            // Başkasına verilen alım: portföyde işlem yok, yalnız tasarruf satırı silinir
+            $tasarruf->delete();
+
+            return response()->json(['message' => 'Tasarruf silindi.']);
+        }
         // Alış silinince sonraki bir satış elde olandan fazla kalmamalı (portföy kuralı)
         $kalan = Islem::where('hesap_id', $islem->hesap_id)->where('varlik_id', $islem->varlik_id)->whereKeyNot($islem->id)->get();
         try {

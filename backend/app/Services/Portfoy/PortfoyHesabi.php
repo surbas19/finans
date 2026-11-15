@@ -56,7 +56,7 @@ class PortfoyHesabi
         $hesaplar = $this->hesaplar($user, $hesapId)->get();
         // Hesaptaki bütün işlemler: hanede eşin girdiği işlem de sayılır
         $islemler = self::sirala(
-            Islem::whereIn('hesap_id', $hesaplar->modelKeys())
+            Islem::whereIn('hesap_id', $hesaplar->modelKeys())->where('dahil', true)
                 ->with('varlik.fiyat')
                 ->get()
         );
@@ -122,7 +122,7 @@ class PortfoyHesabi
         $haric = $this->haricCiftler($hesapIdleri);
         // Genel toplama dahil olmayan satırların işlemleri seriye alınmaz (grafik toplamla tutarlı)
         $islemler = self::sirala(
-            Islem::whereIn('hesap_id', $hesapIdleri)->with('varlik.fiyat')->get()
+            Islem::whereIn('hesap_id', $hesapIdleri)->where('dahil', true)->with('varlik.fiyat')->get()
                 ->reject(fn (Islem $i): bool => isset($haric[$i->hesap_id.'-'.$i->varlik_id]))
         );
         if ($islemler->isEmpty()) {

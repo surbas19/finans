@@ -302,7 +302,7 @@ class ButceRaporu
      */
     public function tasarrufOzeti(int $haneId, string $donem): array
     {
-        $kayitlar = Tasarruf::where('hane_id', $haneId)->where('donem', $donem)->with(['hesap', 'islem.varlik', 'gun'])
+        $kayitlar = Tasarruf::where('hane_id', $haneId)->where('donem', $donem)->with(['hesap', 'islem.varlik', 'varlik', 'gun'])
             ->orderByDesc('tarih')->orderByDesc('id')->get();
 
         return [

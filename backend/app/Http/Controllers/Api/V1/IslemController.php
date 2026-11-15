@@ -130,6 +130,40 @@ class IslemController extends Controller
         return response()->json(['islem' => $islem->ozet(), 'message' => 'İşlem güncellendi.']);
     }
 
+    /**
+     * İşlemi genel toplama / zekâta dahil eder ya da çıkarır. Aktarım kaydıysa eşleşik bütün kayıtlar birlikte değişir.
+     * Kapatma, dahil kalan işlemlerde bir satışı elde olandan fazla bırakıyorsa reddedilir.
+     */
+    public function dahil(Request $request, Islem $islem): JsonResponse
+    {
+        Gate::authorize('update', $islem);
+        $veri = $request->validate(['dahil' => ['required', 'boolean']]);
+        $dahil = (bool) $veri['dahil'];
+        $grup = $islem->aktarim_kodu !== null ? Islem::where('aktarim_kodu', $islem->aktarim_kodu)->get() : collect([$islem]);
+        foreach ($grup as $g) {
+            Gate::authorize('update', $g);
+        }
+        $ids = $grup->pluck('id')->all();
+        $ciftler = $grup->map(fn (Islem $g): array => [$g->hesap_id, $g->varlik_id])->unique(fn (array $c): string => implode('-', $c));
+        foreach ($ciftler as [$hesapId, $varlikId]) {
+            $dahilKalan = Islem::where('hesap_id', $hesapId)->where('varlik_id', $varlikId)->get()
+                ->filter(fn (Islem $i): bool => in_array($i->id, $ids, true) ? $dahil : ($i->dahil ?? true));
+            try {
+                $this->portfoy->dogrula($dahilKalan);
+            } catch (YetersizMiktar $e) {
+                throw ValidationException::withMessages([
+                    'dahil' => 'Bu işlem toplamdan çıkarılırsa '.$e->islem->tarih->format('d.m.Y').' tarihli satış elde olandan fazla kalır. Önce o satışı da toplamdan çıkarın.',
+                ]);
+            }
+        }
+        Islem::whereIn('id', $ids)->update(['dahil' => $dahil]);
+
+        return response()->json([
+            'dahil' => $dahil,
+            'message' => $dahil ? 'İşlem genel toplama eklendi.' : 'İşlem genel toplamdan ve zekâttan çıkarıldı.',
+        ]);
+    }
+
     public function destroy(Islem $islem): JsonResponse
     {
         Gate::authorize('delete', $islem);

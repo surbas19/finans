@@ -18,7 +18,7 @@ class Islem extends Model
 
     protected $table = 'islemler';
 
-    protected $fillable = ['user_id', 'hesap_id', 'varlik_id', 'tur', 'miktar', 'birim_fiyat', 'komisyon', 'tarih', 'not', 'aktarim_kodu'];
+    protected $fillable = ['user_id', 'hesap_id', 'varlik_id', 'tur', 'miktar', 'birim_fiyat', 'komisyon', 'tarih', 'not', 'aktarim_kodu', 'dahil'];
 
     /**
      * @return array<string, string>
@@ -31,6 +31,7 @@ class Islem extends Model
             'birim_fiyat' => 'float',
             'komisyon' => 'float',
             'tarih' => 'date',
+            'dahil' => 'boolean',
         ];
     }
 
@@ -73,6 +74,10 @@ class Islem extends Model
             'tarih' => $this->tarih->toDateString(),
             'not' => $this->not,
             'aktarim_kodu' => $this->aktarim_kodu,
+            // İşlem numarası (kalıcı, kimlikten), genel toplama dahil mi ve kaydın girildiği zaman (otomatik)
+            'no' => 'İ-'.$this->id,
+            'dahil' => $this->dahil ?? true,
+            'islem_zamani' => $this->created_at?->toIso8601String(),
         ];
     }
 }
