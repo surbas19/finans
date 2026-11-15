@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-15) Kartlar sayfasına ekstre dönemi seçici (‹ Kasım 2026 ›, kartlardaki ekstre borcu / son ödeme seçilen dönemden, "En yeni"); Gelir / Gider dönem seçici yüksekliği Özet ile aynı (100 px). Testler: ön yüz 132.
 - (2026-11-15) Bütçe Özet → Sonraki taksitler: sonraki her ay için ayrı toplam ve kart kırılımı (`sonraki_taksit_aylari`). Testler: ön yüz 130, KartIslemiTest.
 - (2026-11-15) Bütçe → İşlemler: ekstre dönemi seçici (‹ Kasım 2026 ›, Tümü); grup başlığında dönem yalnız tek dönemse. Testler: ön yüz 130.
 - (2026-11-15) Bütçe → İşlemler: tarih seçici kaldırıldı, bütün ekstre işlemleri kart akordiyonlarında listeleniyor; Özet bağlantısındaki ay çip olarak. Testler: ön yüz 129.

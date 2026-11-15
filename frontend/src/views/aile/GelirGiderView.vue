@@ -33,7 +33,7 @@ watch(sira, (i) => {
 <template>
   <div class="flex flex-col gap-3">
     <!-- Dönem seçici ekranı yatay kaplar, 150 px yüksekliğinde -->
-    <AySecici v-model="donem" :ileri-sinir="null" genis />
+    <AySecici v-model="donem" :ileri-sinir="null" genis :yukseklik="100" />
 
     <KaydirmaliPaneller
       v-model:sira="sira"

@@ -7,6 +7,7 @@ import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
+import AySecici from '@/components/aile/AySecici.vue'
 import KartGrafigi from '@/components/grafik/KartGrafigi.vue'
 import KaydirmaliPaneller from '@/components/KaydirmaliPaneller.vue'
 import KartEtiketi from '@/components/aile/KartEtiketi.vue'
@@ -16,6 +17,7 @@ import KartFormu from '@/components/aile/KartFormu.vue'
 import { aileApi, type Ekstre, type Kart } from '@/api/aile'
 import { useAileStore } from '@/stores/aile'
 import { bugun, tarih, tl } from '@/utils/bicim'
+import { donemEtiketi, gecerliDonem } from '@/utils/donem'
 import { kartDegradesi } from '@/utils/kartRengi'
 
 /**
@@ -73,8 +75,30 @@ const sonOdemeler = computed(() => {
 const gunMetni = (gun: number): string =>
   gun < 0 ? `${-gun} gün geçti` : gun === 0 ? 'bugün' : `${gun} gün kaldı`
 
+/** Seçilebilecek en yeni ekstre dönemi (onaylı ekstrelerin kesim ayı); seçici bundan ileri gitmez */
+const enYeni = computed(() => {
+  const donemler = (ekstreler.value ?? [])
+    .filter((e) => e.durum === 'onaylandi' && gecerliDonem(e.donem))
+    .map((e) => e.donem)
+    .sort()
+
+  return donemler[donemler.length - 1] ?? null
+})
+/** Kartlardaki ekstre dönemi: seçilmediyse en yeni ekstre dönemi */
+const seciliDonem = ref<string | null>(null)
+const aktifDonem = computed(() => seciliDonem.value ?? enYeni.value)
+const donemModeli = computed({
+  get: () => aktifDonem.value ?? '',
+  set: (v: string) => {
+    seciliDonem.value = v
+  },
+})
+
+/** Kartın seçili dönemdeki onaylı ekstresi (aynı dönemde birden çoksa en yenisi) */
 function sonEkstre(kartId: number): Ekstre | undefined {
-  return (ekstreler.value ?? []).find((e) => e.kart_id === kartId && e.durum === 'onaylandi')
+  return (ekstreler.value ?? [])
+    .filter((e) => e.kart_id === kartId && e.durum === 'onaylandi' && e.donem === aktifDonem.value)
+    .sort((a, b) => b.id - a.id)[0]
 }
 </script>
 
@@ -133,6 +157,20 @@ function sonEkstre(kartId: number): Ekstre | undefined {
       <Button label="Kart ekle" icon="pi pi-plus" @click="kartFormuAcik = true" />
     </BosDurum>
     <template v-else>
+      <!-- Ekstre dönemi: kartlardaki ekstre borcu / son ödeme seçilen dönemin ekstresinden gelir -->
+      <div v-if="enYeni" class="flex items-center gap-2" data-test="kart-donem-secici">
+        <AySecici v-model="donemModeli" :ileri-sinir="enYeni" />
+        <Button
+          v-if="seciliDonem !== null && seciliDonem !== enYeni"
+          label="En yeni"
+          severity="secondary"
+          text
+          rounded
+          size="small"
+          data-test="kart-donem-en-yeni"
+          @click="seciliDonem = null"
+        />
+      </div>
       <KaydirmaliPaneller
         v-model:sira="sira"
         :ogeler="kartlar"
@@ -168,12 +206,16 @@ function sonEkstre(kartId: number): Ekstre | undefined {
               </span>
               <span class="mt-4 flex min-h-[2.75rem] items-end justify-between gap-3">
                 <span v-if="sonEkstre(k.id)">
-                  <span class="block text-[11px] opacity-80">Son ekstre borcu</span>
+                  <span class="block text-[11px] opacity-80" data-test="kart-ekstre-etiketi"
+                    >{{ donemEtiketi(aktifDonem) }} ekstre borcu</span
+                  >
                   <span class="block text-lg font-semibold tabular-nums">{{
                     tl(sonEkstre(k.id)!.donem_borcu)
                   }}</span>
                 </span>
-                <span v-else class="text-xs opacity-80">Henüz ekstre yok</span>
+                <span v-else class="text-xs opacity-80">{{
+                  ekstreler?.length ? 'Bu dönem ekstre yok' : 'Henüz ekstre yok'
+                }}</span>
                 <span
                   v-if="sonEkstre(k.id)?.son_odeme_tarihi"
                   class="text-right text-[11px] opacity-90"
