@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Accordion from 'primevue/accordion'
+import AccordionContent from 'primevue/accordioncontent'
+import AccordionHeader from 'primevue/accordionheader'
+import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
 import IconField from 'primevue/iconfield'
@@ -9,18 +13,26 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
 import BosDurum from '@/components/BosDurum.vue'
+import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import KartIslemFormu from '@/components/aile/KartIslemFormu.vue'
 import KartIslemListesi from '@/components/aile/KartIslemListesi.vue'
-import { aileApi, KART_ISLEM_TURLERI, type KartIslemi, type KartIslemTuru } from '@/api/aile'
+import KategoriSecDialog from '@/components/aile/KategoriSecDialog.vue'
+import {
+  aileApi,
+  KART_ISLEM_TURLERI,
+  type KartIslemi,
+  type KartIslemToplami,
+  type KartIslemTuru,
+} from '@/api/aile'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAileStore } from '@/stores/aile'
 import { tl, tarihMetni } from '@/utils/bicim'
 import { donemdenTarih, gecerliDonem } from '@/utils/donem'
 
 /**
- * Kart işlemleri: arama (açıklama, kategori, kart, tutar), tarih ya da tarih aralığı (işlem tarihine göre), kişi,
- * banka, kart, kategori, tür süzgeçleri. Toplamlar raporun kuralıyla (kart borcu ödemesi, transfer, nakit avans gider
- * değil). Süzgeçler adreste.
+ * Kart işlemleri. Süzgeçsiz varsayılan görünüm: her kartın güncel ekstre dönemindeki harcamalar, kart adının altında
+ * akordiyon (ilki açık). Süzgeç (arama, tarih ya da aralık, kişi, banka, kart, kategori, tür) uygulanınca bütün
+ * dönemlerde süzülür ve bütün kart grupları açık gelir. Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
  */
 const aile = useAileStore()
 const route = useRoute()
@@ -42,14 +54,6 @@ function ayAraligi(ay: string): [Date, Date] {
 
   return [ilk, new Date(ilk.getFullYear(), ilk.getMonth() + 1, 0)]
 }
-function buAyAraligi(): [Date, Date] {
-  const s = new Date()
-
-  return [
-    new Date(s.getFullYear(), s.getMonth(), 1),
-    new Date(s.getFullYear(), s.getMonth() + 1, 0),
-  ]
-}
 
 const q = route.query
 function baslangicAraligi(): Date[] | null {
@@ -59,7 +63,7 @@ function baslangicAraligi(): Date[] | null {
   // Özet'ten gelen eski bağlantı (?ay=2026-11): o ayın tamamı
   if (gecerliDonem(String(q.ay ?? ''))) return ayAraligi(String(q.ay))
 
-  return q.ara || q.kart_id ? null : buAyAraligi()
+  return null
 }
 
 const ara = ref(String(q.ara ?? ''))
@@ -73,9 +77,14 @@ const tur = ref<KartIslemTuru | null>(
 )
 
 const islemler = ref<KartIslemi[] | null>(null)
-const toplam = ref<{ gider: number; gidere_girmeyen: number; adet: number } | null>(null)
+const toplam = ref<KartIslemToplami | null>(null)
 const formAcik = ref(false)
 const duzenlenen = ref<KartIslemi | null>(null)
+const kategoriAcik = ref(false)
+const kategorilenen = ref<KartIslemi | null>(null)
+/** Açık kart grupları (kart kimliği, metin) */
+const acik = ref<string[]>([])
+let acikSifirla = true
 
 const TURLER = (Object.keys(KART_ISLEM_TURLERI) as KartIslemTuru[]).map((t) => ({
   deger: t,
@@ -97,32 +106,27 @@ const suzgecVar = computed(
     [uyeId, bankaId, kartId, kategoriId, tur].some((r) => r.value !== null),
 )
 
-const HIZLI = [
-  { etiket: 'Bu ay', sec: (): [Date, Date] => buAyAraligi() },
-  {
-    etiket: 'Geçen ay',
-    sec: (): [Date, Date] => {
-      const s = new Date()
+/** İşlemler kart başına gruplanır (grup başlığındaki gider / dönem sunucudan) */
+const gruplar = computed(() => {
+  const harita = new Map<number, KartIslemi[]>()
+  for (const i of islemler.value ?? []) {
+    const liste = harita.get(i.kart_id) ?? []
+    liste.push(i)
+    harita.set(i.kart_id, liste)
+  }
 
-      return [
-        new Date(s.getFullYear(), s.getMonth() - 1, 1),
-        new Date(s.getFullYear(), s.getMonth(), 0),
-      ]
-    },
-  },
-  {
-    etiket: 'Son 30 gün',
-    sec: (): [Date, Date] => {
-      const s = new Date()
-
-      return [new Date(s.getFullYear(), s.getMonth(), s.getDate() - 29), s]
-    },
-  },
-]
+  return [...harita.entries()].map(([kart, liste]) => ({
+    kart,
+    liste,
+    bilgi: toplam.value?.kartlar?.find((k) => k.kart_id === kart) ?? null,
+  }))
+})
 
 async function yukle(): Promise<void> {
+  const guncel = !suzgecVar.value
   const veri = await sonIstek(() =>
     aileApi.kartIslemleri({
+      guncel: guncel ? 1 : null,
       tarih_bas: tarihBas.value,
       tarih_bit: tarihBit.value,
       ara: ara.value.trim() || null,
@@ -136,6 +140,12 @@ async function yukle(): Promise<void> {
   if (veri === undefined) return
   islemler.value = veri.islemler
   toplam.value = veri.toplam
+  // Süzgeç değişince / ilk yüklemede açık gruplar yeniden belirlenir; kategori vb. yenilemede kullanıcının seçimi korunur
+  if (acikSifirla) {
+    acikSifirla = false
+    const idler = gruplar.value.map((g) => String(g.kart))
+    acik.value = suzgecVar.value ? idler : idler.slice(0, 1)
+  }
 }
 
 onMounted(async () => {
@@ -157,6 +167,7 @@ function adresVeYukle(): void {
       tur: tur.value ?? undefined,
     },
   })
+  acikSifirla = true
   void yukle()
 }
 
@@ -182,6 +193,11 @@ function temizle(): void {
 function sec(i: KartIslemi | null): void {
   duzenlenen.value = i
   formAcik.value = true
+}
+
+function kategoriSec(i: KartIslemi): void {
+  kategorilenen.value = i
+  kategoriAcik.value = true
 }
 </script>
 
@@ -212,19 +228,6 @@ function sec(i: KartIslemi | null): void {
         aria-label="Tarih ya da tarih aralığı"
         class="w-full sm:w-64"
         data-test="islem-tarih"
-      />
-    </div>
-    <div class="flex gap-2 overflow-x-auto" data-test="hizli-tarih">
-      <Button
-        v-for="h in HIZLI"
-        :key="h.etiket"
-        :label="h.etiket"
-        size="small"
-        severity="secondary"
-        rounded
-        outlined
-        class="shrink-0"
-        @click="aralik = h.sec()"
       />
     </div>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -291,19 +294,27 @@ function sec(i: KartIslemi | null): void {
         <p class="text-xs text-surface-500">Satır</p>
         <p class="font-semibold tabular-nums">{{ toplam.adet }}</p>
       </div>
-      <p class="col-span-3 text-[11px] text-surface-500">
-        Gider: harcama ve faiz / ücret eklenir, iade düşülür. Kart borcu ödemesi, transfer ve nakit
-        avans gider sayılmaz (ekstredeki harcamalar zaten sayıldı). Tarih işlem tarihine göredir;
-        Bütçe Özet'te kart gideri ekstre kesim ayına yazıldığından aylık toplam farklı olabilir.
+      <p class="col-span-3 text-[11px] text-surface-500" data-test="islem-not">
+        <template v-if="!suzgecVar"
+          >Her kartın güncel ekstre dönemi (en yeni onaylı ekstre + ekstreye girmemiş satırlar).
+          Arama ya da tarih seçince bütün dönemlerde aranır. </template
+        >Gider: harcama ve faiz / ücret eklenir, iade düşülür. Kart borcu ödemesi, transfer ve nakit
+        avans gider sayılmaz (ekstredeki harcamalar zaten sayıldı).
+        <template v-if="aralik">
+          Tarih işlem tarihine göredir; Bütçe Özet'te kart gideri ekstre kesim ayına yazıldığından
+          aylık toplam farklı olabilir.</template
+        >
       </p>
     </section>
+    <p class="-mt-2 text-center text-[11px] text-surface-400" data-test="uzun-basma-ipucu">
+      <i class="pi pi-tag text-[10px]" /> Kategori vermek için işleme basılı tutun
+    </p>
 
-    <section class="kart p-2 sm:p-4">
-      <div v-if="islemler === null" class="flex flex-col gap-2 p-2">
-        <Skeleton v-for="n in 5" :key="n" height="3rem" />
-      </div>
+    <div v-if="islemler === null" class="kart flex flex-col gap-2 p-4">
+      <Skeleton v-for="n in 5" :key="n" height="3rem" />
+    </div>
+    <section v-else-if="!islemler.length" class="kart p-2 sm:p-4">
       <BosDurum
-        v-else-if="!islemler.length"
         kucuk
         :baslik="suzgecVar ? 'Eşleşen işlem yok' : 'Henüz işlem yok'"
         :aciklama="suzgecVar ? undefined : 'Ekstre yükleyin; işlemler buraya gelir.'"
@@ -319,7 +330,39 @@ function sec(i: KartIslemi | null): void {
           @click="temizle"
         />
       </BosDurum>
-      <KartIslemListesi v-else :islemler="islemler" kart-goster @sec="sec" />
+    </section>
+    <section v-else class="kart p-2" data-test="kart-gruplari">
+      <Accordion
+        v-model:value="acik"
+        multiple
+        class="[&_.p-accordioncontent-wrapper]:min-w-0 [&_.p-accordioncontent-wrapper]:overflow-hidden"
+      >
+        <AccordionPanel v-for="g in gruplar" :key="g.kart" :value="String(g.kart)">
+          <AccordionHeader data-test="kart-grubu-baslik">
+            <span class="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2">
+              <span class="min-w-0">
+                <span class="block truncate font-semibold"><KartEtiketi :kart-id="g.kart" /></span>
+                <span
+                  v-if="g.bilgi?.ekstre_donemi"
+                  class="block text-xs font-normal text-surface-500"
+                  >{{ g.bilgi.ekstre_donemi }} ekstresi</span
+                >
+              </span>
+              <span class="shrink-0 text-right">
+                <span class="block text-sm font-semibold tabular-nums">{{
+                  tl(g.bilgi?.gider ?? null)
+                }}</span>
+                <span class="block text-xs font-normal text-surface-500"
+                  >{{ g.liste.length }} satır</span
+                >
+              </span>
+            </span>
+          </AccordionHeader>
+          <AccordionContent>
+            <KartIslemListesi :islemler="g.liste" @sec="sec" @kategori="kategoriSec" />
+          </AccordionContent>
+        </AccordionPanel>
+      </Accordion>
     </section>
 
     <KartIslemFormu
@@ -328,5 +371,6 @@ function sec(i: KartIslemi | null): void {
       :kart-id="kartId"
       @kaydedildi="yukle"
     />
+    <KategoriSecDialog v-model:visible="kategoriAcik" :islem="kategorilenen" @degisti="yukle" />
   </div>
 </template>

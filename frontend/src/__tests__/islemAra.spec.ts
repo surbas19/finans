@@ -27,7 +27,28 @@ vi.mock('@/api/aile', async (asil) => ({
   },
 }))
 
-const bos = { islemler: [], toplam: { gider: 0, gidere_girmeyen: 0, adet: 0 } }
+const bos = { islemler: [], toplam: { gider: 0, gidere_girmeyen: 0, adet: 0, kartlar: [] } }
+const satir = (id: number, kart: number) => ({
+  id,
+  kart_id: kart,
+  aciklama: `SATIR ${id}`,
+  tutar: 10,
+  tur: 'harcama',
+  islem_tarihi: '2026-11-03',
+  kategori_id: null,
+})
+const iki = {
+  islemler: [satir(1, 1), satir(2, 1), satir(3, 2)],
+  toplam: {
+    gider: 30,
+    gidere_girmeyen: 0,
+    adet: 3,
+    kartlar: [
+      { kart_id: 1, gider: 20, adet: 2, ekstre_donemi: 'Kasım 2026' },
+      { kart_id: 2, gider: 10, adet: 1, ekstre_donemi: null },
+    ],
+  },
+}
 
 async function kur() {
   const { default: AileIslemlerView } = await import('@/views/aile/AileIslemlerView.vue')
@@ -35,16 +56,18 @@ async function kur() {
   const w = mount(AileIslemlerView, {
     global: {
       plugins: [PrimeVue],
-      stubs: { KartIslemFormu: true, KartIslemListesi: true },
+      stubs: {
+        KartIslemFormu: true,
+        KartIslemListesi: true,
+        KartEtiketi: true,
+        KategoriSecDialog: true,
+      },
     },
   })
   await flushPromises()
 
   return w
 }
-
-const ay = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 describe('Bütçe → İşlemler: arama ve tarih aralığı', () => {
   beforeEach(() => {
@@ -61,21 +84,49 @@ describe('Bütçe → İşlemler: arama ve tarih aralığı', () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  it('açılışta bu ayın başı-sonu işlem tarihi aralığıyla yüklenir; ay / Özet ayı düğmesi yok', async () => {
+  it('açılışta süzgeçsiz güncel ekstre dönemi istenir; kısayol çipleri, ay / Özet ayı düğmesi yok', async () => {
     const w = await kur()
-    const s = new Date()
     expect(sorgu).toHaveBeenCalledTimes(1)
     expect(sorgu.mock.calls[0]![0]).toMatchObject({
-      tarih_bas: ay(new Date(s.getFullYear(), s.getMonth(), 1)),
-      tarih_bit: ay(new Date(s.getFullYear(), s.getMonth() + 1, 0)),
+      guncel: 1,
+      tarih_bas: null,
+      tarih_bit: null,
       ara: null,
     })
     expect(sorgu.mock.calls[0]![0]).not.toHaveProperty('donem_turu')
-    expect(w.text()).not.toContain('Özet ayı')
-    expect(w.text()).not.toContain('Ekstre dönemi')
-    expect(w.text()).not.toContain('İşlem ekle')
+    for (const yok of [
+      'Özet ayı',
+      'Ekstre dönemi',
+      'İşlem ekle',
+      'Bu ay',
+      'Geçen ay',
+      'Son 30 gün',
+    ]) {
+      expect(w.text()).not.toContain(yok)
+    }
+    expect(w.find('[data-test="hizli-tarih"]').exists()).toBe(false)
     expect(w.find('[data-test="islem-ara"]').exists()).toBe(true)
     expect(w.find('[data-test="islem-tarih"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('kart başına akordiyon: süzgeçsizken yalnız ilk kart açık; arama yapılınca hepsi açık', async () => {
+    sorgu.mockResolvedValue(iki)
+    const w = await kur()
+    expect(w.findAll('[data-test="kart-grubu-baslik"]')).toHaveLength(2)
+    const aktif = () => w.findAll('.p-accordionpanel-active').length
+    expect(aktif()).toBe(1)
+    expect(w.get('[data-test="kart-grubu-baslik"]').text()).toContain('2 satır')
+    expect(w.get('[data-test="kart-grubu-baslik"]').text()).toContain('Kasım 2026 ekstresi')
+    expect(w.get('[data-test="islem-not"]').text()).toContain('güncel ekstre dönemi')
+    // Süzgeç uygulanınca (arama) bütün gruplar açık
+    sorgu.mockClear()
+    await w.get('[data-test="islem-ara"]').setValue('satir')
+    vi.advanceTimersByTime(400)
+    await flushPromises()
+    expect(sorgu.mock.calls[0]![0]).toMatchObject({ ara: 'satir', guncel: null })
+    expect(aktif()).toBe(2)
+    expect(w.get('[data-test="islem-not"]').text()).not.toContain('güncel ekstre dönemi')
     w.unmount()
   })
 
@@ -112,6 +163,7 @@ describe('Bütçe → İşlemler: arama ve tarih aralığı', () => {
       ara: null,
       tarih_bas: null,
       tarih_bit: null,
+      guncel: 1,
     })
     w.unmount()
   })

@@ -789,6 +789,16 @@ export interface KartIslemSuzgeci {
   tarih_bit?: string | null
   /** Arama: açıklama, kategori, kart adı ya da tutar */
   ara?: string | null
+  /** Süzgeçsiz varsayılan görünüm: her kartın güncel ekstre dönemi (arama / tarih verilirse uygulanmaz) */
+  guncel?: 1 | null
+}
+
+/** Kart işlemleri listesinin toplamları; `kartlar`: kart başına grup başlığı bilgisi */
+export interface KartIslemToplami {
+  gider: number
+  gidere_girmeyen: number
+  adet: number
+  kartlar?: { kart_id: number; gider: number; adet: number; ekstre_donemi: string | null }[]
 }
 
 /** Dönem grafikleri (yılın 12 ayı, TL; oran %; gelir 0 olan ayın oranı null) */
@@ -954,8 +964,10 @@ export const aileApi = {
 
   kategoriler: () =>
     http.get<{ kategoriler: Kategori[] }>('/aile/kategoriler').then((r) => r.data.kategoriler),
-  kategoriEkle: (ad: string) =>
-    http.post<{ kategori: Kategori }>('/aile/kategoriler', { ad }).then((r) => r.data.kategori),
+  kategoriEkle: (ad: string, renk?: string | null) =>
+    http
+      .post<{ kategori: Kategori }>('/aile/kategoriler', { ad, ...(renk ? { renk } : {}) })
+      .then((r) => r.data.kategori),
   kategoriSil: (id: number) => http.delete(`/aile/kategoriler/${id}`),
   kuralEkle: (kategoriId: number, desen: string) =>
     http.post(`/aile/kategoriler/${kategoriId}/kurallar`, { desen }),
@@ -967,8 +979,18 @@ export const aileApi = {
     http
       .get<{
         islemler: KartIslemi[]
-        toplam: { gider: number; gidere_girmeyen: number; adet: number }
+        toplam: KartIslemToplami
       }>('/aile/kart-islemleri', { params: temiz(suzgec) })
+      .then((r) => r.data),
+  /** İşleme kategori ata (null: kategorisiz); açıklaması aynı olan bütün satırlar da aynı kategoriye geçer */
+  kartIslemiKategori: (id: number, kategoriId: number | null) =>
+    http
+      .put<{
+        islem: KartIslemi
+        guncellenen: number
+        kategori_ad: string | null
+        message: string
+      }>(`/aile/kart-islemleri/${id}/kategori`, { kategori_id: kategoriId })
       .then((r) => r.data),
   kartIslemiEkle: (veri: KartIslemGirdisi) =>
     http
