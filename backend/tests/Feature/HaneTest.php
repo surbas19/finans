@@ -88,7 +88,7 @@ class HaneTest extends TestCase
 
     public function test_aile_ucu_haneyi_kurar_uyeler_hane_icinde(): void
     {
-        [$ben, $yabanci] = User::factory()->count(2)->create()->all();
+        [$ben, $yabanci] = User::factory()->count(2)->sequence(['ad' => 'Ali'], ['ad' => 'Veli'])->create()->all();
 
         $cevap = $this->actingAs($ben)->getJson('/api/v1/aile/hane')->assertOk();
         $this->assertNotNull($ben->fresh()->hane_id);
