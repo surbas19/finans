@@ -2,6 +2,10 @@
 import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import Accordion from 'primevue/accordion'
+import AccordionContent from 'primevue/accordioncontent'
+import AccordionHeader from 'primevue/accordionheader'
+import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
@@ -463,29 +467,81 @@ const gunMetni = (gun: number | null | undefined) =>
         </ul>
       </section>
 
-      <section v-if="ozet.gider.taksitler.length" class="kart p-4">
-        <h2 class="bolum-etiketi mb-2">Taksitler</h2>
-        <ul class="divide-y divide-surface-100 text-sm">
-          <li
-            v-for="t in ozet.gider.taksitler"
-            :key="t.islem_id"
-            class="flex items-center justify-between gap-3 border-l-4 py-2 pl-3"
-            :style="{ borderLeftColor: kartRengiCss(aile.kart(t.kart_id)) }"
-            data-test="taksit-satiri"
-          >
-            <span class="min-w-0">
-              <span class="block truncate font-semibold">{{ t.aciklama }}</span>
-              <span class="block text-xs text-surface-500">
-                <KartEtiketi :kart-id="t.kart_id" /> · {{ t.taksit_no }}/{{ t.taksit_sayisi }} ·
-                toplam borç {{ tl(t.toplam_borc) }}{{ t.toplam_tahmini ? ' (yaklaşık)' : '' }}
-              </span>
-            </span>
-            <span class="text-right">
-              <span class="block font-semibold tabular-nums">{{ tl(t.aya_dusen) }}</span>
-              <span class="block text-[11px] text-surface-500">bu aya düşen</span>
-            </span>
-          </li>
-        </ul>
+      <section
+        v-if="ozet.gider.taksitler.length || ozet.gider.sonraki_taksitler.length"
+        class="kart p-2"
+        data-test="taksit-akordiyon"
+      >
+        <Accordion :value="['taksitler']" multiple>
+          <AccordionPanel v-if="ozet.gider.taksitler.length" value="taksitler">
+            <AccordionHeader>Taksitler ({{ ozet.gider.taksitler.length }})</AccordionHeader>
+            <AccordionContent>
+              <ul class="divide-y divide-surface-100 text-sm">
+                <li
+                  v-for="t in ozet.gider.taksitler"
+                  :key="t.islem_id"
+                  class="flex items-center justify-between gap-3 border-l-4 py-2 pl-3"
+                  :style="{ borderLeftColor: kartRengiCss(aile.kart(t.kart_id)) }"
+                  data-test="taksit-satiri"
+                >
+                  <span class="min-w-0">
+                    <span class="block truncate font-semibold">{{ t.aciklama }}</span>
+                    <span class="block text-xs text-surface-500">
+                      <KartEtiketi :kart-id="t.kart_id" /> · {{ t.taksit_no }}/{{
+                        t.taksit_sayisi
+                      }}
+                      · toplam borç {{ tl(t.toplam_borc)
+                      }}{{ t.toplam_tahmini ? ' (yaklaşık)' : '' }}
+                    </span>
+                  </span>
+                  <span class="text-right">
+                    <span class="block font-semibold tabular-nums">{{ tl(t.aya_dusen) }}</span>
+                    <span class="block text-[11px] text-surface-500">bu aya düşen</span>
+                  </span>
+                </li>
+              </ul>
+            </AccordionContent>
+          </AccordionPanel>
+
+          <AccordionPanel v-if="ozet.gider.sonraki_taksitler.length" value="sonraki">
+            <AccordionHeader data-test="sonraki-taksitler-baslik"
+              >Sonraki taksitler</AccordionHeader
+            >
+            <AccordionContent>
+              <p class="mb-2 text-xs text-surface-500">
+                Bu aydan sonra ödenecek kalan taksitlerin kart başına toplamı.
+              </p>
+              <ul class="flex flex-col gap-3 text-sm">
+                <li
+                  v-for="k in ozet.gider.sonraki_taksitler"
+                  :key="k.kart_id"
+                  class="border-l-4 pl-3"
+                  :style="{ borderLeftColor: kartRengiCss(aile.kart(k.kart_id)) }"
+                  data-test="sonraki-taksit-karti"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="font-semibold"><KartEtiketi :kart-id="k.kart_id" /></span>
+                    <span class="font-semibold tabular-nums"
+                      >{{ tl(k.toplam) }}{{ k.tahmini ? ' (yaklaşık)' : '' }}</span
+                    >
+                  </div>
+                  <ul class="mt-1 divide-y divide-surface-100 text-xs text-surface-500">
+                    <li
+                      v-for="m in k.kalemler"
+                      :key="m.islem_id"
+                      class="flex justify-between gap-3 py-1"
+                    >
+                      <span class="min-w-0 truncate"
+                        >{{ m.aciklama }} · {{ m.kalan_adet }} taksit × {{ tl(m.aya_dusen) }}</span
+                      >
+                      <span class="tabular-nums">{{ tl(m.kalan_toplam) }}</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </AccordionContent>
+          </AccordionPanel>
+        </Accordion>
       </section>
 
       <!-- Faturalar (hizmet ayı) -->

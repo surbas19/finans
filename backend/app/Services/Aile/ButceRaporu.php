@@ -210,7 +210,52 @@ class ButceRaporu
                     'toplam_borc' => Kurus::tl($i->taksit_toplam !== null ? Kurus::kurus($i->taksit_toplam) : Kurus::kurus($i->tutar) * (int) $i->taksit_sayisi),
                     'toplam_tahmini' => $i->taksit_toplam === null,
                 ])->values(),
+            'sonraki_taksitler' => $this->sonrakiTaksitler($islemler, $kartlar),
         ];
+    }
+
+    /**
+     * Rapor ayındaki taksitli harcamaların bu aydan SONRA kalan taksitleri, kart başına: kalan tutar ekstrenin "kalan"
+     * alanından, yoksa aya düşen × kalan taksit sayısı (yaklaşık).
+     *
+     * @param  Collection<int, KartIslemi>  $islemler
+     * @param  Collection<int, Kart>  $kartlar
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function sonrakiTaksitler(Collection $islemler, Collection $kartlar): Collection
+    {
+        $kalemler = $islemler
+            ->filter(fn (KartIslemi $i): bool => ($i->taksit_sayisi ?? 0) > 1 && $i->tur === KartIslemTuru::Harcama && ($i->taksit_no ?? 0) >= 1 && $i->taksit_no < $i->taksit_sayisi)
+            ->map(function (KartIslemi $i): array {
+                $kalanAdet = (int) $i->taksit_sayisi - (int) $i->taksit_no;
+                $tahmini = $i->taksit_kalan === null;
+
+                return [
+                    'islem_id' => $i->id,
+                    'kart_id' => $i->kart_id,
+                    'aciklama' => $i->aciklama,
+                    'kalan_adet' => $kalanAdet,
+                    'aya_dusen' => Kurus::kurus($i->tutar),
+                    'kalan_kurus' => $tahmini ? Kurus::kurus($i->tutar) * $kalanAdet : Kurus::kurus($i->taksit_kalan),
+                    'tahmini' => $tahmini,
+                ];
+            });
+
+        return $kalemler->groupBy('kart_id')->map(fn ($grup, $kartId): array => [
+            'kart_id' => (int) $kartId,
+            'ad' => $kartlar[$kartId]->ad ?? '',
+            'toplam' => Kurus::tl($grup->sum('kalan_kurus')),
+            'tahmini' => $grup->contains('tahmini', true),
+            'kalem_sayisi' => $grup->count(),
+            'kalemler' => $grup->map(fn (array $k): array => [
+                'islem_id' => $k['islem_id'],
+                'aciklama' => $k['aciklama'],
+                'kalan_adet' => $k['kalan_adet'],
+                'aya_dusen' => Kurus::tl($k['aya_dusen']),
+                'kalan_toplam' => Kurus::tl($k['kalan_kurus']),
+                'tahmini' => $k['tahmini'],
+            ])->values(),
+        ])->sortByDesc('toplam')->values();
     }
 
     /** Satırın gider toplamına etkisi (kuruş): harcama / ücret +, iade −, ödeme / transfer / nakit avans 0 */

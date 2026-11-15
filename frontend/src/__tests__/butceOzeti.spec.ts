@@ -64,6 +64,7 @@ function ornek(): AylikOzet {
       kartlar: [],
       haric: [],
       taksitler: [],
+      sonraki_taksitler: [],
     },
     faturalar: {
       toplam: 0,
@@ -135,6 +136,67 @@ describe('Bütçe aylık özeti', () => {
     expect(sayfa.text()).toContain('Bakıcı')
     expect(sayfa.get('[data-test="tasarruf-bolumu"]').text()).toContain('Gram altın')
     expect(sayfa.get('[data-test="tasarruf-yap"]').text()).toContain('Tasarruf yap')
+    sayfa.unmount()
+  })
+
+  it('taksitler ve sonraki taksitler akordiyon; kart başına kalan taksit toplamı', async () => {
+    const veri = ornek()
+    veri.gider.taksitler = [
+      {
+        islem_id: 1,
+        aciklama: 'TEKNOSA',
+        kart_id: 7,
+        taksit_no: 1,
+        taksit_sayisi: 6,
+        aya_dusen: 250.25,
+        toplam_borc: 1501.5,
+        toplam_tahmini: true,
+      },
+    ]
+    veri.gider.sonraki_taksitler = [
+      {
+        kart_id: 7,
+        ad: 'Bonus',
+        toplam: 1251.25,
+        tahmini: true,
+        kalem_sayisi: 1,
+        kalemler: [
+          {
+            islem_id: 1,
+            aciklama: 'TEKNOSA',
+            kalan_adet: 5,
+            aya_dusen: 250.25,
+            kalan_toplam: 1251.25,
+            tahmini: true,
+          },
+        ],
+      },
+    ]
+    ozet.mockResolvedValue(veri)
+    const { default: AileOzetView } = await import('@/views/aile/AileOzetView.vue')
+    setActivePinia(createPinia())
+    const sayfa = mount(AileOzetView, {
+      global: {
+        plugins: [PrimeVue, ConfirmationService, ToastService],
+        stubs: {
+          RouterLink: { template: '<a><slot /></a>' },
+          VeriGrafigi: true,
+          GelirFormu: true,
+          GiderFormu: true,
+          TasarrufFormu: true,
+        },
+      },
+    })
+    await flushPromises()
+    const akordiyon = sayfa.get('[data-test="taksit-akordiyon"]')
+    expect(akordiyon.text()).toContain('Taksitler (1)')
+    expect(akordiyon.text()).toContain('Sonraki taksitler')
+    // Sonraki taksitler başlıkta kapalı; açınca kart başına toplam görünür
+    await sayfa.get('[data-test="sonraki-taksitler-baslik"]').trigger('click')
+    await flushPromises()
+    const kart = sayfa.get('[data-test="sonraki-taksit-karti"]').text().replace(/\s+/g, ' ')
+    expect(kart).toContain('1.251,25')
+    expect(kart).toContain('5 taksit')
     sayfa.unmount()
   })
 })

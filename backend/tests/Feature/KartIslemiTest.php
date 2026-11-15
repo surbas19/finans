@@ -77,6 +77,11 @@ class KartIslemiTest extends TestCase
         $ozet->assertJsonPath('gider.taksitler.0.aya_dusen', 250.25)
             ->assertJsonPath('gider.taksitler.0.toplam_borc', 1501.5)
             ->assertJsonPath('gider.taksitler.0.toplam_tahmini', true);
+        // Bu aydan sonra kalan taksitler (1/6 → 5 taksit kaldı), kart başına; ekstre "kalan" yazmadığı için yaklaşık
+        $ozet->assertJsonPath('gider.sonraki_taksitler.0.kart_id', $this->kart)
+            ->assertJsonPath('gider.sonraki_taksitler.0.toplam', 1251.25)
+            ->assertJsonPath('gider.sonraki_taksitler.0.tahmini', true)
+            ->assertJsonPath('gider.sonraki_taksitler.0.kalemler.0.kalan_adet', 5);
 
         // Liste toplamı aynı kuralla
         $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-11')->assertOk()
@@ -102,6 +107,9 @@ class KartIslemiTest extends TestCase
         $this->getJson('/api/v1/aile/ozet?ay=2026-09')->assertJsonPath('gider.toplam', 0);
         $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gider.toplam', 1000)
             ->assertJsonPath('gider.taksitler.0.toplam_borc', 6000)->assertJsonPath('gider.taksitler.0.toplam_tahmini', false);
+        // 3/6: kalan 3 taksit × 1000 (ekstre kalan tutarı yok → yaklaşık)
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gider.sonraki_taksitler.0.toplam', 3000)
+            ->assertJsonPath('gider.sonraki_taksitler.0.kalem_sayisi', 1);
         // İşlem ayına göre süzgeç Eylül'de, ekstre ayına göre Kasım'da bulur
         $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-09&donem_turu=islem')->assertJsonCount(1, 'islemler');
         $this->getJson('/api/v1/aile/kart-islemleri?ay=2026-11&donem_turu=ekstre')->assertJsonCount(1, 'islemler')
