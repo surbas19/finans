@@ -1,3 +1,5 @@
+> Durum: Aşama 1-3 tamamlandı (arka uç + arayüz + testler). Aşama 4 kapsam dışı. Sapmalar: hicrî yedek algoritma Ümmülkura'dan en çok 2 gün ayrışır; ek uçlar GET zekat/odemeler, PUT zekat/yillar/{yil} (taslak notu); hesap bayrağı zekat/ayar PUT 'hesaplar' ile de değişir.
+
 ﻿# BÖLÜM B — Zekât hesabı ve takibi (portföydeki hesapların toplam değeri üzerinden)
 
 ## Context

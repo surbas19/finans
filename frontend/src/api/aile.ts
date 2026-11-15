@@ -450,11 +450,210 @@ export interface AylikOzet {
   fark: number
   /** Gelir − Gider − Tasarruf */
   kalan: number
+  /** Verilen zekât (ödeme tarihinin ayı): yalnızca bilgi, gider / kalan hesabına girmez */
+  zekat?: { verilen: number; adet: number }
   uyarilar: {
     gecikmis_faturalar: Fatura[]
     bekleyen_faturalar: Fatura[]
     son_odemeler: (Ekstre & { kart_ad: string; gun: number })[]
+    zekat?: ZekatUyarisi[]
   }
+}
+
+// ---- Zekât ----
+
+export const ZEKAT_UYARISI =
+  'Bilgilendirme amaçlıdır, dini hüküm değildir; din görevlisine danışın.'
+
+export type ZekatNisabOlcutu = 'altin' | 'gumus'
+export type ZekatGunuTuru = 'hicri' | 'miladi'
+export type ZekatBorcKaynagi = 'kart' | 'fatura' | 'elle'
+
+export interface ZekatTurKurali {
+  dahil: boolean
+  /** Değerin zekâta giren yüzdesi (0-100) */
+  yuzde: number
+}
+
+export interface ZekatAyari {
+  nisab_olcutu: ZekatNisabOlcutu
+  nisab_altin_gram: number
+  nisab_gumus_gram: number
+  /** Binde: 25 = %2,5 */
+  oran_binde: number
+  tur_kurallari: Record<string, ZekatTurKurali>
+  borc_dus: boolean
+  borc_kaynaklari: Record<ZekatBorcKaynagi, boolean>
+  yalniz_gunde_nisab: boolean
+  zekat_gunu_turu: ZekatGunuTuru
+  hicri_ay: number
+  hicri_gun: number
+  miladi_ay: number
+  miladi_gun: number
+  sonraki_zekat_gunu: string | null
+  hatirlatma_gun: number
+}
+
+export interface ZekatGunu {
+  tarih: string
+  /** Hicrî günler her zaman tahminîdir (takvim yöntemi ±1-2 gün sapabilir) */
+  tahmini: boolean
+  yontem: 'intl' | 'yedek' | 'miladi'
+  gun_kaldi: number
+}
+
+export interface ZekatHesapAyari {
+  id: number
+  ad: string
+  sahip_ad: string | null
+  zekata_dahil: boolean
+  zekat_notu: string | null
+}
+
+export interface ZekatAyarYaniti {
+  ayar: ZekatAyari
+  zekat_gunu: ZekatGunu
+  turler: { deger: string; etiket: string }[]
+  hesaplar: ZekatHesapAyari[]
+  varsayilanlar: { nisab_altin_gram: number; nisab_gumus_gram: number; oran_binde: number }
+  uyari: string
+}
+
+export type ZekatAyarGirdisi = Partial<
+  Omit<ZekatAyari, 'tur_kurallari' | 'borc_kaynaklari'> & {
+    tur_kurallari: Record<string, ZekatTurKurali>
+    borc_kaynaklari: Partial<Record<ZekatBorcKaynagi, boolean>>
+    hesaplar: { id: number; zekata_dahil: boolean }[]
+  }
+>
+
+export interface ZekatKalemi {
+  hesap_id: number | null
+  hesap_ad: string
+  varlik_kod: string
+  varlik_ad: string
+  varlik_tur: string
+  miktar: number
+  birim_fiyat_tl: number | null
+  /** Fiyatı yoksa null (sıfır sayılmaz) */
+  deger: number | null
+  dahil_edilen: boolean
+  kapsam_yuzde: number
+  hesaba_giren: number
+  dislanma_nedeni: string | null
+}
+
+export interface ZekatBorcSatiri {
+  kaynak: ZekatBorcKaynagi
+  ad: string
+  tutar: number
+}
+
+export interface ZekatEksik {
+  hesap_ad: string
+  varlik_kod: string
+  varlik_ad: string
+  neden: string
+}
+
+export interface ZekatNisabi {
+  olcut: ZekatNisabOlcutu
+  gram: number
+  birim_fiyat: number
+  tl: number
+  fiyat_zamani?: string | null
+}
+
+/** Önizleme ya da kayıtlı yılın ortak gösterimi */
+export interface ZekatSonucu {
+  brut: number
+  borc: number
+  net: number
+  nisab: ZekatNisabi
+  nisab_ustu: boolean
+  zekat: number
+  kalemler: ZekatKalemi[]
+  borclar: ZekatBorcSatiri[]
+  eksikler: ZekatEksik[]
+  eksik_veri: boolean
+  notlar?: string[]
+  borc_dusuldu?: boolean
+  oran_binde?: number
+}
+
+export interface ZekatHesabiYaniti extends ZekatSonucu {
+  tarih: string
+  usd_kuru: number | null
+  zekat_gunu: ZekatGunu
+  /** Bugün zekât günü değilse tahmindir */
+  tahmini: boolean
+  uyari: string
+}
+
+export interface ZekatOdemesi {
+  id: number
+  zekat_yili_id: number | null
+  uye_id: number | null
+  tarih: string
+  tutar: number
+  alici: string | null
+  not: string | null
+}
+
+export interface ZekatOdemeGirdisi {
+  zekat_yili_id: number | null
+  uye_id?: number | null
+  tarih: string
+  tutar: number | null
+  alici: string | null
+  not: string | null
+}
+
+export interface ZekatYili {
+  id: number
+  zekat_gunu: string
+  durum: 'taslak' | 'kesinlesti'
+  brut: number
+  borc: number
+  net: number
+  nisab: number
+  nisab_birim_fiyat: number
+  nisab_ustu: boolean
+  zekat: number
+  odenen: number
+  kalan: number
+  usd_kuru: number | null
+  eksik_veri: boolean
+  hesaplandi_at: string
+  kesinlesti_at: string | null
+  not: string | null
+}
+
+export interface ZekatYiliDetayi extends ZekatYili {
+  ayar: ZekatAyari
+  eksikler: ZekatEksik[]
+  kalemler: ZekatKalemi[]
+  borclar: ZekatBorcSatiri[]
+  odemeler: ZekatOdemesi[]
+}
+
+export interface ZekatElleBorcu {
+  id: number
+  ad: string
+  tutar: number
+  vade_tarihi: string | null
+  not: string | null
+}
+
+/** Bütçe uyarıları: zekât gününe N gün / gün geçti, kayıt yok / ödenmemiş zekât */
+export interface ZekatUyarisi {
+  tur: 'yaklasiyor' | 'gecti' | 'odenmemis'
+  tarih: string
+  mesaj: string
+  gun?: number
+  tahmini?: boolean
+  yil_id?: number
+  kalan?: number
 }
 
 export interface KartIslemSuzgeci {
@@ -534,6 +733,30 @@ export const aileApi = {
   tasarrufEkle: (veri: TasarrufGirdisi) =>
     http.post<{ tasarruf: Tasarruf }>('/aile/tasarruflar', veri).then((r) => r.data),
   tasarrufSil: (id: number) => http.delete(`/aile/tasarruflar/${id}`),
+
+  zekatAyar: () => http.get<ZekatAyarYaniti>('/aile/zekat/ayar').then((r) => r.data),
+  zekatAyarKaydet: (veri: ZekatAyarGirdisi) =>
+    http.put<ZekatAyarYaniti>('/aile/zekat/ayar', veri).then((r) => r.data),
+  zekatHesapla: () => http.post<ZekatHesabiYaniti>('/aile/zekat/hesapla').then((r) => r.data),
+  zekatYillari: () =>
+    http.get<{ yillar: ZekatYili[] }>('/aile/zekat/yillar').then((r) => r.data.yillar),
+  zekatYili: (id: number) =>
+    http.get<{ yil: ZekatYiliDetayi }>(`/aile/zekat/yillar/${id}`).then((r) => r.data.yil),
+  zekatYiliKaydet: (veri: { zekat_gunu?: string | null; not?: string | null } = {}) =>
+    http.post<{ yil: ZekatYiliDetayi }>('/aile/zekat/yillar', veri).then((r) => r.data.yil),
+  zekatYiliKesinlestir: (id: number) =>
+    http
+      .post<{ yil: ZekatYiliDetayi }>(`/aile/zekat/yillar/${id}/kesinlestir`)
+      .then((r) => r.data.yil),
+  zekatYiliSil: (id: number) => http.delete(`/aile/zekat/yillar/${id}`),
+  zekatBorclari: () =>
+    http.get<{ borclar: ZekatElleBorcu[] }>('/aile/zekat/borclar').then((r) => r.data.borclar),
+  zekatBorcuEkle: (veri: { ad: string; tutar: number | null; vade_tarihi?: string | null }) =>
+    http.post<{ borc: ZekatElleBorcu }>('/aile/zekat/borclar', veri).then((r) => r.data.borc),
+  zekatBorcuSil: (id: number) => http.delete(`/aile/zekat/borclar/${id}`),
+  zekatOdemeEkle: (veri: ZekatOdemeGirdisi) =>
+    http.post<{ odeme: ZekatOdemesi }>('/aile/zekat/odemeler', veri).then((r) => r.data.odeme),
+  zekatOdemeSil: (id: number) => http.delete(`/aile/zekat/odemeler/${id}`),
   gelirTurleri: () =>
     http.get<{ turler: GelirTuru[] }>('/aile/gelir-turleri').then((r) => r.data.turler),
   gelirTuruEkle: (ad: string) =>

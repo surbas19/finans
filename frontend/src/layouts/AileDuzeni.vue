@@ -14,6 +14,7 @@ const SEKMELER = [
   { ad: 'aile-kartlar', etiket: 'Kartlar', ikon: 'pi pi-credit-card' },
   { ad: 'aile-islemler', etiket: 'İşlemler', ikon: 'pi pi-list' },
   { ad: 'aile-faturalar', etiket: 'Faturalar', ikon: 'pi pi-bolt' },
+  { ad: 'aile-zekat', etiket: 'Zekât', ikon: 'pi pi-heart' },
   { ad: 'aile-ayarlar', etiket: 'Ayarlar', ikon: 'pi pi-sliders-h' },
 ] as const
 
