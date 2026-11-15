@@ -184,7 +184,8 @@ class TransactionValidator
             return 'Tutar, kaynak satırda yazmıyor.';
         }
         // Satırda birden çok tutar (taksit toplamı, bonus / puan sütunu, bakiye): TL tutar çoğunlukla en sağdaki
-        if (count($tutarlar) > 1 && ! in_array(end($tutarlar), [$yazili, str_replace('.', '', $yazili)], true)) {
+        if (count($tutarlar) > 1 && ! in_array(end($tutarlar), [$yazili, str_replace('.', '', $yazili)], true)
+            && ! $this->ekTutarlarAciklanmis($i, $tutarlar, $yazili)) {
             $inceleme[] = 'Satırda birden çok tutar var; seçilen tutar en sağdaki değil.';
         }
         $beklenen = self::YONLER[$tur] ?? null;
@@ -217,6 +218,35 @@ class TransactionValidator
         }
 
         return false;
+    }
+
+    /**
+     * Satırdaki diğer tutarların hepsi satırın kendi taksit / döviz / bakiye alanlarıyla açıklanıyorsa (ör. Yapı Kredi:
+     * "1.757,80  8.789,00 / 5  15.820,17 TL'lik işlemin 4 / 9 taksidi": kalan ve toplam) TL tutar solda olsa da şüphe yoktur.
+     *
+     * @param  array<string, mixed>  $i
+     * @param  list<string>  $tutarlar
+     */
+    private function ekTutarlarAciklanmis(array $i, array $tutarlar, string $yazili): bool
+    {
+        $bilinen = [];
+        foreach ([$i['installment_details']['total_amount'] ?? null, $i['installment_details']['remaining_amount'] ?? null, $i['original_amount'] ?? null, $i['balance'] ?? null] as $d) {
+            if (is_numeric($d)) {
+                $bilinen[] = (float) $d;
+            }
+        }
+        $digerleri = array_values(array_filter($tutarlar, fn (string $t): bool => ! in_array($t, [$yazili, str_replace('.', '', $yazili)], true)));
+        if ($digerleri === [] || $bilinen === []) {
+            return false;
+        }
+        foreach ($digerleri as $t) {
+            $deger = (float) str_replace(',', '.', str_replace('.', '', $t));
+            if (! array_filter($bilinen, fn (float $b): bool => abs($b - $deger) < 0.005)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

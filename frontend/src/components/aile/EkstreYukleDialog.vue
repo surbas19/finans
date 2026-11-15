@@ -197,9 +197,11 @@ async function yukle(): Promise<void> {
       >
         <p class="font-semibold">1. İstemi kopyalayın</p>
         <p class="mt-1">
-          Ekstre PDF'ini ChatGPT, Claude ya da Gemini gibi bir yapay zekâya <strong>siz</strong>
-          yükleyin, bu istemi yapıştırın ve çıkan JSON'u kopyalayın. Farklı bankaların ekstreleri
-          tek biçime iner; sunucumuz yapay zekâya hiçbir şey göndermez.
+          Ekstre PDF'ini ChatGPT, Claude ya da Gemini gibi bir yapay zekâya
+          <strong>siz</strong> yükleyin, bu istemi yapıştırın ve çıkan JSON'u kod bloğunun
+          <strong>Kopyala</strong>
+          düğmesiyle kopyalayın (metni fareyle seçmeyin; sohbet arayüzü karakterleri bozabilir).
+          Farklı bankaların ekstreleri tek biçime iner; sunucumuz yapay zekâya hiçbir şey göndermez.
         </p>
         <div class="mt-2 flex flex-wrap gap-2">
           <Button

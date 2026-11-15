@@ -21,7 +21,7 @@ use Throwable;
  * Claude, Gemini…) kendisi yükler, HariciIstem'le standart JSON'u (şema v2) ürettirir ve buraya yapıştırır. Sunucu
  * hiçbir dış servise istek atmaz.
  *
- * - Çit (```) ve BOM soyulur; başka düzeltme / tahmin yoktur. Şemaya uymayan JSON hata yollarıyla reddedilir.
+ * - Çit (```), BOM ve taşıma artıkları (markdown kaçışı, HTML boşluk, satır devamı: JsonOnarici) onarılır; değer düzeltmesi / tahmin yoktur. Şemaya uymayan JSON hata yollarıyla reddedilir.
  * - PDF isteğe bağlı: verilirse sunucu sayfa metnini okur ve kaynak satırlar o metinde doğrulanır (OpenAI'ye gitmez);
  *   verilmezse "metinsiz kaynak" modu: satır satır işaret yok, ekstre düzeyinde tek uyarı; borç denklemi / özet
  *   toplamları tutmuyorsa tüm satırlar inceleme ister.
@@ -44,6 +44,7 @@ class HariciJsonAktarici
         private StatementAnalyzer $analizci,
         private KisiselVeriTemizleyici $temizleyici,
         private PdfUploadService $yukleme,
+        private JsonOnarici $onarici,
     ) {}
 
     /**
@@ -56,7 +57,7 @@ class HariciJsonAktarici
         if (strlen($json) > self::MAX_BAYT) {
             throw ValidationException::withMessages(['json' => 'JSON en çok '.(self::MAX_BAYT / 1024 / 1024).' MB olabilir.']);
         }
-        $veri = $this->coz($json);
+        ['veri' => $veri, 'duzeltme' => $duzeltme] = $this->coz($json);
         $this->semayaUydur($veri);
 
         $pdfBilgisi = $pdf !== null ? $this->yukleme->oku($pdf) : null;
@@ -87,7 +88,7 @@ class HariciJsonAktarici
             throw ValidationException::withMessages(['json' => $this->redNedenleri($veri['transactions'], $reddedilen)]);
         }
 
-        $uyarilar = [];
+        $uyarilar = $duzeltme !== null ? [$duzeltme] : [];
         if ($metinsizKaynak) {
             $uyarilar[] = $pdfBilgisi === null
                 ? "PDF'siz: satırlar dış yapay zekâdan geldi, kaynak satırlar doğrulanamadı. Ekstredeki toplamlarla karşılaştırın."
@@ -167,7 +168,10 @@ class HariciJsonAktarici
     }
 
     /**
-     * @return array<string, mixed>
+     * Sözdizimi hatasında yalnızca taşıma / biçim artıkları (markdown kaçışı, HTML boşluk, satır devamı) onarılır ve
+     * sonuç geçerli JSON ise kullanılır; değer düzeltmesi yoktur. Onarılamıyorsa hatanın yeri söylenir.
+     *
+     * @return array{veri: array<string, mixed>, duzeltme: ?string}
      */
     private function coz(string $json): array
     {
@@ -175,20 +179,36 @@ class HariciJsonAktarici
         if ($metin === '') {
             throw ValidationException::withMessages(['json' => 'JSON boş.']);
         }
+        $duzeltme = null;
         $veri = json_decode($metin, true, 64);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $neden = match (json_last_error()) {
-                JSON_ERROR_DEPTH => 'çok derin iç içe yapı',
-                JSON_ERROR_UTF8 => 'geçersiz karakter kodlaması',
+        $bicimHatasi = [JSON_ERROR_SYNTAX, JSON_ERROR_CTRL_CHAR, JSON_ERROR_STATE_MISMATCH];
+        if (in_array(json_last_error(), $bicimHatasi, true)) {
+            $onarim = $this->onarici->onar($metin);
+            if ($onarim['duzeltme'] !== null) {
+                $onarilmis = json_decode($onarim['metin'], true, 64);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $veri = $onarilmis;
+                    $duzeltme = $onarim['duzeltme'];
+                } else {
+                    $metin = $onarim['metin']; // hata yeri onarılmış metinde aranır
+                }
+            }
+        }
+        if ($duzeltme === null && json_last_error() !== JSON_ERROR_NONE) {
+            $konum = in_array(json_last_error(), $bicimHatasi, true) ? $this->onarici->hataKonumu($metin) : null;
+            $neden = match (true) {
+                json_last_error() === JSON_ERROR_DEPTH => 'çok derin iç içe yapı',
+                json_last_error() === JSON_ERROR_UTF8 => 'geçersiz karakter kodlaması',
+                $konum !== null => $konum,
                 default => 'söz dizimi hatası (yarım kalmış, fazladan metin ya da tırnak / virgül hatası olabilir)',
             };
-            throw ValidationException::withMessages(['json' => "Geçerli bir JSON değil: {$neden}. Yapay zekânın yanıtının tamamını, başka metin eklemeden yapıştırın."]);
+            throw ValidationException::withMessages(['json' => "Geçerli bir JSON değil: {$neden}. Yapay zekânın yanıtının tamamını, başka metin eklemeden (kod bloğunun Kopyala düğmesiyle) yapıştırın."]);
         }
         if (! is_array($veri) || array_is_list($veri)) {
             throw ValidationException::withMessages(['json' => 'JSON tek bir nesne ({ … }) olmalı.']);
         }
 
-        return $veri;
+        return ['veri' => $veri, 'duzeltme' => $duzeltme];
     }
 
     /**
