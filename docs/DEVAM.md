@@ -4,7 +4,7 @@
 
 
 ## Yayın bekleyenler
-Yok: canlıda 8efcc5d (2026-11-15; kart gideri = ekstre borcu, Giderler, Tasarruf, tutarla ekstre, yapay zekâ ekstre analizi, gelir türleri, fatura dönemi).
+Yok: canlıda yayın bekleyen yok (son yayın 2026-11-15: dış yapay zekâ ekstre girişi, zekât).
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
