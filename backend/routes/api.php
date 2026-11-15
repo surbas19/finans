@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Aile\GelirController;
 use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
 use App\Http\Controllers\Api\V1\Aile\GelirTuruController;
 use App\Http\Controllers\Api\V1\Aile\GiderKaynagiController;
+use App\Http\Controllers\Api\V1\Aile\GrafikController;
 use App\Http\Controllers\Api\V1\Aile\HaneController as AileHaneController;
 use App\Http\Controllers\Api\V1\Aile\HesapEkstresiController;
 use App\Http\Controllers\Api\V1\Aile\KartController;
@@ -17,8 +18,8 @@ use App\Http\Controllers\Api\V1\Aile\KategoriController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufController;
-use App\Http\Controllers\Api\V1\Aile\TasarrufOzetController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufGunuController;
+use App\Http\Controllers\Api\V1\Aile\TasarrufOzetController;
 use App\Http\Controllers\Api\V1\Aile\ZekatAyarController;
 use App\Http\Controllers\Api\V1\Aile\ZekatBorcController;
 use App\Http\Controllers\Api\V1\Aile\ZekatController;
@@ -92,6 +93,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('duzenli-giderler', DuzenliGiderController::class)->except('show')->parameters(['duzenli-giderler' => 'gider']);
 
             Route::get('tasarruf-ozeti', TasarrufOzetController::class)->name('tasarruf.ozeti');
+            Route::get('grafikler', GrafikController::class)->name('grafikler');
             Route::get('tasarruflar', [TasarrufController::class, 'index'])->name('tasarruflar.index');
             Route::post('tasarruflar', [TasarrufController::class, 'store'])->name('tasarruflar.store');
             Route::delete('tasarruflar/{tasarruf}', [TasarrufController::class, 'destroy'])->name('tasarruflar.destroy');
