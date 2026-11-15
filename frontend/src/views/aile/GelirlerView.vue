@@ -220,7 +220,10 @@ function kaynakAdi(id: number | null): string {
       </section>
     </template>
 
-    <!-- Kaynaklar -->
+    <!-- Aylık gelir grafiği -->
+    <GelirGrafigi />
+
+    <!-- Gelir kaynakları: en altta -->
     <section class="kart p-4 sm:p-5">
       <h2 class="bolum-etiketi mb-2">Gelir kaynakları</h2>
       <BosDurum
@@ -258,8 +261,6 @@ function kaynakAdi(id: number | null): string {
         </li>
       </ul>
     </section>
-
-    <GelirGrafigi />
 
     <GelirFormu
       v-model:visible="gelirFormuAcik"
