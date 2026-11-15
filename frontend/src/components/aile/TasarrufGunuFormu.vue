@@ -34,6 +34,8 @@ const { hatalar, gonderiliyor, gonder } = useFormGonder()
 const hesaplar = ref<HesapOzeti[]>([])
 const yukleniyor = ref(false)
 const baslangicAyi = ref<Date>(new Date())
+/** Sıranın bizde olduğu ay (boş olabilir) */
+const bizdeAyi = ref<Date | null>(null)
 
 function bos(): TasarrufGunuGirdisi {
   return {
@@ -44,6 +46,7 @@ function bos(): TasarrufGunuGirdisi {
     ay_gunu: 10,
     baslangic: '',
     ay_sayisi: null,
+    bizde_ay: null,
   }
 }
 const form = ref<TasarrufGunuGirdisi>(bos())
@@ -61,9 +64,11 @@ watch(gorunur, async (acik) => {
         ay_gunu: g.ay_gunu,
         baslangic: g.baslangic,
         ay_sayisi: g.ay_sayisi,
+        bizde_ay: g.bizde_ay,
       }
     : bos()
   baslangicAyi.value = g ? new Date(`${g.baslangic}T00:00:00`) : new Date()
+  bizdeAyi.value = g?.bizde_ay ? new Date(`${g.bizde_ay}-01T00:00:00`) : null
   yukleniyor.value = true
   try {
     await Promise.all([
@@ -97,6 +102,7 @@ async function kaydet(): Promise<void> {
   const veri: TasarrufGunuGirdisi = {
     ...form.value,
     baslangic: tarihMetni(new Date(ay.getFullYear(), ay.getMonth(), 1)),
+    bizde_ay: bizdeAyi.value ? tarihMetni(bizdeAyi.value).slice(0, 7) : null,
   }
   const g = props.gun
   const sonuc = await gonder(
@@ -237,6 +243,21 @@ function sil(): void {
           />
         </FormAlani>
       </div>
+      <FormAlani etiket="Hangi ay bizde (boş olabilir)" for="gun-bizde" :hata="hatalar.bizde_ay">
+        <DatePicker
+          v-model="bizdeAyi"
+          input-id="gun-bizde"
+          view="month"
+          date-format="MM yy"
+          show-icon
+          icon-display="input"
+          show-button-bar
+          data-test="gun-bizde-ay"
+        />
+      </FormAlani>
+      <p class="-mt-2 text-xs text-surface-500">
+        Sıranın size geldiği ay: o ay "Sıra bizde" yazar, alım yapmanız beklenmez.
+      </p>
       <div class="flex items-center justify-between gap-2">
         <Button
           v-if="gun"

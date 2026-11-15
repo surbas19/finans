@@ -42,12 +42,15 @@ class GunTakvimi
             $planlanan = Donem::ilkGun($donem)->day(min($g->ay_gunu, Donem::sonGun($donem)->day));
             $kayitlar = $yapilan->get($g->id, collect());
 
+            // Sıra bizde: o ay alım beklenmez (yine de tasarruf girilmişse yapıldı sayılır)
+            $siraBizde = $g->bizde_ay === $donem && $kayitlar->isEmpty();
+
             return [
                 'gun' => $g->ozet(),
                 'donem' => $donem,
                 'tarih' => $planlanan->toDateString(),
-                'durum' => $kayitlar->isNotEmpty() ? 'yapildi' : 'bekliyor',
-                'vadesi_geldi' => $kayitlar->isEmpty() && $planlanan->lte($bugun),
+                'durum' => $kayitlar->isNotEmpty() ? 'yapildi' : ($siraBizde ? 'sira_bizde' : 'bekliyor'),
+                'vadesi_geldi' => $kayitlar->isEmpty() && ! $siraBizde && $planlanan->lte($bugun),
                 'tasarruf_id' => $kayitlar->first()?->id,
             ];
         })->values();

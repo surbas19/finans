@@ -452,7 +452,13 @@ const gunMetni = (gun: number | null | undefined) =>
               </span>
             </button>
             <span
-              v-if="g.durum === 'yapildi'"
+              v-if="g.durum === 'sira_bizde'"
+              class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+              data-test="gun-sira-bizde"
+              >Sıra bizde</span
+            >
+            <span
+              v-else-if="g.durum === 'yapildi'"
               class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
               data-test="gun-yapildi"
               >Alım yapıldı</span

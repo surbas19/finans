@@ -168,6 +168,8 @@ export interface TasarrufGunu {
   ay_gunu: number
   baslangic: string
   ay_sayisi: number | null
+  /** Sıranın bizde olduğu ay (YYYY-AA): o ay alım beklenmez */
+  bizde_ay: string | null
   aktif: boolean
 }
 
@@ -179,6 +181,7 @@ export interface TasarrufGunuGirdisi {
   ay_gunu: number | null
   baslangic: string
   ay_sayisi: number | null
+  bizde_ay: string | null
 }
 
 /** Ayın günü: bu ay alım yapıldı mı (yapildi) ya da bekliyor */
@@ -186,7 +189,7 @@ export interface AyGunu {
   gun: TasarrufGunu
   donem: string
   tarih: string
-  durum: 'bekliyor' | 'yapildi'
+  durum: 'bekliyor' | 'yapildi' | 'sira_bizde'
   vadesi_geldi: boolean
   tasarruf_id: number | null
 }

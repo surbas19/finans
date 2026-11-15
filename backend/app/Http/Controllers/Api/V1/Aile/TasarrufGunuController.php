@@ -10,6 +10,7 @@ use App\Services\Aile\GunTakvimi;
 use App\Support\Donem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -67,12 +68,20 @@ class TasarrufGunuController extends Controller
             'ay_gunu' => ['required', 'integer', 'between:1,28'],
             'baslangic' => ['required', 'date'],
             'ay_sayisi' => ['nullable', 'integer', 'between:1,240'],
+            'bizde_ay' => ['nullable', 'regex:'.Donem::DESEN],
             'aktif' => ['sometimes', 'boolean'],
-        ], [], ['ad' => 'gün adı', 'hesap_id' => 'hesap', 'varlik_id' => 'varlık', 'miktar' => 'miktar', 'ay_gunu' => 'ayın günü', 'baslangic' => 'başlangıç', 'ay_sayisi' => 'ay sayısı']);
+        ], [], ['ad' => 'gün adı', 'hesap_id' => 'hesap', 'varlik_id' => 'varlık', 'miktar' => 'miktar', 'ay_gunu' => 'ayın günü', 'baslangic' => 'başlangıç', 'ay_sayisi' => 'ay sayısı', 'bizde_ay' => 'bizde olan ay']);
         if (Varlik::findOrFail((int) $veri['varlik_id'])->tur === VarlikTuru::Bes) {
             throw ValidationException::withMessages(['varlik_id' => 'Bireysel emeklilik gün olarak tanımlanmaz.']);
         }
         $veri['ad'] = trim($veri['ad']);
+        // Sıranın bizde olduğu ay, günün süresi içinde olmalı
+        if (! empty($veri['bizde_ay'])) {
+            $fark = Donem::fark(Donem::tarihten(Carbon::parse($veri['baslangic'])), $veri['bizde_ay']);
+            if ($fark < 0 || (! empty($veri['ay_sayisi']) && $fark >= (int) $veri['ay_sayisi'])) {
+                throw ValidationException::withMessages(['bizde_ay' => 'Bizde olan ay, günün ilk alım ayı ile süresi arasında olmalı.']);
+            }
+        }
 
         return $veri;
     }

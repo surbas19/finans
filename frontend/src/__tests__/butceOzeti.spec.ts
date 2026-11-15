@@ -218,6 +218,7 @@ describe('Bütçe aylık özeti', () => {
       ay_gunu: 10,
       baslangic: '2026-09-01',
       ay_sayisi: 6,
+      bizde_ay: null,
       aktif: true,
     })
     veri.gunler = [
@@ -236,6 +237,14 @@ describe('Bütçe aylık özeti', () => {
         durum: 'yapildi',
         vadesi_geldi: false,
         tasarruf_id: 4,
+      },
+      {
+        gun: gun(3, 'Bizim ay'),
+        donem: '2026-11',
+        tarih: '2026-11-25',
+        durum: 'sira_bizde',
+        vadesi_geldi: false,
+        tasarruf_id: null,
       },
     ]
     ozet.mockResolvedValue(veri)
@@ -256,12 +265,15 @@ describe('Bütçe aylık özeti', () => {
     })
     await flushPromises()
     const satirlar = sayfa.findAll('[data-test="gun-satiri"]')
-    expect(satirlar).toHaveLength(2)
+    expect(satirlar).toHaveLength(3)
     expect(satirlar[0]!.text()).toContain('Mahalle günü')
     expect(satirlar[0]!.text()).toContain('5 gr Gram altın')
     expect(satirlar[0]!.find('[data-test="gun-alimi-yap"]').text()).toContain('Bu ayın alımını yap')
     expect(satirlar[1]!.find('[data-test="gun-yapildi"]').exists()).toBe(true)
     expect(satirlar[1]!.find('[data-test="gun-alimi-yap"]').exists()).toBe(false)
+    // Sıra bizde: rozet var, alım düğmesi yok
+    expect(satirlar[2]!.find('[data-test="gun-sira-bizde"]').text()).toBe('Sıra bizde')
+    expect(satirlar[2]!.find('[data-test="gun-alimi-yap"]').exists()).toBe(false)
     sayfa.unmount()
   })
 })

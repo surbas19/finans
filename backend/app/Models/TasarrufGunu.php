@@ -15,7 +15,7 @@ class TasarrufGunu extends Model
 
     protected $table = 'tasarruf_gunleri';
 
-    protected $fillable = ['hane_id', 'hesap_id', 'varlik_id', 'ad', 'miktar', 'ay_gunu', 'baslangic', 'ay_sayisi', 'aktif', 'olusturan_id'];
+    protected $fillable = ['hane_id', 'hesap_id', 'varlik_id', 'ad', 'miktar', 'ay_gunu', 'baslangic', 'ay_sayisi', 'bizde_ay', 'aktif', 'olusturan_id'];
 
     /**
      * @return array<string, string>
@@ -59,6 +59,7 @@ class TasarrufGunu extends Model
             'ay_gunu' => $this->ay_gunu,
             'baslangic' => $this->baslangic->toDateString(),
             'ay_sayisi' => $this->ay_sayisi,
+            'bizde_ay' => $this->bizde_ay,
             'aktif' => $this->aktif,
         ];
     }

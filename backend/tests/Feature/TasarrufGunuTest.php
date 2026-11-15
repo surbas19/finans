@@ -128,4 +128,28 @@ class TasarrufGunuTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('gun_id');
         $this->assertSame(1, TasarrufGunu::count());
     }
+
+    public function test_bizde_ay_alim_beklenmez_sira_bizde_gorunur_ve_sure_icinde_olmali(): void
+    {
+        $this->gunEkle(['baslangic' => '2026-09-01', 'ay_sayisi' => 6, 'bizde_ay' => '2026-11']);
+
+        $this->getJson('/api/v1/aile/ozet?ay=2026-10')->assertJsonPath('gunler.0.durum', 'bekliyor')->assertJsonPath('gunler.0.vadesi_geldi', true);
+        // Sıra bizde: alım beklenmez, vadesi gelmiş sayılmaz
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertOk()
+            ->assertJsonPath('gunler.0.durum', 'sira_bizde')->assertJsonPath('gunler.0.vadesi_geldi', false)
+            ->assertJsonPath('gunler.0.gun.bizde_ay', '2026-11');
+
+        // Aralık dışı ay reddedilir (başlangıçtan önce / süreden sonra)
+        $this->postJson('/api/v1/aile/tasarruf-gunleri', ['ad' => 'x', 'hesap_id' => $this->hesap->id, 'varlik_id' => $this->altin->id, 'miktar' => 1, 'ay_gunu' => 5, 'baslangic' => '2026-09-01', 'ay_sayisi' => 2, 'bizde_ay' => '2026-12'])
+            ->assertStatus(422)->assertJsonValidationErrors('bizde_ay');
+        $this->postJson('/api/v1/aile/tasarruf-gunleri', ['ad' => 'x', 'hesap_id' => $this->hesap->id, 'varlik_id' => $this->altin->id, 'miktar' => 1, 'ay_gunu' => 5, 'baslangic' => '2026-09-01', 'bizde_ay' => '2026-08'])
+            ->assertStatus(422)->assertJsonValidationErrors('bizde_ay');
+        $this->postJson('/api/v1/aile/tasarruf-gunleri', ['ad' => 'x', 'hesap_id' => $this->hesap->id, 'varlik_id' => $this->altin->id, 'miktar' => 1, 'ay_gunu' => 5, 'baslangic' => '2026-09-01', 'bizde_ay' => 'kasım'])
+            ->assertStatus(422)->assertJsonValidationErrors('bizde_ay');
+
+        // Sıra bizde olan ay yine de alım girilirse yapıldı sayılır (engellenmez)
+        $id = Tasarruf::count() === 0 ? TasarrufGunu::value('id') : 0;
+        $this->postJson('/api/v1/aile/tasarruflar', ['hesap_id' => $this->hesap->id, 'varlik_id' => $this->altin->id, 'miktar' => 1, 'birim_fiyat' => 3000, 'tarih' => '2026-11-10', 'gun_id' => $id])->assertCreated();
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('gunler.0.durum', 'yapildi');
+    }
 }
