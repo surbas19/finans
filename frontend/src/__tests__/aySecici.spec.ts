@@ -54,6 +54,58 @@ describe('AySecici: dikey ay çarkı', () => {
     expect(yayilan(w)).toEqual(['2026-09', '2026-11'])
   })
 
+  it('fare tekerleği: bir tıkta tek ay; kilit süresince ikinci tık yok sayılır; sınırda ileri gidilmez', async () => {
+    const w = kur({ ileriSinir: '2026-12' })
+    const liste = w.get('[role="listbox"]')
+    const tekerle = (deltaY: number, deltaMode = 0) =>
+      liste.element.dispatchEvent(
+        new WheelEvent('wheel', { deltaY, deltaMode, bubbles: true, cancelable: true }),
+      )
+    // Bir tıkta (100 px) tam bir ay ileri
+    tekerle(100)
+    expect(yayilan(w)).toEqual(['2026-11'])
+    // Kilit süresi içindeki ikinci tık yeni ay atlatmaz (ivmeli tekerlek)
+    tekerle(100)
+    tekerle(100)
+    expect(yayilan(w)).toEqual(['2026-11'])
+    // Kilit bitince yukarı: bir ay geri
+    vi.advanceTimersByTime(200)
+    tekerle(-100)
+    expect(yayilan(w)).toEqual(['2026-11', '2026-09'])
+    // Satır modundaki küçük kaydırma (deltaMode 1): 3 satır ≈ 48 px → bir ay
+    vi.advanceTimersByTime(200)
+    tekerle(3, 1)
+    expect(yayilan(w)).toEqual(['2026-11', '2026-09', '2026-11'])
+  })
+
+  it('tekerlek: küçük kaydırmalar eşiğe kadar birikir; sayfa kaymaz (preventDefault); pasifken işlem yok', async () => {
+    const w = kur()
+    const liste = w.get('[role="listbox"]')
+    const olay = (deltaY: number) => {
+      const e = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true })
+      liste.element.dispatchEvent(e)
+
+      return e
+    }
+    expect(olay(10).defaultPrevented).toBe(true)
+    olay(10)
+    expect(yayilan(w)).toEqual([])
+    olay(15)
+    expect(yayilan(w)).toEqual(['2026-11'])
+    await w.setProps({ pasif: true, modelValue: '2026-11' })
+    vi.advanceTimersByTime(200)
+    olay(100)
+    expect(yayilan(w)).toEqual(['2026-11'])
+  })
+
+  it('tekerlek ileri sınırda ileri gitmez', () => {
+    const w = kur({ modelValue: '2026-11' })
+    w.get('[role="listbox"]').element.dispatchEvent(
+      new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }),
+    )
+    expect(yayilan(w)).toEqual([])
+  })
+
   it('kaydırma durunca ortaya oturan ay seçilir (satır 24 px)', async () => {
     const w = kur()
     const liste = w.get('[role="listbox"]')

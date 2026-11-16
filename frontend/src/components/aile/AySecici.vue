@@ -85,7 +85,10 @@ watch(sinir, () => {
   void nextTick(() => kaydir(aylar.value.indexOf(secili.value), false))
 })
 onMounted(() => kaydir(aylar.value.indexOf(secili.value), false))
-onBeforeUnmount(() => clearTimeout(zamanlayici))
+onBeforeUnmount(() => {
+  clearTimeout(zamanlayici)
+  clearTimeout(tekerKilidi)
+})
 
 function sec(d: string | undefined): void {
   if (!d || props.pasif) return
@@ -113,6 +116,38 @@ function kaydiriliyor(): void {
   clearTimeout(zamanlayici)
   // scrollend olmayan tarayıcılar için: kaydırma 120 ms durunca
   zamanlayici = setTimeout(kaydirmaBitti, 120)
+}
+
+/**
+ * Fare tekerleği: bir tıkta tam bir ay. Yerel kaydırma bir tıkta ~4 satır atlıyor ve art arda seçim yayıyordu;
+ * bu yüzden tekerlek burada yönetilir (dokunmatik kaydırma yerel kalır). Bir adımdan sonra kısa kilit, dokunmatik
+ * yüzeyin küçük ve ivmeli kaydırmaları 30 px eşiğine kadar birikir.
+ */
+const TEKER_ESIK = 30
+const TEKER_KILIT_MS = 140
+let tekerBirikim = 0
+let tekerSon = 0
+let tekerKilitli = false
+let tekerKilidi: ReturnType<typeof setTimeout> | undefined
+
+function teker(e: WheelEvent): void {
+  if (props.pasif) return
+  e.preventDefault()
+  if (tekerKilitli) return
+  const simdi = Date.now()
+  if (simdi - tekerSon > 300) tekerBirikim = 0
+  tekerSon = simdi
+  // deltaMode: 0 piksel, 1 satır, 2 sayfa
+  tekerBirikim += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 100 : e.deltaY
+  if (Math.abs(tekerBirikim) < TEKER_ESIK) return
+  const yon = tekerBirikim > 0 ? 1 : -1
+  tekerBirikim = 0
+  tekerKilitli = true
+  clearTimeout(tekerKilidi)
+  tekerKilidi = setTimeout(() => {
+    tekerKilitli = false
+  }, TEKER_KILIT_MS)
+  sec(donemEkle(secili.value, yon))
 }
 
 function tus(e: KeyboardEvent): void {
@@ -145,6 +180,7 @@ function tus(e: KeyboardEvent): void {
       @scroll.passive="kaydiriliyor"
       @scrollend="kaydirmaBitti"
       @keydown="tus"
+      @wheel="teker"
     >
       <div
         v-for="(d, i) in aylar"
