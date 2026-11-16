@@ -96,6 +96,33 @@ const okunamayanSatir = computed(() =>
   satirlar.value.filter((s) => s.okuma?.alanlar?.length && s.durum !== 'atlandi'),
 )
 const faturaSecili = computed(() => dahil.value.filter((s) => s.fatura_onerisi?.secildi))
+/** Fatura önerisi olan satırlar (sağlayıcı bulundu ya da aday var): sayfanın en üstünde, işaretliler ve güvenilirler önce */
+const GUVEN_SIRASI: Record<string, number> = {
+  kullanici: 0,
+  yuksek: 1,
+  orta: 2,
+  belirsiz: 3,
+  dusuk: 4,
+}
+const faturaOnerileri = computed(() =>
+  dahil.value
+    .filter(
+      (s) =>
+        s.fatura_onerisi &&
+        (s.fatura_onerisi.saglayici_id !== null || s.fatura_onerisi.adaylar.length > 0),
+    )
+    .sort(
+      (a, b) =>
+        Number(b.fatura_onerisi!.secildi) - Number(a.fatura_onerisi!.secildi) ||
+        (GUVEN_SIRASI[a.fatura_onerisi!.guven] ?? 9) - (GUVEN_SIRASI[b.fatura_onerisi!.guven] ?? 9),
+    ),
+)
+const faturaOneriIdleri = computed(() => new Set(faturaOnerileri.value.map((s) => s.id)))
+/** Dosyasız (yalnızca tutarla girilen) ekstrede satır incelemesi olmadığından onay kaldırılamaz */
+const onayKaldirilabilir = computed(
+  () => ekstre.value?.durum === 'onaylandi' && ekstre.value.banka_profili !== 'elle',
+)
+const onayKaldiriliyor = ref(false)
 /** Yapay zekâ satırı şüpheli ve henüz "Kontrol ettim" denmedi */
 const incelemeBekleyen = computed(() =>
   dahil.value.filter((s) => s.okuma?.inceleme && !s.okuma.incelendi),
@@ -113,7 +140,8 @@ const gorunenSatirlar = computed(() =>
         )
       : goster.value === 'fatura'
         ? satirlar.value.filter((s) => s.fatura_onerisi)
-        : satirlar.value,
+        : // Hepsi: fatura önerileri üstte ayrı bölümde gösterilir, burada tekrarlanmaz
+          satirlar.value.filter((s) => !faturaOneriIdleri.value.has(s.id)),
 )
 
 function kaynak(alanAdi: string): string {
@@ -185,6 +213,33 @@ function onayla(): void {
   })
 }
 
+function onayiKaldir(): void {
+  confirm.require({
+    header: 'Onayı kaldır',
+    message:
+      'Ekstre incelemeye döner: satırları düzeltebilir, fatura bağlayabilir, sonra yeniden onaylarsınız. Onaylı olmadığı sürece bu ekstre Bütçe giderlerinde sayılmaz; bağlı faturalar çözülür (ödenmemiş görünür), yeniden onayda aynı fatura kararları uygulanır. Devam edilsin mi?',
+    acceptProps: { label: 'Onayı kaldır' },
+    rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
+    accept: async () => {
+      onayKaldiriliyor.value = true
+      try {
+        const sonuc = await aileApi.ekstreOnayiKaldir(props.id)
+        toast.add({
+          severity: 'success',
+          summary: 'Onay kaldırıldı',
+          detail: sonuc.message,
+          life: 8000,
+        })
+        await yukle()
+      } catch (e) {
+        toast.add({ severity: 'error', summary: 'Yapılamadı', detail: hataMesaji(e), life: 8000 })
+      } finally {
+        onayKaldiriliyor.value = false
+      }
+    },
+  })
+}
+
 async function odendi(deger: boolean): Promise<void> {
   const sonuc = await gonder(() => aileApi.ekstreGuncelle(props.id, { odendi: deger }))
   if (sonuc) ekstre.value = sonuc.ekstre
@@ -218,6 +273,28 @@ function sil(): void {
     <Message v-if="bulunamadi" severity="error">Ekstre bulunamadı.</Message>
     <Skeleton v-else-if="!ekstre" height="12rem" border-radius="1.5rem" />
     <template v-else>
+      <!-- Fatura önerileri: sayfanın en üstünde (işaretliler ve güvenilirler önce) -->
+      <section
+        v-if="faturaOnerileri.length && goster === 'hepsi'"
+        class="kart border-amber-200 bg-amber-50/40 p-3"
+        data-test="fatura-onerileri"
+      >
+        <h2 class="bolum-etiketi mb-2 !text-amber-800">
+          Fatura önerileri ({{ faturaOnerileri.length }})
+        </h2>
+        <ul class="flex flex-col gap-2">
+          <EkstreSatiri
+            v-for="s in faturaOnerileri"
+            :key="s.id"
+            :satir="s"
+            :ekstre-id="id"
+            :duzenlenebilir="taslak && !aiSuruyor"
+            @degisti="satirDegisti"
+            @duzelt="duzelt"
+          />
+        </ul>
+      </section>
+
       <section
         class="kart border-t-4 p-4 sm:p-5"
         :style="{ borderTopColor: kartRengiCss(kart ?? { id: ekstre.kart_id }) }"
@@ -489,10 +566,21 @@ function sil(): void {
           data-test="onayla-alt"
           @click="onayla"
         />
+        <Button
+          v-if="onayKaldirilabilir"
+          label="Onayı kaldır"
+          icon="pi pi-undo"
+          severity="secondary"
+          outlined
+          :loading="onayKaldiriliyor"
+          data-test="onayi-kaldir"
+          @click="onayiKaldir"
+        />
         <Button label="Ekstreyi sil" icon="pi pi-trash" severity="danger" text @click="sil" />
       </div>
       <p v-if="!taslak" class="text-center text-xs text-surface-500">
-        Onaylı ekstrenin satırları İşlemler sayfasından düzeltilir.
+        Onaylı ekstrenin satırları İşlemler sayfasından düzeltilir. Fatura bağlamak ya da satırları
+        değiştirmek için "Onayı kaldır"ı kullanın.
       </p>
       <p
         v-else-if="yalnizOnizleme"

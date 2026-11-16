@@ -1169,6 +1169,11 @@ export const aileApi = {
         message: string
       }>(`/aile/ekstreler/${id}/onayla`)
       .then((r) => r.data),
+  /** Onayı kaldır: ekstre incelemeye (taslak) döner; fatura bağlanır / satırlar düzeltilir, sonra yeniden onaylanır */
+  ekstreOnayiKaldir: (id: number) =>
+    http
+      .post<{ ekstre: Ekstre; message: string }>(`/aile/ekstreler/${id}/onayi-kaldir`)
+      .then((r) => r.data),
   ekstreSil: (id: number) => http.delete(`/aile/ekstreler/${id}`),
   /** PDF (yalnızca hane; oturum çereziyle açılır) */
   ekstreDosyaAdresi: (id: number, sayfa?: number | null) =>

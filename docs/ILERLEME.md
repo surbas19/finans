@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-16) Ekstre: "Onayı kaldır" (onaylı ekstre incelemeye döner, faturalar çözülür, düzeltip yeniden onaylanır; fatura bağlamanın yolu) ve fatura önerileri ekstre ekranının en üstünde. Testler: ön yüz 154, FaturaTest 11.
 - (2026-11-16) Bütçe → İşlemler: "Kategorisiz harcamalar" bölümü + tek dokunuşla en çok kullanılan kategori çipleri; kategoriler kullanım sayısına göre sıralı, seçicide "Sık kullanılan" çipleri. Testler: ön yüz 151, KategoriAtamaTest.
 - (2026-11-16) Temettü ve bedelsiz ([planlar/temettu.md](planlar/temettu.md)): hisse satırında elle temettü (net TL + stopaj, aynı hesaba nakit, getiride görünür, Bütçe gelirine yazılmaz) ve bedelsiz (oran %, adet büyür, maliyet aynı). MySQL'de doğrulandı: arka uç 258, ön yüz 146.
 - (2026-11-16) Ekstrenin ayı = son ödeme tarihinin ayı (yoksa kesim ayı): Bütçe kart gideri, ekstre dönemi çarkları, taksit rapor ayı, fatura dönemi önerisi; migration eski taksit / fatura dönemlerini yeniden yazar. Testler: EkstreAyiTest, FaturaTest; ön yüz 146 (arka uç SQLite'ta; MySQL'de bekliyor).
