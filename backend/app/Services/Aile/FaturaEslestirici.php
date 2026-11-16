@@ -25,7 +25,7 @@ use Illuminate\Validation\ValidationException;
  * Güven: tek sağlayıcı + desen + en az bir kanıt daha → yüksek; yalnızca desen → orta; birden çok sağlayıcı →
  * belirsiz; yalnızca tür kelimesi (sağlayıcı tanımsız) → düşük. Otomatik kayıt yalnızca sağlayıcıda açıksa ve güven
  * yüksekse. Hizmet dönemi: açıklamada yazıyorsa o; kullanıcı seçtiyse (ya da "bilinmiyor" dediyse) o; yoksa ekstrenin
- * kesim ayı (kaynağı "kesim", `guncelDonem` ile okunurken ve onayda güncel kesim tarihinden); kesim tarihi de yoksa boş.
+ * ekstrenin ayı (son ödeme ayı; kaynağı "kesim", `guncelDonem` ile okunurken ve onayda güncel tarihlerden); tarih yoksa boş.
  */
 class FaturaEslestirici
 {
@@ -45,7 +45,7 @@ class FaturaEslestirici
         }
         ['saglayicilar' => $saglayicilar, 'turler' => $turler] = $this->tanimlar((int) $islem->hane_id);
         $sade = Metin::sade($islem->aciklama);
-        // Açıklamada dönem yoksa öneride boş kalır; kesim ayı okunurken eklenir (guncelDonem)
+        // Açıklamada dönem yoksa öneride boş kalır; ekstrenin ayı okunurken eklenir (guncelDonem)
         $donem = $this->aciklamadakiDonem($sade);
 
         $eslesenler = [];
@@ -136,8 +136,8 @@ class FaturaEslestirici
 
     /**
      * Kayıtlı fatura önerisinin güncel hizmet dönemi. Açıklamadan okunan ya da kullanıcının seçtiği (boş bıraktığı) dönem
-     * korunur; karar yoksa ekstrenin şimdiki kesim ayı (kaynağı "kesim"). Öneri okunurken ve onayda uygulanır: kesim
-     * tarihi sonradan girilse ya da değişse dönem onu izler, eski taslaklar da kesim ayını alır.
+     * korunur; karar yoksa ekstrenin şimdiki ayı (son ödeme ayı; yoksa kesim ayı; kaynağı "kesim"). Öneri okunurken ve onayda uygulanır: tarihler
+     * sonradan girilse ya da değişse dönem onu izler, eski taslaklar da ekstrenin ayını alır.
      *
      * @param  array<string, mixed>|null  $oneri
      * @return array<string, mixed>|null
@@ -154,21 +154,21 @@ class FaturaEslestirici
         }
         $kesimDonemi = $kesim !== null ? Donem::tarihten($kesim) : null;
         $gerekce[] = $kesimDonemi !== null
-            ? self::DONEM_GEREKCESI.': ekstrenin kesim ayı ('.Donem::etiket($kesimDonemi).') alındı; farklıysa dönemi değiştirin.'
+            ? self::DONEM_GEREKCESI.': ekstrenin ayı ('.Donem::etiket($kesimDonemi).') alındı; farklıysa dönemi değiştirin.'
             : self::DONEM_GEREKCESI.': dönemi seçin ya da bilinmiyor bırakın.';
 
         return [...$oneri, 'hizmet_donemi' => $kesimDonemi, 'donem_kaynagi' => $kesimDonemi !== null ? 'kesim' : null, 'gerekce' => $gerekce];
     }
 
     /**
-     * Dönemi bilinmeyen fatura ekstredeki bir satıra bağlanırken ekstrenin kesim ayını alır; o sağlayıcının o ayda başka
+     * Dönemi bilinmeyen fatura ekstredeki bir satıra bağlanırken ekstrenin ayını (son ödeme ayı) alır; o sağlayıcının o ayda başka
      * faturası varsa boş kalır (aynı dönem iki kez olmaz). Doldurulacak alanları döner.
      *
      * @return array{hizmet_donemi?: string, donem_kaynagi?: string}
      */
     public function bosDonemiTamamla(Fatura $fatura, KartIslemi $islem): array
     {
-        $kesim = $islem->ekstre?->kesim_tarihi;
+        $kesim = $islem->ekstre?->ayTarihi();
         if ($fatura->hizmet_donemi !== null || $kesim === null) {
             return [];
         }

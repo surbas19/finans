@@ -94,7 +94,7 @@ class FaturaController extends Controller
 
     /**
      * Faturayı (bağsız) onaylı bir kart satırına bağlar: ödendi olur, ödeme tarihi kart satırının tarihi; dönemi
-     * bilinmiyorsa satırın ekstresinin kesim ayı
+     * bilinmiyorsa satırın ekstresinin ayı (son ödeme ayı)
      */
     public function bagla(Request $request, Fatura $fatura): JsonResponse
     {

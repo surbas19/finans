@@ -100,10 +100,10 @@ class KartIslemi extends Model
             'ham_metin' => $this->ham_metin,
             'sayfa' => $this->sayfa,
             'okuma' => $this->okuma ?? ['alanlar' => [], 'uyarilar' => [], 'tutar_adaylari' => []],
-            // Hizmet dönemi karar verilmemişse ekstrenin güncel kesim ayı
+            // Hizmet dönemi karar verilmemişse ekstrenin güncel ayı (son ödeme ayı)
             'fatura_onerisi' => FaturaEslestirici::guncelDonem(
                 $this->fatura_onerisi,
-                $this->fatura_onerisi !== null ? $this->ekstre?->kesim_tarihi : null,
+                $this->fatura_onerisi !== null ? $this->ekstre?->ayTarihi() : null,
             ),
         ];
     }

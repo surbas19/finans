@@ -174,7 +174,7 @@ function kaynakAdi(id: number | null): string {
           </li>
         </ul>
         <p class="mt-2 text-xs text-surface-500">
-          Kart gideri ekstre borcunun tamamıdır (kesim ayına yazılır); ekstresi gelmemiş elle
+          Kart gideri ekstre borcunun tamamıdır (son ödeme ayına yazılır); ekstresi gelmemiş elle
           girilen harcamalar ayrıca eklenir.
         </p>
       </section>

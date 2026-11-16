@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Kart satırı kuralları (tek yer):
  *
- * - Rapor ayı: normal satırda işlem tarihinin ayı; taksit satırında (n/N) ekstrenin kesim ayı. Ekstreler taksit
+ * - Rapor ayı: normal satırda işlem tarihinin ayı; taksit satırında (n/N) ekstrenin ayı (son ödeme ayı). Ekstreler taksit
  *   satırında çoğunlukla asıl alış tarihini yazar; "aya düşen taksit" o ekstrenin ayına yazılır.
  * - Parmak izi: kart + tarih + tutar + tür + sade açıklama + taksit + aynı satırın kaçıncısı olduğu. Yalnızca onaylı
  *   satırda dolu ve kart içinde tekil: aynı işlem iki kez onaylanamaz (ikinci ekstre, elle girilmiş aynı satır).
@@ -24,8 +24,8 @@ class KartIslemKurallari
 {
     public function raporDonemi(KartIslemi $islem, ?Ekstre $ekstre): ?string
     {
-        if (($islem->taksit_sayisi ?? 0) > 1 && $ekstre?->kesim_tarihi) {
-            return Donem::tarihten($ekstre->kesim_tarihi);
+        if (($islem->taksit_sayisi ?? 0) > 1 && $ekstre?->ay() !== null) {
+            return $ekstre->ay();
         }
 
         return $islem->islem_tarihi ? Donem::tarihten($islem->islem_tarihi) : null;

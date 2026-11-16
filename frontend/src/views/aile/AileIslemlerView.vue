@@ -32,7 +32,7 @@ import { buAy, donemEtiketi, gecerliDonem } from '@/utils/donem'
 /**
  * Kart işlemleri: bütün ekstre işlemleri kart adının altında akordiyon (süzgeçsizken ilk kart açık). Süzgeç (arama,
  * kişi, banka, kart, kategori, tür; Bütçe Özet'ten gelince ay çipi) uygulanınca bütün kart grupları açık gelir.
- * En üstte ekstre dönemi çarkı (kesim ayı; varsayılan en yeni ekstre dönemi, ondan ileri yok; "Tümü" bütün dönemler).
+ * En üstte ekstre dönemi çarkı (ekstrenin ayı: son ödeme ayı; varsayılan en yeni ekstre dönemi, ondan ileri yok; "Tümü" bütün dönemler).
  * Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
  */
 const aile = useAileStore()
@@ -46,9 +46,9 @@ const q = route.query
 const ara = ref(String(q.ara ?? ''))
 /** Bütçe Özet'ten gelen ay (rapor ayı) süzgeci; çip ile kaldırılır */
 const ay = ref<string | null>(gecerliDonem(String(q.ay ?? '')) ? String(q.ay) : null)
-/** Ekstre dönemi (kesim ayı) seçici: null = bütün dönemler. Varsayılan en yeni ekstre dönemi */
+/** Ekstre dönemi (son ödeme ayı) seçici: null = bütün dönemler. Varsayılan en yeni ekstre dönemi */
 const donem = ref<string | null>(null)
-/** Seçilebilecek en yeni ekstre dönemi (onaylı ekstrelerin kesim ayı) */
+/** Seçilebilecek en yeni ekstre dönemi (onaylı ekstrelerin ayı: son ödeme ayı) */
 const enYeni = ref<string | null>(null)
 let hazir = false
 const uyeId = ref<number | null>(sayi(q.uye_id))

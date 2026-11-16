@@ -84,9 +84,9 @@ class FaturaTest extends TestCase
         ]);
         $this->assertStringContainsString('"ISKI SU" geçiyor (İSKİ)', $iski['fatura_onerisi']['gerekce'][0]);
         $this->assertStringContainsString('Eylül 2026', $iski['fatura_onerisi']['gerekce'][1]);
-        // Dönem açıklamada yok: ekstrenin kesim ayı (10.11.2026 → Kasım 2026), kaynağı "kesim"
+        // Dönem açıklamada yok: ekstrenin ayı (son ödeme ayı; burada kesim 10.11.2026 → Kasım 2026), kaynağı "kesim"
         $this->assertSame(['orta', '2026-11', 'kesim', false], [$igdas['fatura_onerisi']['guven'], $igdas['fatura_onerisi']['hizmet_donemi'], $igdas['fatura_onerisi']['donem_kaynagi'], $igdas['fatura_onerisi']['secildi']]);
-        $this->assertStringContainsString('kesim ayı (Kasım 2026)', end($igdas['fatura_onerisi']['gerekce']));
+        $this->assertStringContainsString('ekstrenin ayı (Kasım 2026)', end($igdas['fatura_onerisi']['gerekce']));
         $this->assertSame('belirsiz', $enerji['fatura_onerisi']['guven']);
         $this->assertEqualsCanonicalizing([$this->s['enerjisa'], $this->s['ayedas']], $enerji['fatura_onerisi']['adaylar']);
         $this->assertNull($enerji['fatura_onerisi']['saglayici_id']);
@@ -121,9 +121,9 @@ class FaturaTest extends TestCase
         $this->getJson("/api/v1/aile/faturalar?kart_id={$this->kart}")->assertJsonCount(3, 'faturalar');
     }
 
-    public function test_hizmet_donemi_secilmedikce_ekstrenin_kesim_ayini_izler(): void
+    public function test_hizmet_donemi_secilmedikce_ekstrenin_ayini_izler(): void
     {
-        // PDF'te kesim tarihi yok: dönem önce bilinmiyor
+        // PDF'te kesim ve son ödeme tarihi yok: dönem önce bilinmiyor; son ödeme yokken ekstrenin ayı kesim ayıdır
         $id = $this->ekstreYukle([
             ['08.10.2026', 'IGDAS OTOMATIK ODEME', '845,00'],   // aday (orta), dönem açıklamada yok
             ['09.10.2026', 'KIRTASIYE DUNYASI', '120,00'],      // aday yok; kullanıcı faturaya bağlar
@@ -139,7 +139,7 @@ class FaturaTest extends TestCase
         $this->putJson("/api/v1/aile/ekstreler/{$id}", ['kesim_tarihi' => '2026-11-10'])->assertOk();
         $this->assertSame(['2026-11', 'kesim'], $donem(0));
         $gerekce = $satir(0)['fatura_onerisi']['gerekce'];
-        $this->assertStringContainsString('kesim ayı (Kasım 2026)', end($gerekce));
+        $this->assertStringContainsString('ekstrenin ayı (Kasım 2026)', end($gerekce));
         $this->assertCount(1, array_filter($gerekce, fn (string $g): bool => str_starts_with($g, 'Hizmet dönemi')));
 
         // Önerisiz satırda sağlayıcı seçilince dönem kesim ayı; İSKİ'de kullanıcı "bilinmiyor" der
@@ -147,7 +147,7 @@ class FaturaTest extends TestCase
             ->assertJsonPath('islem.fatura_onerisi.hizmet_donemi', '2026-11')->assertJsonPath('islem.fatura_onerisi.donem_kaynagi', 'kesim');
         $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satir(2)['id']}", ['fatura' => ['secildi' => true, 'hizmet_donemi' => null]])->assertOk()
             ->assertJsonPath('islem.fatura_onerisi.hizmet_donemi', null)->assertJsonPath('islem.fatura_onerisi.donem_kaynagi', 'kullanici');
-        $this->assertSame([], array_filter($satir(2)['fatura_onerisi']['gerekce'], fn (string $g): bool => str_contains($g, 'kesim ayı')));
+        $this->assertSame([], array_filter($satir(2)['fatura_onerisi']['gerekce'], fn (string $g): bool => str_contains($g, 'ekstrenin ayı')));
         $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$satir(0)['id']}", ['fatura' => ['secildi' => true]])->assertOk();
 
         // Kesim değişince seçilmemiş dönemler izler, kullanıcının kararı kalır; onayda da aynısı

@@ -250,7 +250,7 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
           oneri.donem_kaynagi === 'aciklama'
             ? 'ekstre açıklamasından okundu'
             : oneri.donem_kaynagi === 'kesim'
-              ? 'ekstrenin kesim ayından alındı'
+              ? 'ekstrenin ayından alındı'
               : 'sizin seçiminiz'
         }}.
       </p>

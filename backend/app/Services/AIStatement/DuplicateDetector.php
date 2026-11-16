@@ -5,7 +5,6 @@ namespace App\Services\AIStatement;
 use App\Enums\KartIslemDurumu;
 use App\Models\Ekstre;
 use App\Models\KartIslemi;
-use Illuminate\Support\Carbon;
 
 /**
  * Mükerrer kayıt denetimi.
@@ -81,12 +80,12 @@ class DuplicateDetector
                 ->where(fn ($q) => $q->whereNull('ekstre_id')->orWhere('ekstre_id', '!=', $ekstre->id))
                 ->whereDate('islem_tarihi', $islem->islem_tarihi)->where('tutar', $islem->tutar)->where('tur', $islem->tur->value)
                 ->where('taksit_no', $islem->taksit_no)->where('taksit_sayisi', $islem->taksit_sayisi)
-                ->with('ekstre:id,kesim_tarihi')->first();
+                ->with('ekstre:id,kesim_tarihi,son_odeme_tarihi')->first();
             if ($aynisi === null) {
                 continue;
             }
             $okuma = $islem->okuma ?? ['alanlar' => [], 'uyarilar' => [], 'tutar_adaylari' => []];
-            $yer = $aynisi->ekstre?->kesim_tarihi ? Carbon::parse($aynisi->ekstre->kesim_tarihi)->format('m.Y').' ekstresinde' : 'elle girilen işlemlerde';
+            $yer = $aynisi->ekstre?->donemEtiketi() !== null ? $aynisi->ekstre->donemEtiketi().' ekstresinde' : 'elle girilen işlemlerde';
             $okuma['uyarilar'][] = "Olası tekrar: {$yer} aynı tarih ve tutarlı işlem var.";
             $okuma['inceleme'] = true;
             $okuma['incelendi'] = false;

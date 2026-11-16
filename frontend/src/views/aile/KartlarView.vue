@@ -75,7 +75,7 @@ const sonOdemeler = computed(() => {
 const gunMetni = (gun: number): string =>
   gun < 0 ? `${-gun} gün geçti` : gun === 0 ? 'bugün' : `${gun} gün kaldı`
 
-/** Seçilebilecek en yeni ekstre dönemi (onaylı ekstrelerin kesim ayı); seçici bundan ileri gitmez */
+/** Seçilebilecek en yeni ekstre dönemi (onaylı ekstrelerin ayı: son ödeme ayı); seçici bundan ileri gitmez */
 const enYeni = computed(() => {
   const donemler = (ekstreler.value ?? [])
     .filter((e) => e.durum === 'onaylandi' && gecerliDonem(e.donem))

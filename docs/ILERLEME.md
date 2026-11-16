@@ -17,6 +17,8 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-16) Ekstrenin ayı = son ödeme tarihinin ayı (yoksa kesim ayı): Bütçe kart gideri, ekstre dönemi çarkları, taksit rapor ayı, fatura dönemi önerisi; migration eski taksit / fatura dönemlerini yeniden yazar. Testler: EkstreAyiTest, FaturaTest; ön yüz 146 (arka uç SQLite'ta; MySQL'de bekliyor).
+- (2026-11-16) Bütçe → İşlemler: kategori renginde tarih kutusu; harcama satırındaki grafik düğmesi şirket geçmişini (aynı açıklamalı bütün harcamalar, ay ay toplam, eğri) tam ekran açar (`SirketGecmisi`). Testler: SirketGecmisiTest, ön yüz 146.
 - (2026-11-16) Ay çarkı: Bütçe'deki 5 ay seçicisi (Özet, Gelir / Gider, Kartlar, İşlemler, Faturalar) tek tip, sayfanın en üstünde, çerçevesiz, 50 px dikey çark (`AySecici`; "Tümü" / "En yeni" çarkın içinde, Faturalar'da "Dönemi bilinmeyen"de soluk). Testler: ön yüz 144.
 - (2026-11-15) Kartlar sayfasına ekstre dönemi seçici (‹ Kasım 2026 ›, kartlardaki ekstre borcu / son ödeme seçilen dönemden, "En yeni"); Gelir / Gider dönem seçici yüksekliği Özet ile aynı (100 px). Testler: ön yüz 132.
 - (2026-11-15) Bütçe Özet → Sonraki taksitler: sonraki her ay için ayrı toplam ve kart kırılımı (`sonraki_taksit_aylari`). Testler: ön yüz 130, KartIslemiTest.

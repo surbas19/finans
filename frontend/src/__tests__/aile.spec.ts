@@ -127,7 +127,7 @@ describe('EkstreSatiri', () => {
     expect(w.find('input[type="checkbox"]').exists()).toBe(false)
   })
 
-  it('kesim ayı dönemi ve kalan taksit onaylı satırda görünür', async () => {
+  it('ekstrenin ayından gelen dönem ve kalan taksit onaylı satırda görünür', async () => {
     const oneri = {
       guven: 'orta' as const,
       puan: 60,
@@ -144,7 +144,7 @@ describe('EkstreSatiri', () => {
       satir({ fatura_onerisi: oneri, taksit_no: 3, taksit_sayisi: 9, taksit_kalan: 10546.8 }),
       false,
     )
-    // Onaylı ekstrede (düzenleme yok) yalnızca dönem ve kalan taksit; "kesim ayından" notu düzenlenebilir modda
+    // Onaylı ekstrede (düzenleme yok) yalnızca dönem ve kalan taksit; "ekstrenin ayından" notu düzenlenebilir modda
     expect(w.text()).toContain('Kasım 2026')
     expect(w.text()).toContain('taksit 3/9')
     expect(w.text()).toContain('kalan')

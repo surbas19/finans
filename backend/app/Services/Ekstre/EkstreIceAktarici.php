@@ -150,7 +150,7 @@ class EkstreIceAktarici
 
     /**
      * Ayrıştırılmış satırları taslak kart işlemi olarak yazar (PDF okuyucu ve yapay zekâ yedeği aynı yolu kullanır):
-     * kategori kuralı, fatura adayı (dönem açıklamada yoksa kesim ayı), kategori yoksa fatura kategorisi.
+     * kategori kuralı, fatura adayı (dönem açıklamada yoksa ekstrenin ayı), kategori yoksa fatura kategorisi.
      *
      * @param  list<array<string, mixed>>  $satirlar
      */
@@ -178,7 +178,7 @@ class EkstreIceAktarici
                 'okuma' => $satir['okuma'],
                 'olusturan_id' => $user->id,
             ]);
-            // Fatura adayı (dönem açıklamada yoksa okunurken ekstrenin kesim ayı); kategori kuralı yoksa sağlayıcısı belli
+            // Fatura adayı (dönem açıklamada yoksa okunurken ekstrenin ayı); kategori kuralı yoksa sağlayıcısı belli
             // fatura Faturalar kategorisine
             $islem->fatura_onerisi = $this->faturalar->oner($islem);
             if ($islem->kategori_id === null && ($islem->fatura_onerisi['saglayici_id'] ?? null) !== null) {
@@ -310,7 +310,13 @@ class EkstreIceAktarici
         if (array_key_exists('odendi', $veri)) {
             $ekstre->odendi = (bool) $veri['odendi'];
         }
+        $ayDegisti = $ekstre->isDirty(['kesim_tarihi', 'son_odeme_tarihi']);
         $ekstre->save();
+        // Onaylı ekstrenin ayı (son ödeme ayı) değiştiyse taksit satırlarının rapor ayı da onu izler
+        if ($ayDegisti && $ekstre->durum === EkstreDurumu::Onaylandi && $ekstre->ay() !== null) {
+            KartIslemi::where('ekstre_id', $ekstre->id)->where('durum', KartIslemDurumu::Onayli->value)
+                ->where('taksit_sayisi', '>', 1)->update(['rapor_donemi' => $ekstre->ay()]);
+        }
     }
 
     /**
@@ -352,8 +358,8 @@ class EkstreIceAktarici
 
     /**
      * Kullanıcının fatura kararı: işaretle / kaldır, sağlayıcı seç, hizmet dönemini seç ya da bilinmiyor bırak. Önerinin
-     * gerekçesi korunur; dönem seçilmedikçe ekstrenin kesim ayıdır, kullanıcının seçtiği ay ya da "bilinmiyor"un kaynağı
-     * "kullanıcı" olur (kesim ayı artık izlenmez).
+     * gerekçesi korunur; dönem seçilmedikçe ekstrenin ayıdır (son ödeme ayı), kullanıcının seçtiği ay ya da "bilinmiyor"un kaynağı
+     * "kullanıcı" olur (ekstrenin ayı artık izlenmez).
      *
      * @param  array{secildi?: bool, saglayici_id?: int|null, hizmet_donemi?: string|null}|null  $secim
      * @return array<string, mixed>|null
@@ -363,7 +369,7 @@ class EkstreIceAktarici
         $oneri = FaturaEslestirici::guncelDonem($islem->fatura_onerisi ?? [
             'guven' => 'kullanici', 'puan' => 0, 'saglayici_id' => null, 'fatura_turu_id' => null, 'adaylar' => [],
             'gerekce' => ['Faturayı siz eşleştirdiniz.'], 'hizmet_donemi' => null, 'donem_kaynagi' => null, 'otomatik' => false, 'secildi' => false,
-        ], $islem->ekstre?->kesim_tarihi);
+        ], $islem->ekstre?->ayTarihi());
         if ($secim === null) {
             return [...$oneri, 'secildi' => false];
         }
@@ -377,7 +383,7 @@ class EkstreIceAktarici
         if (array_key_exists('hizmet_donemi', $secim) && $secim['hizmet_donemi'] !== $oneri['hizmet_donemi']) {
             $oneri['hizmet_donemi'] = $secim['hizmet_donemi'];
             $oneri['donem_kaynagi'] = 'kullanici';
-            $oneri = FaturaEslestirici::guncelDonem($oneri, null); // kesim ayı gerekçesi kalkar
+            $oneri = FaturaEslestirici::guncelDonem($oneri, null); // ekstre ayı gerekçesi kalkar
         }
         if (array_key_exists('secildi', $secim)) {
             $oneri['secildi'] = (bool) $secim['secildi'];
@@ -455,8 +461,8 @@ class EkstreIceAktarici
                 $this->kurallar->onayla($islem, $ekstre, $kacinci);
                 $eklenen++;
 
-                // Hizmet dönemi: açıklamadaki ya da kullanıcının seçtiği; yoksa ekstrenin (şimdiki) kesim ayı
-                $oneri = FaturaEslestirici::guncelDonem($islem->fatura_onerisi, $ekstre->kesim_tarihi);
+                // Hizmet dönemi: açıklamadaki ya da kullanıcının seçtiği; yoksa ekstrenin (şimdiki) ayı: son ödeme ayı
+                $oneri = FaturaEslestirici::guncelDonem($islem->fatura_onerisi, $ekstre->ayTarihi());
                 if (($oneri['secildi'] ?? false) && ($oneri['saglayici_id'] ?? null) !== null) {
                     $this->faturalar->bagla(
                         $islem,

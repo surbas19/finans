@@ -26,7 +26,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Kart işlemleri: süzgeçli liste (ay: rapor / işlem / ekstre ayına göre; kişi, banka, kart, kategori, tür), elle
+ * Kart işlemleri: süzgeçli liste (ay: rapor / işlem / ekstre ayına [son ödeme ayı] göre; kişi, banka, kart, kategori, tür), elle
  * ekleme ve düzeltme. Toplamlar ButceRaporu'nun kuralıyla (ödeme / transfer / nakit avans gider değildir).
  */
 class KartIslemiController extends Controller
@@ -59,7 +59,7 @@ class KartIslemiController extends Controller
             ->when($ay, function ($q) use ($ay, $veri): void {
                 match ($veri['donem_turu'] ?? 'rapor') {
                     'islem' => $q->whereBetween('islem_tarihi', [Donem::ilkGun($ay)->toDateString(), Donem::sonGun($ay)->toDateString()]),
-                    'ekstre' => $q->whereHas('ekstre', fn ($e) => $e->whereBetween('kesim_tarihi', [Donem::ilkGun($ay)->toDateString(), Donem::sonGun($ay)->toDateString()])),
+                    'ekstre' => $q->whereHas('ekstre', fn ($e) => $e->ayinda($ay)),
                     default => $q->where('rapor_donemi', $ay),
                 };
             })
@@ -74,7 +74,7 @@ class KartIslemiController extends Controller
             ->when($veri['tarih_bit'] ?? null, fn ($q, $t) => $q->whereDate('islem_tarihi', '<=', $t))
             ->when(trim((string) ($veri['ara'] ?? '')) !== '', fn ($q) => $this->aramaUygula($q, (string) $veri['ara']))
             ->when($guncel, fn ($q) => $this->guncelDonem($q, (int) $request->user()->hane_id));
-        $islemler = $sorgu->with('ekstre:id,kesim_tarihi')->orderByDesc('islem_tarihi')->orderByDesc('id')->limit(1000)->get();
+        $islemler = $sorgu->with('ekstre:id,kesim_tarihi,son_odeme_tarihi')->orderByDesc('islem_tarihi')->orderByDesc('id')->limit(1000)->get();
 
         $haric = $islemler->filter(fn (KartIslemi $i): bool => $i->tur->giderYonu() === 0);
 

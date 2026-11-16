@@ -8,7 +8,7 @@ import { kartRengiCss } from '@/utils/kartRengi'
 
 /**
  * Kartlar: ay ay tüm kartların toplam dönem sonu ödemesi ve her kartın kendi rengiyle dönem sonu ödemesi
- * (kesim ayı o ay olan onaylı ekstrenin dönem borcu).
+ * (son ödeme ayı o ay olan onaylı ekstrenin dönem borcu).
  */
 const { yil, veri, yukleniyor, hata } = useDonemGrafikleri()
 

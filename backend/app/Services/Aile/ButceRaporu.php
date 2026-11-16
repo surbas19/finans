@@ -75,7 +75,7 @@ class ButceRaporu
     }
 
     /**
-     * Gider: kart tarafı kesim ayı bu ay olan onaylı ekstrelerin **dönem borcu** (devreden borç, ödeme, bonus… dahil,
+     * Gider: kart tarafı ayı (son ödeme ayı; yoksa kesim ayı) bu ay olan onaylı ekstrelerin **dönem borcu** (devreden borç, ödeme, bonus… dahil,
      * ayrılmaz) + henüz ekstreye girmemiş elle kart satırları; kategori dağılımı satırlardan, aradaki fark "ekstredeki
      * diğer" dilimi. Ayrıca kartsız ödenen faturalar ve düzenli giderler.
      *
@@ -86,10 +86,9 @@ class ButceRaporu
         $kategoriler = HarcamaKategorisi::where('hane_id', $haneId)->get()->keyBy('id');
         $kartlar = Kart::where('hane_id', $haneId)->get()->keyBy('id');
 
-        // Kart gideri = kesim ayı bu ay olan onaylı ekstrelerin dönem borcu (devreden borç, ödeme, bonus… dahil).
+        // Kart gideri = ayı (son ödeme ayı) bu ay olan onaylı ekstrelerin dönem borcu (devreden borç, ödeme, bonus… dahil).
         $ekstreler = Ekstre::where('hane_id', $haneId)->where('durum', EkstreDurumu::Onaylandi->value)
-            ->whereBetween('kesim_tarihi', [Donem::ilkGun($donem)->toDateString(), Donem::sonGun($donem)->toDateString()])
-            ->orderBy('kesim_tarihi')->get();
+            ->ayinda($donem)->orderBy('kesim_tarihi')->get();
         $ekstreSatirlari = KartIslemi::whereIn('ekstre_id', $ekstreler->modelKeys())->where('durum', KartIslemDurumu::Onayli->value)
             ->with(['iadeEdilen:id,kategori_id'])->orderBy('islem_tarihi')->get();
 

@@ -6,6 +6,8 @@ use App\Enums\EkstreDurumu;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Donem;
 use App\Support\Kurus;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -73,10 +75,42 @@ class Ekstre extends Model
         return $this->hasMany(EkstreAiCalismasi::class);
     }
 
-    /** "Şubat 2026" (kesim ayı) ya da null */
+    /**
+     * Ekstrenin ayına bakılan tarih: son ödeme tarihi (20.11.2026 son ödemeli ekstre Kasım ekstresidir); okunamadıysa
+     * kesim tarihi. Bütçe kart gideri, ekstre dönemi süzgeci, taksit rapor ayı ve fatura dönemi önerisi buna göredir.
+     */
+    public function ayTarihi(): ?CarbonInterface
+    {
+        return $this->son_odeme_tarihi ?? $this->kesim_tarihi;
+    }
+
+    /** Ekstrenin ayı "YYYY-AA" (son ödeme ayı; yoksa kesim ayı) ya da null */
+    public function ay(): ?string
+    {
+        $tarih = $this->ayTarihi();
+
+        return $tarih ? Donem::tarihten($tarih) : null;
+    }
+
+    /** "Şubat 2026" (ekstrenin ayı: son ödeme ayı) ya da null */
     public function donemEtiketi(): ?string
     {
-        return $this->kesim_tarihi ? Donem::etiket(Donem::tarihten($this->kesim_tarihi)) : null;
+        $ay = $this->ay();
+
+        return $ay ? Donem::etiket($ay) : null;
+    }
+
+    /**
+     * Ayı `$donem` olan ekstreler: son ödeme tarihi o ayda; son ödemesi bilinmeyenlerde kesim tarihi o ayda.
+     *
+     * @param  Builder<self>  $sorgu
+     */
+    public function scopeAyinda(Builder $sorgu, string $donem): void
+    {
+        $aralik = [Donem::ilkGun($donem)->toDateString(), Donem::sonGun($donem)->toDateString()];
+        $tablo = $this->getTable();
+        $sorgu->where(fn (Builder $q) => $q->whereBetween("{$tablo}.son_odeme_tarihi", $aralik)
+            ->orWhere(fn (Builder $k) => $k->whereNull("{$tablo}.son_odeme_tarihi")->whereBetween("{$tablo}.kesim_tarihi", $aralik)));
     }
 
     /**
@@ -88,7 +122,7 @@ class Ekstre extends Model
             'id' => $this->id,
             'kart_id' => $this->kart_id,
             'durum' => $this->durum->value,
-            'donem' => $this->kesim_tarihi ? Donem::tarihten($this->kesim_tarihi) : null,
+            'donem' => $this->ay(),
             'donem_etiketi' => $this->donemEtiketi(),
             'donem_baslangic' => $this->donem_baslangic?->toDateString(),
             'kesim_tarihi' => $this->kesim_tarihi?->toDateString(),

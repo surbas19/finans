@@ -532,7 +532,7 @@ export interface AylikOzet {
       kart_id: number
       ad: string
       sahip_uye_id: number | null
-      /** Kart gideri: kesim ayı bu ay olan onaylı ekstrelerin dönem borcu (+ ekstreye girmemiş elle satırlar) */
+      /** Kart gideri: ayı (son ödeme ayı) bu ay olan onaylı ekstrelerin dönem borcu (+ ekstreye girmemiş elle satırlar) */
       toplam: number
       ekstre: { id: number; donem_borcu: number | null; son_odeme_tarihi: string | null } | null
     }[]

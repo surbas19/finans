@@ -137,7 +137,7 @@ class EkstreController extends Controller
     {
         Gate::authorize('hane-kaydi', $ekstre);
         $ekstre->load('kart');
-        // Satırların fatura önerisi kesim ayını bu ekstreden okur (satır başına sorgu yok)
+        // Satırların fatura önerisi ekstrenin ayını bu ekstreden okur (satır başına sorgu yok)
         $islemler = $ekstre->islemler()->get()->each(fn (KartIslemi $i) => $i->setRelation('ekstre', $ekstre));
         $tekrarlar = KartIslemi::whereIn('id', $islemler->pluck('tekrar_islem_id')->filter())->with('ekstre')->get()->keyBy('id');
 
