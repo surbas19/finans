@@ -326,6 +326,17 @@ function sil(): void {
               :value="taslak ? 'İnceleme bekliyor' : 'Onaylandı'"
               :severity="taslak ? 'warn' : 'success'"
             />
+            <Button
+              v-if="onayKaldirilabilir"
+              label="Onayı kaldır"
+              icon="pi pi-undo"
+              size="small"
+              severity="secondary"
+              outlined
+              :loading="onayKaldiriliyor"
+              data-test="onayi-kaldir"
+              @click="onayiKaldir"
+            />
             <a
               v-if="ekstre.dosya_var"
               :href="aileApi.ekstreDosyaAdresi(ekstre.id)"
@@ -565,16 +576,6 @@ function sil(): void {
           :disabled="onayEngelli"
           data-test="onayla-alt"
           @click="onayla"
-        />
-        <Button
-          v-if="onayKaldirilabilir"
-          label="Onayı kaldır"
-          icon="pi pi-undo"
-          severity="secondary"
-          outlined
-          :loading="onayKaldiriliyor"
-          data-test="onayi-kaldir"
-          @click="onayiKaldir"
         />
         <Button label="Ekstreyi sil" icon="pi pi-trash" severity="danger" text @click="sil" />
       </div>

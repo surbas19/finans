@@ -14,6 +14,7 @@ import { aileApi } from '@/api/aile'
 import { dogrulamaListesi } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAileStore } from '@/stores/aile'
+import { buAy, donemEtiketi, gecerliDonem, tarihMetnindenDonem } from '@/utils/donem'
 
 type Tur = 'kart' | 'yapistir' | 'banka'
 
@@ -60,10 +61,38 @@ watch(gorunur, async (acik) => {
   json.value = ''
   istemGoster.value = false
   await aile.yukle()
+  void eksikleriYukle()
   tur.value =
     props.baslangicTuru === 'banka' && !aiAcik.value ? 'kart' : (props.baslangicTuru ?? 'kart')
   secilenKart.value = props.kartId ?? (aile.kartlar.length === 1 ? aile.kartlar[0]!.id : null)
 })
+
+/** Bu ayın ekstresi (son ödeme ayı bu ay olan) henüz yüklenmemiş kartlar */
+const bakilanAy = buAy()
+const eksikKartlar = ref<{ id: number; ad: string; son: string | null }[]>([])
+
+async function eksikleriYukle(): Promise<void> {
+  try {
+    const ekstreler = await aileApi.ekstreler()
+    const ayi = (e: (typeof ekstreler)[number]): string | null =>
+      tarihMetnindenDonem(e.son_odeme_tarihi) ??
+      tarihMetnindenDonem(e.kesim_tarihi) ??
+      (gecerliDonem(e.donem) ? e.donem : null)
+    eksikKartlar.value = aile.kartlar
+      .filter((k) => !ekstreler.some((e) => e.kart_id === k.id && ayi(e) === bakilanAy))
+      .map((k) => {
+        const aylar = ekstreler
+          .filter((e) => e.kart_id === k.id)
+          .map(ayi)
+          .filter((a): a is string => a !== null)
+          .sort()
+
+        return { id: k.id, ad: k.ad, son: aylar.length ? aylar[aylar.length - 1]! : null }
+      })
+  } catch {
+    eksikKartlar.value = []
+  }
+}
 
 function secildi(olay: Event): void {
   dosya.value = (olay.target as HTMLInputElement).files?.[0] ?? null
@@ -240,6 +269,34 @@ async function yukle(): Promise<void> {
         <Message v-if="!aile.kartlar.length" severity="warn" size="small"
           >Önce bir kart ekleyin.</Message
         >
+        <section
+          v-if="eksikKartlar.length"
+          class="rounded-2xl bg-amber-50 p-3 text-xs text-amber-900"
+          data-test="eksik-kartlar"
+        >
+          <p class="font-semibold">{{ donemEtiketi(bakilanAy) }} ekstresi eksik kartlar</p>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <button
+              v-for="k in eksikKartlar"
+              :key="k.id"
+              type="button"
+              class="rounded-full px-3 py-1.5 text-left text-sm font-semibold ring-1 transition-all active:scale-95"
+              :class="
+                secilenKart === k.id
+                  ? 'bg-primary-50 text-primary-800 ring-primary-400'
+                  : 'bg-white text-surface-800 ring-amber-200'
+              "
+              :aria-pressed="secilenKart === k.id"
+              data-test="eksik-kart"
+              @click="secilenKart = k.id"
+            >
+              {{ k.ad
+              }}<span v-if="k.son" class="ml-1 text-[11px] font-normal text-surface-500"
+                >son: {{ donemEtiketi(k.son) }}</span
+              >
+            </button>
+          </div>
+        </section>
         <FormAlani
           :etiket="tur === 'yapistir' ? '2. Kart' : 'Kart'"
           for="ekstre-kart"

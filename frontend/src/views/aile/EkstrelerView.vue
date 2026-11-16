@@ -4,6 +4,9 @@ import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
+import { hataMesaji } from '@/api/http'
 import BosDurum from '@/components/BosDurum.vue'
 import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
@@ -16,6 +19,8 @@ import { tarih } from '@/utils/bicim'
  * ekstreleri (yalnızca önizleme), durumlarıyla; yükleme (tür seçimi, yapay zekâ onayı).
  */
 const aile = useAileStore()
+const confirm = useConfirm()
+const toast = useToast()
 const ekstreler = ref<Ekstre[] | null>(null)
 const hesaplar = ref<(HesapEkstresi & { ai_calisma: AiCalisma | null })[]>([])
 const yukleAcik = ref(false)
@@ -29,6 +34,30 @@ async function yukle(): Promise<void> {
   hesaplar.value = h
 }
 onMounted(yukle)
+
+/** İnceleme bekleyen (taslak) ekstreyi siler; satırları ve PDF'i de gider */
+function ekstreSil(e: Ekstre): void {
+  confirm.require({
+    header: 'Ekstreyi sil',
+    message: `${e.donem_etiketi ?? 'Bu ekstre'} silinsin mi? Satırları ve PDF dosyası da silinir.`,
+    acceptProps: { label: 'Sil', severity: 'danger' },
+    rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
+    accept: async () => {
+      try {
+        await aileApi.ekstreSil(e.id)
+        ekstreler.value = (ekstreler.value ?? []).filter((x) => x.id !== e.id)
+        toast.add({ severity: 'success', summary: 'Ekstre silindi', life: 3000 })
+      } catch (hata) {
+        toast.add({
+          severity: 'error',
+          summary: 'Silinemedi',
+          detail: hataMesaji(hata),
+          life: 5000,
+        })
+      }
+    },
+  })
+}
 
 const aiAcik = computed(() => aile.hane?.yetenekler?.ai_acik ?? false)
 
@@ -102,10 +131,10 @@ function hesapDurumu(h: HesapEkstresi & { ai_calisma: AiCalisma | null }): {
           ikon="pi pi-file-pdf"
         />
         <ul v-else class="divide-y divide-surface-100">
-          <li v-for="e in ekstreler" :key="e.id">
+          <li v-for="e in ekstreler" :key="e.id" class="flex items-center gap-1">
             <RouterLink
               :to="{ name: 'aile-ekstre', params: { id: e.id } }"
-              class="flex items-center gap-3 py-3"
+              class="flex min-w-0 flex-1 items-center gap-3 py-3"
             >
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-semibold text-surface-900"
@@ -124,6 +153,18 @@ function hesapDurumu(h: HesapEkstresi & { ai_calisma: AiCalisma | null }): {
                 :severity="e.durum === 'taslak' ? 'warn' : 'success'"
               />
             </RouterLink>
+            <Button
+              v-if="e.durum === 'taslak'"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              rounded
+              size="small"
+              aria-label="Ekstreyi sil"
+              title="Ekstreyi sil"
+              data-test="ekstre-sil"
+              @click="ekstreSil(e)"
+            />
           </li>
         </ul>
       </section>

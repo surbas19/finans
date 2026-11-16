@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import HizliIslemler from '@/components/HizliIslemler.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
+import SayfaBasinaDon from '@/components/SayfaBasinaDon.vue'
 import { useAuthStore } from '@/stores/auth'
 
 /**
@@ -111,6 +112,8 @@ async function cikis(): Promise<void> {
         <component :is="Component" :key="`${r.path}:${yenileme}`" class="sayfa-giris" />
       </RouterView>
     </main>
+
+    <SayfaBasinaDon />
 
     <!-- Telefon: alt sekme çubuğu -->
     <nav

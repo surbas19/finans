@@ -74,6 +74,30 @@ async function odendi(e: Ekstre, deger: boolean): Promise<void> {
   }
 }
 
+/** İnceleme bekleyen (taslak) ekstreyi siler; satırları ve PDF'i de gider */
+function ekstreSil(e: Ekstre): void {
+  confirm.require({
+    header: 'Ekstreyi sil',
+    message: `${e.donem_etiketi ?? 'Bu ekstre'} silinsin mi? Satırları ve PDF dosyası da silinir.`,
+    acceptProps: { label: 'Sil', severity: 'danger' },
+    rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
+    accept: async () => {
+      try {
+        await aileApi.ekstreSil(e.id)
+        ekstreler.value = ekstreler.value.filter((x) => x.id !== e.id)
+        toast.add({ severity: 'success', summary: 'Ekstre silindi', life: 3000 })
+      } catch (hata) {
+        toast.add({
+          severity: 'error',
+          summary: 'Silinemedi',
+          detail: hataMesaji(hata),
+          life: 5000,
+        })
+      }
+    },
+  })
+}
+
 function islemSec(i: KartIslemi | null): void {
   duzenlenen.value = i
   islemFormuAcik.value = true
@@ -210,6 +234,18 @@ function kartiSil(): void {
             <span class="text-right text-sm font-semibold whitespace-nowrap tabular-nums">{{
               tl(e.donem_borcu)
             }}</span>
+            <Button
+              v-if="e.durum === 'taslak'"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              rounded
+              size="small"
+              aria-label="Ekstreyi sil"
+              title="Ekstreyi sil"
+              data-test="ekstre-sil"
+              @click="ekstreSil(e)"
+            />
             <label
               v-if="e.durum === 'onaylandi'"
               class="flex items-center gap-1.5 text-xs text-surface-600"
