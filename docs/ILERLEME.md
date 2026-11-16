@@ -11,12 +11,13 @@
 - [ ] Fiyat alarmı ve bildirim (Web Push)
 - [ ] Banka hesabı ekstresini Bütçe'ye aktarma (kartsız giderler: kira, havale; şimdilik yalnızca önizleme) ve kişiye göre gider
 - [ ] Hesaplar arası aktarma (kasadan yatırım hesabına)
-- [ ] Temettü / faiz / kira geliri
+- [ ] Faiz / kira geliri (temettü ve bedelsiz yapıldı)
 - [ ] Excel'e aktarma
 - [ ] Fonlar için resmî fiyat kaynağı (TEFAS otomatik isteği engelliyor; şimdilik elle)
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-16) Temettü ve bedelsiz ([planlar/temettu.md](planlar/temettu.md)): hisse satırında elle temettü (net TL + stopaj, aynı hesaba nakit, getiride görünür, Bütçe gelirine yazılmaz) ve bedelsiz (oran %, adet büyür, maliyet aynı). MySQL'de doğrulandı: arka uç 258, ön yüz 146.
 - (2026-11-16) Ekstrenin ayı = son ödeme tarihinin ayı (yoksa kesim ayı): Bütçe kart gideri, ekstre dönemi çarkları, taksit rapor ayı, fatura dönemi önerisi; migration eski taksit / fatura dönemlerini yeniden yazar. Testler: EkstreAyiTest, FaturaTest; ön yüz 146 (arka uç SQLite'ta; MySQL'de bekliyor).
 - (2026-11-16) Bütçe → İşlemler: kategori renginde tarih kutusu; harcama satırındaki grafik düğmesi şirket geçmişini (aynı açıklamalı bütün harcamalar, ay ay toplam, eğri) tam ekran açar (`SirketGecmisi`). Testler: SirketGecmisiTest, ön yüz 146.
 - (2026-11-16) Ay çarkı: Bütçe'deki 5 ay seçicisi (Özet, Gelir / Gider, Kartlar, İşlemler, Faturalar) tek tip, sayfanın en üstünde, çerçevesiz, 50 px dikey çark (`AySecici`; "Tümü" / "En yeni" çarkın içinde, Faturalar'da "Dönemi bilinmeyen"de soluk). Testler: ön yüz 144.
