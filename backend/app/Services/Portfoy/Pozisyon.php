@@ -10,6 +10,7 @@ use App\Models\Islem;
  *
  * Maliyeti bilinen ve bilinmeyen miktar ayrı tutulur: bilinmeyen sıfır maliyet sayılmaz. Satış iki kısımdan
  * oranla düşer; bilinmeyen kısmın kârı / zararı hesaplanamaz (gerceklesenEksik). Tutarlar TL, komisyon dahil.
+ * Temettü ayrı tutulur (`temettu`); bedelsiz adedi artırır, maliyeti değiştirmez.
  */
 final class Pozisyon
 {
@@ -26,6 +27,9 @@ final class Pozisyon
     public bool $gerceklesenEksik = false;
 
     public bool $satisVar = false;
+
+    /** Alınan net temettü toplamı (TL) */
+    public float $temettu = 0.0;
 
     public function __construct(public readonly int $hesapId, public readonly int $varlikId) {}
 
@@ -49,6 +53,23 @@ final class Pozisyon
             $this->miktarBilinen = $bilinen ? $miktar : 0.0;
             $this->maliyetBilinen = $bilinen ? $miktar * (float) $islem->birim_fiyat : 0.0;
             $this->miktarBilinmeyen = $bilinen ? 0.0 : $miktar;
+
+            return;
+        }
+
+        // Temettü ve bedelsiz yalnızca elde hisse varken olur. Temettü adedi / maliyeti değiştirmez; bedelsiz adedi
+        // oranla artırır (maliyeti bilinen ve bilinmeyen kısım aynı oranla), toplam maliyet aynı kalır.
+        if ($islem->tur->hisseOlayi()) {
+            if ($this->miktar() <= self::EPS) {
+                throw new YetersizMiktar($islem, 0.0);
+            }
+            if ($islem->tur === IslemTuru::Temettu) {
+                $this->temettu += $miktar;
+            } else {
+                $carpan = 1 + $miktar / 100;
+                $this->miktarBilinen *= $carpan;
+                $this->miktarBilinmeyen *= $carpan;
+            }
 
             return;
         }

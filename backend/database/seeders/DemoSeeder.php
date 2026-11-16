@@ -11,6 +11,7 @@ use App\Models\Islem;
 use App\Models\IzlemeKaydi;
 use App\Models\User;
 use App\Models\Varlik;
+use App\Services\Portfoy\TemettuKaydi;
 use Illuminate\Database\Seeder;
 
 /**
@@ -81,6 +82,12 @@ class DemoSeeder extends Seeder
         $islem($yatirim, 'TL', IslemTuru::Mevcut, 15000, 1, 240);
         $islem($yatirim, 'TL', IslemTuru::Alis, 20000, 1, 60);
         $islem($yatirim, 'TL', IslemTuru::Satis, 5000, 1, 20);
+        // Temettü (hisse satırı + aynı hesaba nakit, eşleşik) ve %20 bedelsiz (adet 1,2 katı, maliyet aynı)
+        app(TemettuKaydi::class)->kaydet(new Islem([
+            'user_id' => $ben->id, 'hesap_id' => $yatirim->id, 'varlik_id' => $v['ASELS'], 'tur' => IslemTuru::Temettu,
+            'miktar' => 680, 'komisyon' => 120, 'tarih' => now()->subDays(45)->toDateString(),
+        ]));
+        $islem($es, 'BIMAS', IslemTuru::Bedelsiz, 20, null, 75);
         // Bireysel emeklilik: toplam tutar ve kâr yüzdesi (birim fiyat = 1 / (1 + kâr))
         $islem($bes, 'BES', IslemTuru::Deger, 120000, round(1 / 1.18, 8), 300);
         $islem($bes, 'BES', IslemTuru::Deger, 150000, round(1 / 1.22, 8), 150);

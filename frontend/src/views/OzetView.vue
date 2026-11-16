@@ -225,6 +225,14 @@ async function elleYenile(): Promise<void> {
           <p class="text-xs text-surface-500">Gerçekleşen (satışlar)</p>
           <DegisimEtiketi :tutar="secili.toplam.gerceklesen_kz" />
         </div>
+        <div
+          v-if="(secili.toplam.temettu ?? 0) > 0"
+          class="col-span-2 flex items-center justify-between rounded-2xl bg-surface-50 p-3"
+          data-test="ozet-temettu"
+        >
+          <p class="text-xs text-surface-500">Alınan temettü (net)</p>
+          <DegisimEtiketi :tutar="secili.toplam.temettu" />
+        </div>
       </div>
       <div class="mt-3 flex flex-col gap-2">
         <Message v-if="secili.toplam.maliyeti_eksik" severity="info" size="small">

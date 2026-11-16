@@ -18,6 +18,7 @@ use Illuminate\Support\Collection;
  * Portföy hesabının TEK yeri: miktar, ağırlıklı ortalama maliyet, gerçekleşen / gerçekleşmemiş kâr-zarar,
  * TL değerleme (USD fiyatlılar USD/TRY alışıyla). Maliyeti bilinmeyen kalem sıfır maliyet sayılmaz.
  * Nakit ve bireysel emeklilikte birim 1 TL'dir; BES'in "güncel tutar" kaydı pozisyonu baştan kurar (Pozisyon).
+ * Hisse temettüsü satırda `temettu` (net), bedelsiz adedi artırır (maliyet aynı); ikisi de Pozisyon'da işlenir.
  */
 class PortfoyHesabi
 {
@@ -111,7 +112,7 @@ class PortfoyHesabi
      * Kapanışı olmayan gün (hafta sonu, tatil) önceki kapanışı kullanır. Hiç kapanış yoksa o güne kadarki son işlem
      * fiyatı (TL) kullanılır; o da yoksa pozisyon değere katılmaz. İkisinde de nokta `eksik` işaretlenir.
      * Bugünün noktası güncel fiyatlarla hesaplanır (özetteki toplamla aynı). Maliyet ve K/Z yalnızca maliyeti
-     * bilinen kısımdandır (kz gerçekleşmemiş; gerceklesen o güne kadarki satışların birikimli K/Z'si).
+     * bilinen kısımdandır (kz gerçekleşmemiş; gerceklesen o güne kadarki satışların birikimli K/Z'si + alınan temettü).
      * 400 günden uzun aralık haftalık (pazar + son gün) örneklenir.
      *
      * @return list<array{tarih: string, deger: float, maliyet: float, kz: float, gerceklesen: float, eksik: bool}>
@@ -187,7 +188,8 @@ class PortfoyHesabi
             $deger = $maliyet = $kz = $gerceklesen = 0.0;
             $eksik = false;
             foreach ($pozisyonlar as $p) {
-                $gerceklesen += $p->gerceklesen;
+                // Temettü günü hisse fiyatı düşer, nakit eklenir: temettü de gerçekleşen getiriye sayılır
+                $gerceklesen += $p->gerceklesen + $p->temettu;
                 $miktar = $p->miktar();
                 if ($miktar <= Pozisyon::EPS) {
                     continue;
@@ -349,6 +351,7 @@ class PortfoyHesabi
             'gunluk_degisim' => self::yuvarla($gunluk, 2),
             'gerceklesen_kz' => $p->satisVar ? round($p->gerceklesen, 2) : null,
             'gerceklesen_kz_eksik' => $p->gerceklesenEksik,
+            'temettu' => $p->temettu > 0 ? round($p->temettu, 2) : null,
         ];
     }
 
@@ -369,6 +372,8 @@ class PortfoyHesabi
             'kz_yuzde' => $maliyet > 0 ? round($kz / $maliyet * 100, 2) : null,
             'gunluk_degisim' => round((float) $acik->sum(fn (array $s): float => $s['gunluk_degisim'] ?? 0), 2),
             'gerceklesen_kz' => round((float) $satirlar->sum(fn (array $s): float => $s['gerceklesen_kz'] ?? 0), 2),
+            // Satılmış (kapalı) hisselerin temettüsü de sayılır
+            'temettu' => round((float) $satirlar->sum(fn (array $s): float => $s['temettu'] ?? 0), 2),
             'fiyatsiz' => $acik->whereNull('deger')->count(),
             'maliyeti_eksik' => $acik->contains(fn (array $s): bool => $s['maliyeti_bilinmeyen_miktar'] > 0),
         ];
@@ -408,6 +413,7 @@ class PortfoyHesabi
             $t->gerceklesen += $p->gerceklesen;
             $t->gerceklesenEksik = $t->gerceklesenEksik || $p->gerceklesenEksik;
             $t->satisVar = $t->satisVar || $p->satisVar;
+            $t->temettu += $p->temettu;
         }
 
         return collect($toplam)

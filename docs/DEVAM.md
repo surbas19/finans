@@ -24,6 +24,6 @@ Gerçek PDF'ler yalnızca bu bilgisayarda (`C:\Users\surbas\Downloads`: Garanti 
 
 ## Temettü ve bedelsiz ([planlar/temettu.md](planlar/temettu.md))
 - Durum: başladı (2026-11-16)
-- Yapılanlar: —
-- **Sıradaki adım:** migration (`bag_turu`), `IslemTuru` temettu / bedelsiz, `Pozisyon`, `PortfoyHesabi`, `TemettuKaydi`, `IslemController`, testler
+- Yapılanlar: migration `bag_turu`, `IslemTuru` temettu / bedelsiz, `Pozisyon`, `PortfoyHesabi` (temettu alanı, gecmis), `TemettuKaydi`, `IslemController`, `Islem::ozet`, demo verisi, `TemettuTest` (yazıldı, **çalıştırılmadı: MySQL kapalıydı**); arayüz (tipler, form, liste, pozisyon / özet / hesap başlığı, `temettu.spec.ts`); type-check, lint, vitest 134/134 geçti (bu makinede paralelde Bütçe testleri 5 sn zaman aşımına düşüyor; `--testTimeout=30000` ile hepsi geçiyor)
+- **Sıradaki adım:** Laragon MySQL açılınca `php artisan migrate:fresh --seed` + `php artisan test`; geçerse CLAUDE.md / ILERLEME, bu kaydı sil, yayın
 - Komutlar: `cd backend && php artisan migrate && php artisan test`; frontend `npm run type-check && npm run lint`, vitest PowerShell'den `D:\`

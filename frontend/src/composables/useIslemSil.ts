@@ -15,9 +15,11 @@ export function useIslemSil() {
   function sil(islem: Islem, silindi: () => void): void {
     confirm.require({
       header: 'İşlemi sil',
-      message: islem.aktarim_kodu
-        ? `${tarih(islem.tarih)} tarihli aktarım silinsin mi? Eşleşik kayıtlar (kaynak satışı ve hedef alışı) birlikte silinir.`
-        : `${tarih(islem.tarih)} tarihli ${islemEtiketi(islem.tur, islem.varlik?.tur).toLocaleLowerCase('tr-TR')} kaydı silinsin mi?`,
+      message: !islem.aktarim_kodu
+        ? `${tarih(islem.tarih)} tarihli ${islemEtiketi(islem.tur, islem.varlik?.tur).toLocaleLowerCase('tr-TR')} kaydı silinsin mi?`
+        : islem.bag_turu === 'temettu'
+          ? `${tarih(islem.tarih)} tarihli temettü silinsin mi? Hesaba eklenen nakit de birlikte silinir.`
+          : `${tarih(islem.tarih)} tarihli aktarım silinsin mi? Eşleşik kayıtlar (kaynak satışı ve hedef alışı) birlikte silinir.`,
       acceptProps: { label: 'Sil', severity: 'danger' },
       rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
       accept: async () => {

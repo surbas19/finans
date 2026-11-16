@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Alış / satış / elde olan. Birim fiyat TL'dir; boşsa maliyet (satışta satış fiyatı) bilinmiyor.
+ * Temettüde `miktar` net TL, `komisyon` stopaj; bedelsizde `miktar` oran yüzdesi (IslemTuru).
+ * Eşleşik kayıtlar `aktarim_kodu` taşır; `bag_turu` ne olduklarını söyler (`aktarim` | `temettu`).
  */
 class Islem extends Model
 {
@@ -18,7 +20,7 @@ class Islem extends Model
 
     protected $table = 'islemler';
 
-    protected $fillable = ['user_id', 'hesap_id', 'varlik_id', 'tur', 'miktar', 'birim_fiyat', 'komisyon', 'tarih', 'not', 'aktarim_kodu', 'dahil'];
+    protected $fillable = ['user_id', 'hesap_id', 'varlik_id', 'tur', 'miktar', 'birim_fiyat', 'komisyon', 'tarih', 'not', 'aktarim_kodu', 'bag_turu', 'dahil'];
 
     /**
      * @return array<string, string>
@@ -58,6 +60,9 @@ class Islem extends Model
     {
         // Bireysel emeklilikte miktar toplam tutardır; birim fiyat maliyet / tutar oranı (kâr yüzdesinden)
         $deger = $this->tur === IslemTuru::Deger;
+        // Temettüde miktar net TL (tutar), komisyon stopaj; bedelsizde miktar oran yüzdesi (tutar yok)
+        $temettu = $this->tur === IslemTuru::Temettu;
+        $bedelsiz = $this->tur === IslemTuru::Bedelsiz;
 
         return [
             'id' => $this->id,
@@ -67,13 +72,19 @@ class Islem extends Model
             'miktar' => $this->miktar,
             'birim_fiyat' => $this->birim_fiyat,
             'komisyon' => $this->komisyon,
-            'tutar' => $deger
-                ? round($this->miktar, 2)
-                : ($this->birim_fiyat !== null ? round($this->miktar * $this->birim_fiyat, 2) : null),
+            'tutar' => match (true) {
+                $deger, $temettu => round($this->miktar, 2),
+                $bedelsiz => null,
+                default => $this->birim_fiyat !== null ? round($this->miktar * $this->birim_fiyat, 2) : null,
+            },
+            'stopaj' => $temettu ? round($this->komisyon, 2) : null,
+            'brut' => $temettu ? round($this->miktar + $this->komisyon, 2) : null,
+            'oran_yuzde' => $bedelsiz ? round($this->miktar, 4) : null,
             'kar_yuzde' => $deger && $this->birim_fiyat ? round((1 / $this->birim_fiyat - 1) * 100, 2) : null,
             'tarih' => $this->tarih->toDateString(),
             'not' => $this->not,
             'aktarim_kodu' => $this->aktarim_kodu,
+            'bag_turu' => $this->bag_turu,
             // İşlem numarası (kalıcı, kimlikten), genel toplama dahil mi ve kaydın girildiği zaman (otomatik)
             'no' => 'İ-'.$this->id,
             'dahil' => $this->dahil ?? true,

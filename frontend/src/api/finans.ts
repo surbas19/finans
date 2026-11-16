@@ -2,7 +2,7 @@ import { http } from './http'
 
 export type VarlikTuru = 'nakit' | 'altin' | 'doviz' | 'hisse' | 'fon' | 'kripto' | 'bes'
 /** `deger`: bireysel emeklilikte o tarihteki toplam tutar (+ kâr yüzdesi) */
-export type IslemTuru = 'alis' | 'satis' | 'mevcut' | 'deger'
+export type IslemTuru = 'alis' | 'satis' | 'mevcut' | 'deger' | 'temettu' | 'bedelsiz'
 export type HesapTuru = 'araci_kurum' | 'banka' | 'kasa' | 'ev' | 'kripto' | 'bes' | 'diger'
 
 export interface Kullanici {
@@ -45,6 +45,8 @@ export interface Toplam {
   kz_yuzde: number | null
   gunluk_degisim: number
   gerceklesen_kz: number
+  /** Alınan net temettü toplamı (satılmış hisseler dahil) */
+  temettu?: number
   fiyatsiz: number
   maliyeti_eksik: boolean
 }
@@ -82,6 +84,8 @@ export interface Pozisyon {
   gunluk_degisim: number | null
   gerceklesen_kz: number | null
   gerceklesen_kz_eksik: boolean
+  /** Bu satırın aldığı net temettü toplamı (yoksa null) */
+  temettu?: number | null
   hesap_sayisi?: number
   hesap_ad?: string
   /** Genel yatırım toplamına ve zekâta dahil mi (false: listede soluk, toplamlara girmez) */
@@ -131,8 +135,15 @@ export interface Islem {
   kar_yuzde?: number | null
   tarih: string
   not: string | null
-  /** Hesaplar arası aktarımda kaynak satışı ve hedef alışı aynı kodu taşır */
+  /** Eşleşik kayıtlar (aktarımda kaynak satışı + hedef alışı; temettüde hisse satırı + nakit) aynı kodu taşır */
   aktarim_kodu?: string | null
+  /** Eşleşik kaydın ne olduğu */
+  bag_turu?: 'aktarim' | 'temettu' | null
+  /** Temettü: stopaj ve brüt (net = `tutar`) */
+  stopaj?: number | null
+  brut?: number | null
+  /** Bedelsiz: oran yüzdesi (miktar alanı) */
+  oran_yuzde?: number | null
   /** Kalıcı işlem numarası (İ-123) */
   no: string
   /** Genel toplama / zekâta dahil mi (false: soluk, toplamlara girmez) */
@@ -380,16 +391,25 @@ export const ISLEM_TURLERI: Record<IslemTuru, string> = {
   satis: 'Satış',
   mevcut: 'Elde olan',
   deger: 'Güncel tutar',
+  temettu: 'Temettü',
+  bedelsiz: 'Bedelsiz',
 }
+
+/** Yalnızca hissede, elde hisse varken girilen olaylar (temettü: net tutar + stopaj; bedelsiz: oran yüzdesi) */
+export const HISSE_OLAYLARI: IslemTuru[] = ['temettu', 'bedelsiz']
 
 /** Nakit ve bireysel emeklilik: fiyatı yok, birimi 1 TL (miktar = TL tutarı) */
 export function sabitFiyatli(tur: VarlikTuru | undefined): boolean {
   return tur === 'nakit' || tur === 'bes'
 }
 
-/** Varlığa uyan işlem türleri: nakitte yatırma / çekme, bireysel emeklilikte yalnızca güncel tutar */
+/**
+ * Varlığa uyan işlem türleri: nakitte yatırma / çekme, bireysel emeklilikte yalnızca güncel tutar,
+ * hissede ayrıca temettü ve bedelsiz.
+ */
 export function islemTurleri(varlikTuru?: VarlikTuru): IslemTuru[] {
   if (varlikTuru === 'bes') return ['deger']
+  if (varlikTuru === 'hisse') return ['alis', 'satis', 'mevcut', ...HISSE_OLAYLARI]
 
   return ['alis', 'satis', 'mevcut']
 }

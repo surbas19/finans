@@ -68,7 +68,7 @@ class PozisyonAktarimi
         $kod = (string) Str::uuid();
         $aciklama = 'Aktarım: '.$kaynak->ad.' → '.$hedef->ad;
         $notMetni = Str::limit($not !== null && trim($not) !== '' ? $aciklama.' · '.trim($not) : $aciklama, 255, '');
-        $ortak = ['user_id' => $user->id, 'varlik_id' => $varlik->id, 'komisyon' => 0, 'tarih' => $tarih->toDateString(), 'not' => $notMetni, 'aktarim_kodu' => $kod];
+        $ortak = ['user_id' => $user->id, 'varlik_id' => $varlik->id, 'komisyon' => 0, 'tarih' => $tarih->toDateString(), 'not' => $notMetni, 'aktarim_kodu' => $kod, 'bag_turu' => 'aktarim'];
 
         // Kaynakta satış sonrası da hesap tutarlı mı (sonraki tarihli satışlar elde olandan fazla kalmasın)
         $cikis = new Islem([...$ortak, 'hesap_id' => $kaynak->id, 'tur' => IslemTuru::Satis, 'miktar' => $miktar, 'birim_fiyat' => $ortalama !== null ? round($ortalama, 8) : null]);

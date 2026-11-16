@@ -82,6 +82,13 @@ function altSatir(p: Pozisyon): string {
               {{ miktar(p.maliyeti_bilinmeyen_miktar) }} {{ p.varlik.birim }} maliyeti bilinmiyor
             </template>
           </span>
+          <span
+            v-if="p.temettu"
+            class="block text-xs text-emerald-700"
+            data-test="pozisyon-temettu"
+          >
+            Temettü {{ tl(p.temettu) }}
+          </span>
         </span>
         <span class="flex flex-col items-end gap-0.5 text-right">
           <span

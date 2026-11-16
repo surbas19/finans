@@ -9,6 +9,7 @@ use App\Models\Hesap;
 use App\Models\Islem;
 use App\Models\Varlik;
 use App\Services\Portfoy\PortfoyHesabi;
+use App\Services\Portfoy\TemettuKaydi;
 use App\Services\Portfoy\YetersizMiktar;
 use App\Support\Bicim;
 use Illuminate\Http\JsonResponse;
@@ -48,10 +49,16 @@ class IslemController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, TemettuKaydi $temettuKaydi): JsonResponse
     {
         $veri = $this->dogrula($request);
         $islem = new Islem([...$veri, 'user_id' => $request->user()->id]);
+        // Temettü: hisse satırı + aynı hesaba nakit, eşleşik iki kayıt
+        if ($islem->tur === IslemTuru::Temettu) {
+            $temettuKaydi->kaydet($islem);
+
+            return response()->json(['islem' => $islem->ozet(), 'message' => 'Temettü kaydedildi; tutar hesaba nakit olarak eklendi.'], 201);
+        }
         $this->miktarYeterliMi($islem, null);
         $islem->save();
 
@@ -119,11 +126,17 @@ class IslemController extends Controller
     {
         Gate::authorize('update', $islem);
         if ($islem->aktarim_kodu !== null) {
-            throw ValidationException::withMessages(['islem' => 'Aktarım kaydı düzenlenemez; silip yeniden aktarın.']);
+            throw ValidationException::withMessages(['islem' => $islem->bag_turu === 'temettu'
+                ? 'Temettü kaydı düzenlenemez; silip yeniden girin.'
+                : 'Aktarım kaydı düzenlenemez; silip yeniden aktarın.']);
+        }
+        $veri = $this->dogrula($request);
+        if ($veri['tur'] === IslemTuru::Temettu->value) {
+            throw ValidationException::withMessages(['tur' => 'Temettüyü yeni kayıt olarak girin (tutar hesaba nakit olarak da eklenir).']);
         }
         $eski = $islem->replicate();
         $eski->id = $islem->id;
-        $islem->fill($this->dogrula($request));
+        $islem->fill($veri);
         $this->miktarYeterliMi($islem, $eski);
         $islem->save();
 
@@ -152,7 +165,7 @@ class IslemController extends Controller
                 $this->portfoy->dogrula($dahilKalan);
             } catch (YetersizMiktar $e) {
                 throw ValidationException::withMessages([
-                    'dahil' => 'Bu işlem toplamdan çıkarılırsa '.$e->islem->tarih->format('d.m.Y').' tarihli satış elde olandan fazla kalır. Önce o satışı da toplamdan çıkarın.',
+                    'dahil' => 'Bu işlem toplamdan çıkarılırsa '.self::gecersizKalan($e).' Önce o kaydı da toplamdan çıkarın.',
                 ]);
             }
         }
@@ -179,13 +192,19 @@ class IslemController extends Controller
                 $this->portfoy->dogrula($kalan);
             } catch (YetersizMiktar $e) {
                 throw ValidationException::withMessages([
-                    'islem' => 'Bu işlem silinirse '.$e->islem->tarih->format('d.m.Y').' tarihli satış elde olandan fazla kalır. Önce o satışı düzeltin.',
+                    'islem' => 'Bu işlem silinirse '.self::gecersizKalan($e).' Önce o kaydı düzeltin.',
                 ]);
             }
         }
         DB::transaction(fn () => $silinecek->each->delete());
 
-        return response()->json(['message' => $silinecek->count() > 1 ? 'Aktarım ve eşleşik kayıtlar silindi.' : 'İşlem silindi.']);
+        $mesaj = match (true) {
+            $silinecek->count() === 1 => 'İşlem silindi.',
+            $islem->bag_turu === 'temettu' => 'Temettü ve hesaba eklenen nakit silindi.',
+            default => 'Aktarım ve eşleşik kayıtlar silindi.',
+        };
+
+        return response()->json(['message' => $mesaj]);
     }
 
     /**
@@ -200,6 +219,8 @@ class IslemController extends Controller
         $varlikTuru = is_numeric($varlikId) ? Varlik::whereKey((int) $varlikId)->first()?->tur : null;
         $sabit = $varlikTuru?->sabitFiyatli() ?? false;
         $bes = $varlikTuru === VarlikTuru::Bes;
+        $hisseOlayi = IslemTuru::tryFrom((string) $request->input('tur'))?->hisseOlayi() ?? false;
+        $bedelsiz = $request->input('tur') === IslemTuru::Bedelsiz->value;
 
         $veri = $request->validate([
             'hesap_id' => ['required', 'integer', Rule::exists('hesaplar', 'id')->whereIn('user_id', $request->user()->haneKullaniciIdleri())],
@@ -208,7 +229,8 @@ class IslemController extends Controller
                 'required', Rule::enum(IslemTuru::class),
                 $bes ? Rule::in([IslemTuru::Deger->value]) : Rule::notIn([IslemTuru::Deger->value]),
             ],
-            'miktar' => ['required', 'numeric', 'gt:0', 'max:1000000000000'],
+            // Temettüde net TL tutarı, bedelsizde oran yüzdesi
+            'miktar' => ['required', 'numeric', 'gt:0', $bedelsiz ? 'max:10000' : 'max:1000000000000'],
             'birim_fiyat' => [Rule::requiredIf(! $sabit && $request->input('tur') === IslemTuru::Alis->value), 'nullable', 'numeric', 'gt:0', 'max:1000000000000'],
             'kar_yuzde' => ['nullable', 'numeric', 'gt:-100', 'max:100000'],
             'komisyon' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
@@ -220,10 +242,22 @@ class IslemController extends Controller
             'tur.not_in' => 'Güncel tutar yalnızca bireysel emeklilikte girilir.',
             'kar_yuzde.gt' => 'Kâr yüzdesi -100\'den büyük olmalı.',
             'tarih.before_or_equal' => 'İleri tarihli işlem girilemez.',
-        ], ['miktar' => 'miktar', 'birim_fiyat' => 'birim fiyat', 'kar_yuzde' => 'kâr yüzdesi', 'hesap_id' => 'hesap', 'varlik_id' => 'varlık']);
+            ...($bedelsiz ? ['miktar.max' => 'Bedelsiz oranı en çok %10.000 olabilir.'] : []),
+        ], [
+            'miktar' => $bedelsiz ? 'bedelsiz oranı' : ($request->input('tur') === IslemTuru::Temettu->value ? 'net tutar' : 'miktar'),
+            'komisyon' => $request->input('tur') === IslemTuru::Temettu->value ? 'stopaj' : 'komisyon',
+            'birim_fiyat' => 'birim fiyat', 'kar_yuzde' => 'kâr yüzdesi', 'hesap_id' => 'hesap', 'varlik_id' => 'varlık',
+        ]);
+        if ($hisseOlayi && $varlikTuru !== VarlikTuru::Hisse) {
+            throw ValidationException::withMessages(['tur' => 'Temettü ve bedelsiz yalnızca hisse senedinde girilir.']);
+        }
         $karYuzde = isset($veri['kar_yuzde']) ? (float) $veri['kar_yuzde'] : null;
         unset($veri['kar_yuzde']);
-        $veri['komisyon'] = $sabit ? 0.0 : (float) ($veri['komisyon'] ?? 0);
+        // Temettüde komisyon alanı stopajdır; bedelsizde ücret / fiyat yoktur
+        $veri['komisyon'] = $sabit || $bedelsiz ? 0.0 : (float) ($veri['komisyon'] ?? 0);
+        if ($hisseOlayi) {
+            $veri['birim_fiyat'] = null;
+        }
         $veri['hesap_id'] = (int) $veri['hesap_id'];
         $veri['varlik_id'] = (int) $veri['varlik_id'];
         if ($bes) {
@@ -253,11 +287,25 @@ class IslemController extends Controller
             try {
                 $this->portfoy->dogrula($liste);
             } catch (YetersizMiktar $e) {
-                $mesaj = $e->islem === $islem
-                    ? 'Bu tarihte hesapta yeterli miktar yok (elde olan: '.Bicim::sayi($e->eldeki).').'
-                    : 'Bu değişiklikle '.$e->islem->tarih->format('d.m.Y').' tarihli satış elde olandan fazla kalır.';
-                throw ValidationException::withMessages(['miktar' => $mesaj]);
+                $mesaj = match (true) {
+                    $e->islem === $islem && $islem->tur->hisseOlayi() => 'Bu tarihte hesapta bu hisse yok.',
+                    $e->islem === $islem => 'Bu tarihte hesapta yeterli miktar yok (elde olan: '.Bicim::sayi($e->eldeki).').',
+                    default => 'Bu değişiklikle '.self::gecersizKalan($e),
+                };
+                throw ValidationException::withMessages([$islem->tur->hisseOlayi() ? 'tarih' : 'miktar' => $mesaj]);
             }
         }
+    }
+
+    /**
+     * Denetimde geçersiz kalan kaydı anlatır: satış elde olandan fazla, temettü / bedelsiz elde hisse yokken.
+     */
+    private static function gecersizKalan(YetersizMiktar $e): string
+    {
+        $tarih = $e->islem->tarih->format('d.m.Y');
+
+        return $e->islem->tur->hisseOlayi()
+            ? $tarih.' tarihli '.mb_strtolower($e->islem->tur->etiket()).' kaydı elde hisse olmadan kalır.'
+            : $tarih.' tarihli satış elde olandan fazla kalır.';
     }
 }

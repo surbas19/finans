@@ -41,6 +41,8 @@ const TARIH_ETIKETI = {
   satis: 'Satım',
   mevcut: 'Elde olan',
   deger: 'Güncel tutar',
+  temettu: 'Ödeme',
+  bedelsiz: 'Bedelsiz',
 } as const
 
 /** İşlemi genel toplama / zekâta dahil eder ya da çıkarır (aktarım çiftinde eşi de değişir); sonra liste yenilenir */
@@ -59,11 +61,32 @@ const TUR_RENGI = {
   satis: 'danger',
   mevcut: 'secondary',
   deger: 'info',
+  temettu: 'warn',
+  bedelsiz: 'contrast',
 } as const
 
-/** Miktar × fiyat; nakitte yok (tutar yeterli), bireysel emeklilikte kâr yüzdesi */
+/**
+ * Eşleşik kaydın rozeti: aktarım çifti ya da temettünün hesaba eklenen nakdi. Hisse satırındaki temettü
+ * zaten tür etiketiyle "Temettü" görünür, ikinci rozet yok.
+ */
+function bagRozeti(i: Islem): string | null {
+  if (!i.aktarim_kodu || i.tur === 'temettu') return null
+
+  return i.bag_turu === 'temettu' ? 'Temettü' : 'Aktarım'
+}
+
+/** Sağdaki tutar: bedelsizde oran, ötekilerde TL */
+function tutarMetni(i: Islem): string {
+  return i.tur === 'bedelsiz' ? yuzde(i.oran_yuzde) : tl(i.tutar)
+}
+
+/** Miktar × fiyat; nakitte yok (tutar yeterli), bireysel emeklilikte kâr yüzdesi, temettüde brüt / stopaj */
 function ayrinti(i: Islem): string | null {
   const tur = i.varlik?.tur
+  if (i.tur === 'temettu') {
+    return i.stopaj ? `brüt ${tl(i.brut)} · stopaj ${tl(i.stopaj)}` : 'net temettü'
+  }
+  if (i.tur === 'bedelsiz') return 'bedelsiz sermaye artırımı · maliyet aynı'
   if (tur === 'nakit') return null
   if (tur === 'bes') return i.kar_yuzde != null ? `${yuzde(i.kar_yuzde)} kâr` : 'kâr yüzdesi yok'
   const birim = `${miktar(i.miktar)} ${i.varlik?.birim ?? ''}`.trim()
@@ -78,7 +101,8 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
   return [
     tarihli ? tarih(i.tarih) : null,
     ayrinti(i),
-    i.komisyon > 0 ? `komisyon ${tl(i.komisyon)}` : null,
+    // Temettüde komisyon alanı stopajdır (ayrıntıda yazılı)
+    i.komisyon > 0 && i.tur !== 'temettu' ? `komisyon ${tl(i.komisyon)}` : null,
     props.hesapGoster && i.hesap_ad ? i.hesap_ad : null,
   ]
     .filter(Boolean)
@@ -121,8 +145,8 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
                   data-test="haric-etiketi"
                 />
                 <Tag
-                  v-if="s.islem.aktarim_kodu"
-                  value="Aktarım"
+                  v-if="bagRozeti(s.islem)"
+                  :value="bagRozeti(s.islem) ?? undefined"
                   severity="info"
                   class="shrink-0"
                   data-test="aktarim-rozeti"
@@ -149,9 +173,9 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
             </span>
             <span class="flex shrink-0 items-center gap-1.5">
               <span class="font-semibold whitespace-nowrap text-surface-900 tabular-nums">
-                {{ tl(s.islem.tutar) }}
+                {{ tutarMetni(s.islem) }}
               </span>
-              <s.islem class="pi pi-angle-right text-sm text-surface-400" />
+              <i class="pi pi-angle-right text-sm text-surface-400" />
             </span>
           </button>
           <button
@@ -187,8 +211,8 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
                 data-test="haric-etiketi"
               />
               <Tag
-                v-if="s.islem.aktarim_kodu"
-                value="Aktarım"
+                v-if="bagRozeti(s.islem)"
+                :value="bagRozeti(s.islem) ?? undefined"
                 severity="info"
                 class="shrink-0"
                 data-test="aktarim-rozeti"
@@ -210,7 +234,7 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
             </div>
           </div>
           <div class="shrink-0 text-right font-semibold text-surface-900 tabular-nums">
-            {{ tl(s.islem.tutar) }}
+            {{ tutarMetni(s.islem) }}
           </div>
           <div class="flex shrink-0">
             <Button
