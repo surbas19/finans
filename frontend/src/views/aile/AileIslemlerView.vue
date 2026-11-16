@@ -27,12 +27,13 @@ import {
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAileStore } from '@/stores/aile'
 import { tl } from '@/utils/bicim'
-import { donemEtiketi, gecerliDonem } from '@/utils/donem'
+import { buAy, donemEtiketi, gecerliDonem } from '@/utils/donem'
 
 /**
  * Kart işlemleri: bütün ekstre işlemleri kart adının altında akordiyon (süzgeçsizken ilk kart açık). Süzgeç (arama,
  * kişi, banka, kart, kategori, tür; Bütçe Özet'ten gelince ay çipi) uygulanınca bütün kart grupları açık gelir.
- * Ekstre dönemi seçici (‹ Kasım 2026 ›, varsayılan en yeni ekstre dönemi, "Tümü"): kesim ayına göre geri / ileri. Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
+ * En üstte ekstre dönemi çarkı (kesim ayı; varsayılan en yeni ekstre dönemi, ondan ileri yok; "Tümü" bütün dönemler).
+ * Satıra basılı tutunca kategori seçilir. Süzgeçler adreste.
  */
 const aile = useAileStore()
 const route = useRoute()
@@ -76,7 +77,7 @@ const kategoriSecenekleri = computed(() => [{ id: 'yok', ad: 'Kategorisiz' }, ..
 
 /** AySecici modeli: seçim yapınca Özet ay çipi kalkar */
 const donemModeli = computed({
-  get: () => donem.value ?? enYeni.value ?? '',
+  get: () => donem.value ?? enYeni.value ?? buAy(),
   set: (v: string) => {
     ay.value = null
     donem.value = v
@@ -209,6 +210,22 @@ function kategoriSec(i: KartIslemi): void {
 
 <template>
   <div class="flex flex-col gap-4">
+    <!-- Ekstre dönemi çarkı: "Tümü" seçiliyken "Tüm dönemler" yazar, çarkı oynatınca bir dönem seçilir -->
+    <div data-test="donem-secici">
+      <AySecici v-model="donemModeli" :ileri-sinir="enYeni ?? undefined" :bos="donem === null">
+        <template #ek>
+          <button
+            type="button"
+            class="ay-carki-ek"
+            :aria-pressed="donem === null"
+            data-test="donem-tumu"
+            @click="donem === null ? (donemModeli = enYeni ?? buAy()) : (donem = null)"
+          >
+            Tümü
+          </button>
+        </template>
+      </AySecici>
+    </div>
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
       <IconField class="min-w-0 flex-1">
         <InputIcon class="pi pi-search" />
@@ -221,36 +238,6 @@ function kategoriSec(i: KartIslemi): void {
           data-test="islem-ara"
         />
       </IconField>
-      <div class="flex items-center gap-2" data-test="donem-secici">
-        <AySecici
-          v-if="donem !== null"
-          v-model="donemModeli"
-          :ileri-sinir="enYeni ?? undefined"
-          class="min-w-0 flex-1 justify-between sm:flex-none"
-        />
-        <Button
-          v-else
-          label="Ekstre dönemi seç"
-          icon="pi pi-calendar"
-          severity="secondary"
-          outlined
-          rounded
-          class="min-w-0 flex-1 sm:flex-none"
-          :disabled="!enYeni"
-          data-test="donem-sec"
-          @click="donemModeli = enYeni!"
-        />
-        <Button
-          v-if="donem !== null"
-          label="Tümü"
-          severity="secondary"
-          text
-          rounded
-          size="small"
-          data-test="donem-tumu"
-          @click="donem = null"
-        />
-      </div>
     </div>
     <button
       v-if="ay"

@@ -113,6 +113,8 @@ async function coz(f: Fatura): Promise<void> {
 
 <template>
   <div class="flex flex-col gap-4">
+    <!-- "Dönemi bilinmeyen" görünümünde ay seçilmez: çark soluk -->
+    <AySecici v-model="donem" :pasif="gorunum !== 'ay'" />
     <div class="flex flex-wrap items-center justify-between gap-3">
       <SelectButton
         v-model="gorunum"
@@ -135,7 +137,6 @@ async function coz(f: Fatura): Promise<void> {
       yazımlarını ekleyin; ekstre yüklenince fatura ödemeleri bunlarla bulunur.
     </p>
     <div class="flex flex-wrap items-center gap-2">
-      <AySecici v-if="gorunum === 'ay'" v-model="donem" />
       <Select
         v-model="turId"
         :options="turler"

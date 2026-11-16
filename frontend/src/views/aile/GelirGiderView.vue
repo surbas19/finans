@@ -8,7 +8,7 @@ import GiderlerView from '@/views/aile/GiderlerView.vue'
 import { buAy } from '@/utils/donem'
 
 /**
- * Gelir / Gider tek sekmede: üstte ortak, tam genişlikte 150 px ay seçici, altında yana kaydırmalı iki panel. Ekranda
+ * Gelir / Gider tek sekmede: üstte ortak ay çarkı (AySecici), altında yana kaydırmalı iki panel. Ekranda
  * "Gelir" / "Gider" yazısı yok; panelin sağ kenarında ince dikey çizgi (gelir yeşil, gider kırmızı) hangisinde
  * olunduğunu gösterir. Telefonda tek panel ekranı kaplar, sağa-sola kaydırınca diğeri açılır; geniş ekranda ikisi yan yana. `?panel=gider` ile Gider açık başlar (eski adresler buraya yönlenir).
  */
@@ -32,8 +32,8 @@ watch(sira, (i) => {
 
 <template>
   <div class="flex flex-col gap-3">
-    <!-- Dönem seçici ekranı yatay kaplar, 150 px yüksekliğinde -->
-    <AySecici v-model="donem" :ileri-sinir="null" genis :yukseklik="100" />
+    <!-- Ay çarkı: iki panelin üstünde ortak -->
+    <AySecici v-model="donem" :ileri-sinir="null" />
 
     <KaydirmaliPaneller
       v-model:sira="sira"

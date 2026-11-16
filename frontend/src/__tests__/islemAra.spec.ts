@@ -135,11 +135,29 @@ describe('Bütçe → İşlemler: arama ve tarih aralığı', () => {
       donem: 'tumu',
     })
     expect(w.find('[data-test="ay-secici"]').exists()).toBe(false)
-    // Dönem seç → en yeni dönem
+    expect(w.get('[data-test="ay-secici-bos"]').text()).toBe('Tüm dönemler')
+    expect(w.get('[data-test="donem-tumu"]').attributes('aria-pressed')).toBe('true')
+    // Tümü'ne yeniden basınca en yeni dönem
     sorgu.mockClear()
-    await w.get('[data-test="donem-sec"]').trigger('click')
+    await w.get('[data-test="donem-tumu"]').trigger('click')
     await flushPromises()
     expect(sorgu.mock.calls[0]![0]).toMatchObject({ ay: '2026-11', donem_turu: 'ekstre' })
+    expect(w.get('[data-test="ay-secici"]').text()).toBe('Kasım 2026')
+    // "Tüm dönemler"deyken çarkta bir aya dokunmak o dönemi seçer
+    await w.get('[data-test="donem-tumu"]').trigger('click')
+    await flushPromises()
+    sorgu.mockClear()
+    const ekim = w.findAll('[role="option"]').find((o) => o.text() === 'Ekim 2026')!
+    await ekim.trigger('click')
+    await flushPromises()
+    expect(sorgu.mock.calls[0]![0]).toMatchObject({ ay: '2026-10', donem_turu: 'ekstre' })
+    w.unmount()
+  })
+
+  it('dönem çarkı sayfanın en üstünde, arama kutusunun üstünde', async () => {
+    const w = await kur()
+    const kok = w.element as HTMLElement
+    expect(kok.firstElementChild?.getAttribute('data-test')).toBe('donem-secici')
     w.unmount()
   })
 

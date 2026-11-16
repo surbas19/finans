@@ -104,6 +104,22 @@ function sonEkstre(kartId: number): Ekstre | undefined {
 
 <template>
   <div class="flex flex-col gap-4">
+    <!-- Ekstre dönemi çarkı: kartlardaki ekstre borcu / son ödeme seçilen dönemin ekstresinden gelir -->
+    <div v-if="enYeni && aile.kartlar.length" data-test="kart-donem-secici">
+      <AySecici v-model="donemModeli" :ileri-sinir="enYeni">
+        <template #ek>
+          <button
+            v-if="seciliDonem !== null && seciliDonem !== enYeni"
+            type="button"
+            class="ay-carki-ek"
+            data-test="kart-donem-en-yeni"
+            @click="seciliDonem = null"
+          >
+            En yeni
+          </button>
+        </template>
+      </AySecici>
+    </div>
     <div class="flex flex-wrap justify-end gap-2">
       <RouterLink
         :to="{ name: 'aile-ekstreler' }"
@@ -157,20 +173,6 @@ function sonEkstre(kartId: number): Ekstre | undefined {
       <Button label="Kart ekle" icon="pi pi-plus" @click="kartFormuAcik = true" />
     </BosDurum>
     <template v-else>
-      <!-- Ekstre dönemi: kartlardaki ekstre borcu / son ödeme seçilen dönemin ekstresinden gelir -->
-      <div v-if="enYeni" class="flex items-center gap-2" data-test="kart-donem-secici">
-        <AySecici v-model="donemModeli" :ileri-sinir="enYeni" />
-        <Button
-          v-if="seciliDonem !== null && seciliDonem !== enYeni"
-          label="En yeni"
-          severity="secondary"
-          text
-          rounded
-          size="small"
-          data-test="kart-donem-en-yeni"
-          @click="seciliDonem = null"
-        />
-      </div>
       <KaydirmaliPaneller
         v-model:sira="sira"
         :ogeler="kartlar"

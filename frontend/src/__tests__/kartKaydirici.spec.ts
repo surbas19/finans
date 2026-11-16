@@ -175,8 +175,8 @@ describe('GelirGiderView', () => {
     expect(sayfa.find('[data-test="panel-cizgi-gelir"]').classes()).toContain('w-[3px]')
     expect(sayfa.find('[data-test="kaydirici-nokta"]').exists()).toBe(false)
     expect(sayfa.find('[data-test="panel-gelir"]').exists()).toBe(false)
-    // Dönem seçici tam genişlik modunda
-    expect(sayfa.findComponent({ name: 'AySecici' }).props('genis')).toBe(true)
+    // Ay çarkı en üstte, sınırsız (ileri aylar da seçilir)
+    expect(sayfa.findComponent({ name: 'AySecici' }).props('ileriSinir')).toBeNull()
     vi.doUnmock('vue-router')
   })
 })

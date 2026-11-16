@@ -158,10 +158,10 @@ const gunMetni = (gun: number | null | undefined) =>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <AySecici v-model="donem" :ileri-sinir="null" genis :yukseklik="100" />
-      <span v-if="aile.hane" class="text-sm text-surface-500">{{ aile.hane.hane.ad }}</span>
-    </div>
+    <AySecici v-model="donem" :ileri-sinir="null" />
+    <p v-if="aile.hane" class="-mt-2 text-right text-xs text-surface-500">
+      {{ aile.hane.hane.ad }}
+    </p>
 
     <Skeleton v-if="!ozet" height="10rem" border-radius="1.5rem" />
     <template v-else>

@@ -95,6 +95,26 @@ body {
   color: var(--p-primary-700);
 }
 
+/* Ay çarkının solundaki küçük ek düğme ("Tümü", "En yeni"); `aria-pressed` ise dolu */
+@utility ay-carki-ek {
+  border-radius: 9999px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--p-primary-700);
+  &:hover {
+    background: var(--p-primary-50);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-500);
+    outline-offset: 2px;
+  }
+  &[aria-pressed='true'] {
+    background: var(--p-primary-600);
+    color: var(--p-primary-contrast-color);
+  }
+}
+
 #app {
   min-height: 100dvh;
 }
