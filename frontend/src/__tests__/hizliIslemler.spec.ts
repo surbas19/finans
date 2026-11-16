@@ -42,7 +42,7 @@ const sahte = (ad: string) =>
         })
     },
   })
-const Gider = sahte('GiderFormu')
+const Nakit = sahte('NakitHarcamaFormu')
 const Tasarruf = sahte('TasarrufFormu')
 const Ekstre = sahte('EkstreYukleDialog')
 const Gelir = sahte('GelirFormu')
@@ -61,7 +61,7 @@ async function kur() {
     global: {
       plugins: [PrimeVue, ToastService],
       stubs: {
-        GiderFormu: Gider,
+        NakitHarcamaFormu: Nakit,
         TasarrufFormu: Tasarruf,
         EkstreYukleDialog: Ekstre,
         GelirFormu: Gelir,
@@ -96,20 +96,18 @@ describe('Hızlı işlemler menüsü', () => {
     expect(satirlar[2]).toContain('Ekstre yükle')
     expect(satirlar[3]).toContain('Gelir ekle')
     // Başlangıçta hiçbir form açık değil
-    for (const f of ['GiderFormu', 'TasarrufFormu', 'EkstreYukleDialog', 'GelirFormu']) {
+    for (const f of ['NakitHarcamaFormu', 'TasarrufFormu', 'EkstreYukleDialog', 'GelirFormu']) {
       expect(gorunur(w, f)).toBe('false')
     }
     w.unmount()
   })
 
-  it('nakit harcama: gider kaynakları yüklenir, "Nakit harcama" başlıklı form açılır', async () => {
+  it('nakit harcama: sade hızlı form açılır (gider kaynağı yüklenmez)', async () => {
     const w = await kur()
     await w.get('[data-test="hizli-nakit-harcama"]').trigger('click')
     await flushPromises()
-    expect(giderKaynaklari).toHaveBeenCalledTimes(1)
-    expect(gorunur(w, 'GiderFormu')).toBe('true')
-    expect(w.get('[data-form="GiderFormu"]').attributes('data-baslik')).toBe('Nakit harcama')
-    expect(w.get('[data-form="GiderFormu"]').attributes('data-kaynak')).toBe('2')
+    expect(giderKaynaklari).not.toHaveBeenCalled()
+    expect(gorunur(w, 'NakitHarcamaFormu')).toBe('true')
     expect(gorunur(w, 'GelirFormu')).toBe('false')
     w.unmount()
   })
@@ -132,7 +130,7 @@ describe('Hızlı işlemler menüsü', () => {
 
   it('form kaydedilince kaydedildi olayı yayılır (açık sayfa yenilensin)', async () => {
     const w = await kur()
-    w.findComponent(Gider).vm.$emit('kaydedildi')
+    w.findComponent(Nakit).vm.$emit('kaydedildi')
     w.findComponent(Tasarruf).vm.$emit('kaydedildi')
     w.findComponent(Gelir).vm.$emit('kaydedildi')
     expect(w.emitted('kaydedildi')).toHaveLength(3)
@@ -140,11 +138,11 @@ describe('Hızlı işlemler menüsü', () => {
   })
 
   it('veri yüklenemezse form açılmaz', async () => {
-    giderKaynaklari.mockRejectedValue(new Error('hata'))
+    kaynaklar.mockRejectedValue(new Error('hata'))
     const w = await kur()
-    await w.get('[data-test="hizli-nakit-harcama"]').trigger('click')
+    await w.get('[data-test="hizli-gelir-ekle"]').trigger('click')
     await flushPromises()
-    expect(gorunur(w, 'GiderFormu')).toBe('false')
+    expect(gorunur(w, 'GelirFormu')).toBe('false')
     w.unmount()
   })
 })

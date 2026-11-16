@@ -5,9 +5,9 @@ import Popover from 'primevue/popover'
 import { useToast } from 'primevue/usetoast'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
-import GiderFormu from '@/components/aile/GiderFormu.vue'
+import NakitHarcamaFormu from '@/components/aile/NakitHarcamaFormu.vue'
 import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
-import { aileApi, type GelirKaynagi, type GiderKaynagi } from '@/api/aile'
+import { aileApi, type GelirKaynagi } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useAileStore } from '@/stores/aile'
 
@@ -62,7 +62,6 @@ const giderAcik = ref(false)
 const tasarrufAcik = ref(false)
 const ekstreAcik = ref(false)
 const gelirAcik = ref(false)
-const giderKaynaklari = ref<GiderKaynagi[]>([])
 const gelirKaynaklari = ref<GelirKaynagi[]>([])
 const yukleniyor = ref<HizliIslemAdi | null>(null)
 
@@ -77,7 +76,6 @@ async function sec(islem: HizliIslem): Promise<void> {
   try {
     await aile.yukle()
     if (islem.ad === 'nakit-harcama') {
-      giderKaynaklari.value = await aileApi.giderKaynaklari()
       giderAcik.value = true
     } else if (islem.ad === 'gelir-ekle') {
       gelirKaynaklari.value = await aileApi.kaynaklar()
@@ -136,12 +134,7 @@ async function sec(islem: HizliIslem): Promise<void> {
     </div>
   </Popover>
 
-  <GiderFormu
-    v-model:visible="giderAcik"
-    baslik="Nakit harcama"
-    :kaynaklar="giderKaynaklari"
-    @kaydedildi="emit('kaydedildi')"
-  />
+  <NakitHarcamaFormu v-model:visible="giderAcik" @kaydedildi="emit('kaydedildi')" />
   <TasarrufFormu v-model:visible="tasarrufAcik" @kaydedildi="emit('kaydedildi')" />
   <EkstreYukleDialog v-model:visible="ekstreAcik" />
   <GelirFormu
