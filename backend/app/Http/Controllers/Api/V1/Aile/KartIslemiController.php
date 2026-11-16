@@ -14,6 +14,7 @@ use App\Services\Aile\FaturaEslestirici;
 use App\Services\Aile\KartIslemKurallari;
 use App\Services\Aile\KategoriAtayici;
 use App\Services\Aile\KategoriBulucu;
+use App\Services\Aile\SirketGecmisi;
 use App\Support\Donem;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Builder;
@@ -140,6 +141,16 @@ class KartIslemiController extends Controller
                 ? ($sayi > 1 ? "{$sayi} işlem \"{$kategori->ad}\" olarak işaretlendi." : "İşlem \"{$kategori->ad}\" olarak işaretlendi.")
                 : ($sayi > 1 ? "{$sayi} işlemin kategorisi kaldırıldı." : 'İşlemin kategorisi kaldırıldı.'),
         ]);
+    }
+
+    /**
+     * Şirket geçmişi: bu satırla aynı açıklamalı (aynı şirket) hanenin bütün onaylı kart harcamaları, ay ay toplamlarıyla.
+     */
+    public function gecmis(KartIslemi $islem, SirketGecmisi $gecmis): JsonResponse
+    {
+        Gate::authorize('hane-kaydi', $islem);
+
+        return response()->json($gecmis->hesapla($islem));
     }
 
     /**

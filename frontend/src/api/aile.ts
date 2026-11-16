@@ -377,6 +377,37 @@ export interface FaturaOnerisi {
   secildi: boolean
 }
 
+/** Şirket geçmişindeki satır: `etki` gider toplamına etkisi (iade eksi; ödeme / transfer 0) */
+export interface SirketGecmisiSatiri {
+  id: number
+  kart_id: number
+  islem_tarihi: string | null
+  aciklama: string
+  tur: KartIslemTuru
+  tutar: number
+  etki: number
+  taksit_no: number | null
+  taksit_sayisi: number | null
+}
+
+/** Bir şirketten (aynı açıklama) yapılan bütün harcamalar; aylar yeniden eskiye, yalnız harcama olan aylar */
+export interface SirketGecmisi {
+  aciklama: string
+  kategori_id: number | null
+  toplam: number
+  adet: number
+  ilk_donem: string | null
+  aylik_ortalama: number | null
+  bu_ay: number
+  aylar: {
+    donem: string
+    etiket: string
+    toplam: number
+    adet: number
+    islemler: SirketGecmisiSatiri[]
+  }[]
+}
+
 export interface KartIslemi {
   id: number
   kart_id: number
@@ -999,6 +1030,9 @@ export const aileApi = {
         message: string
       }>(`/aile/kart-islemleri/${id}/kategori`, { kategori_id: kategoriId })
       .then((r) => r.data),
+  /** Şirket geçmişi: aynı açıklamalı bütün onaylı kart satırları, ay ay toplamlarıyla */
+  kartIslemiGecmisi: (id: number) =>
+    http.get<SirketGecmisi>(`/aile/kart-islemleri/${id}/gecmis`).then((r) => r.data),
   kartIslemiEkle: (veri: KartIslemGirdisi) =>
     http
       .post<{ islem: KartIslemi; message: string }>('/aile/kart-islemleri', veri)

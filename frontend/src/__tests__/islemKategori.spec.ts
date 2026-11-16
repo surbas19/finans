@@ -3,11 +3,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
-import type { Kategori, KartIslemi } from '@/api/aile'
+import type { Kategori, KartIslemi, SirketGecmisi } from '@/api/aile'
 import { useAileStore } from '@/stores/aile'
 
 const atama = vi.fn<(id: number, kategori: number | null) => Promise<unknown>>()
 const ekle = vi.fn<(ad: string, renk?: string | null) => Promise<Kategori>>()
+const gecmis = vi.fn<(id: number) => Promise<SirketGecmisi>>()
 const kategoriler: Kategori[] = [
   { id: 1, ad: 'Market', ikon: null, renk: 'emerald', fatura: false, sira: 1 },
   { id: 2, ad: 'Giyim', ikon: null, renk: 'pink', fatura: false, sira: 2 },
@@ -16,6 +17,7 @@ vi.mock('@/api/aile', async (asil) => ({
   ...(await asil<typeof import('@/api/aile')>()),
   aileApi: {
     kartIslemiKategori: (id: number, k: number | null) => atama(id, k),
+    kartIslemiGecmisi: (id: number) => gecmis(id),
     kategoriEkle: (ad: string, renk?: string | null) => ekle(ad, renk),
     hane: () => Promise.resolve({ hane: { id: 1, ad: 'Aile' }, uyeler: [], ben_uye_id: 1 }),
     bankalar: () => Promise.resolve([]),
@@ -117,16 +119,16 @@ describe('Satıra basılı tutunca kategori', () => {
     expect(w.emitted('kategori')).toHaveLength(1)
   })
 
-  it('sol şerit kategori rengiyle yarı saydam gradient; kategorisizde gri; kategori adı gösterilir', async () => {
+  it('tarih kutusu kategori renginde (açık zemin, koyu yazı); kategorisizde gri; kategori adı gösterilir', async () => {
     const w = await liste([islem(1, { kategori_id: 1 }), islem(2), islem(3, { kategori_id: 2 })])
-    const seritler = w.findAll('[data-test="kategori-seridi"]')
-    const stil = (n: number) => seritler[n]!.attributes('style') ?? ''
-    expect(stil(0)).toContain('color-mix')
-    expect(stil(0)).toContain('50%')
-    expect(stil(0)).toContain('emerald')
-    expect(stil(1)).toContain('surface-400')
+    const kutular = w.findAll('[data-test="tarih-kutusu"]')
+    const stil = (n: number) => kutular[n]!.attributes('style') ?? ''
+    expect(kutular[0]!.findAll('span').map((s) => s.text())).toEqual(['03', 'Kas'])
+    expect(stil(0)).toContain('--p-emerald-100')
+    expect(stil(0)).toContain('--p-emerald-700')
+    expect(stil(1)).toContain('--p-surface-100')
     expect(stil(2)).toContain('pink')
-    expect(stil(0)).not.toBe(stil(2))
+    expect(w.find('[data-test="kategori-seridi"]').exists()).toBe(false)
     expect(w.findAll('[data-test="kategori-adi"]').map((e) => e.text())).toEqual([
       'Market',
       'Giyim',
@@ -176,5 +178,130 @@ describe('Satıra basılı tutunca kategori', () => {
     expect(ad).toBe('Tatil')
     expect(['emerald', 'pink']).not.toContain(renk)
     expect(atama).toHaveBeenCalledWith(7, 9)
+  })
+})
+
+describe('Şirket geçmişi', () => {
+  const ornek: SirketGecmisi = {
+    aciklama: 'KAHVE 1',
+    kategori_id: 1,
+    toplam: 1900,
+    adet: 4,
+    ilk_donem: '2026-09',
+    aylik_ortalama: 633.33,
+    bu_ay: 700,
+    aylar: [
+      {
+        donem: '2026-11',
+        etiket: 'Kasım 2026',
+        toplam: 700,
+        adet: 3,
+        islemler: [
+          {
+            id: 4,
+            kart_id: 1,
+            islem_tarihi: '2026-11-08',
+            aciklama: 'KAHVE IADE',
+            tur: 'iade',
+            tutar: 100,
+            etki: -100,
+            taksit_no: null,
+            taksit_sayisi: null,
+          },
+          {
+            id: 1,
+            kart_id: 1,
+            islem_tarihi: '2026-11-05',
+            aciklama: 'KAHVE 1',
+            tur: 'harcama',
+            tutar: 500,
+            etki: 500,
+            taksit_no: null,
+            taksit_sayisi: null,
+          },
+          {
+            id: 2,
+            kart_id: 2,
+            islem_tarihi: '2026-11-02',
+            aciklama: 'KAHVE 1',
+            tur: 'harcama',
+            tutar: 300,
+            etki: 300,
+            taksit_no: 2,
+            taksit_sayisi: 6,
+          },
+        ],
+      },
+      {
+        donem: '2026-09',
+        etiket: 'Eylül 2026',
+        toplam: 1200,
+        adet: 1,
+        islemler: [
+          {
+            id: 3,
+            kart_id: 1,
+            islem_tarihi: '2026-09-10',
+            aciklama: 'KAHVE 1',
+            tur: 'harcama',
+            tutar: 1200,
+            etki: 1200,
+            taksit_no: null,
+            taksit_sayisi: null,
+          },
+        ],
+      },
+    ],
+  }
+  const stublar = {
+    ...genel,
+    stubs: { ...genel.stubs, Dialog: { template: '<div><slot name="header" /><slot /></div>' } },
+  }
+
+  beforeEach(() => {
+    gecmis.mockReset()
+    gecmis.mockResolvedValue(ornek)
+    setActivePinia(createPinia())
+    useAileStore().kategoriler = kategoriler
+  })
+
+  it('gidere giren satırda grafik düğmesi; ödeme satırında yok; düğme düzenlemeyi açmaz, geçmişi ister', async () => {
+    const { default: KartIslemListesi } = await import('@/components/aile/KartIslemListesi.vue')
+    const w = mount(KartIslemListesi, {
+      props: { islemler: [islem(1, { kategori_id: 1 }), islem(2, { tur: 'odeme' })] },
+      global: stublar,
+    })
+    const dugmeler = w.findAll('[data-test="sirket-gecmisi-dugmesi"]')
+    expect(dugmeler).toHaveLength(1)
+    await dugmeler[0]!.trigger('click')
+    await flushPromises()
+    expect(gecmis).toHaveBeenCalledWith(1)
+    expect(w.emitted('sec')).toBeUndefined()
+    expect(w.findAll('[data-test="gecmis-ay"]')).toHaveLength(2)
+  })
+
+  it('pencere: özet, eğri (Eylül–bu ay, boş ay dahil), ay başlıkları toplamlarıyla, iade eksi', async () => {
+    vi.useFakeTimers({ now: new Date('2026-11-13T10:00:00') })
+    const { default: Pencere } = await import('@/components/aile/SirketGecmisiDialog.vue')
+    const w = mount(Pencere, {
+      props: { visible: true, islem: islem(1, { kategori_id: 1 }) },
+      global: stublar,
+    })
+    await flushPromises()
+    const ozet = w.get('[data-test="gecmis-ozet"]').text().replace(/\s+/g, ' ')
+    expect(ozet).toContain('1.900,00')
+    expect(ozet).toContain('633,33')
+    expect(ozet).toContain('700,00')
+    expect(w.get('[data-test="gecmis-egri"]').attributes('aria-label')).toContain('3 ay')
+    expect(w.findAll('[data-test="gecmis-ay-toplam"]').map((e) => e.text())).toEqual([
+      '₺700,00',
+      '₺1.200,00',
+    ])
+    const kasim = w.findAll('[data-test="gecmis-ay"]')[0]!.text().replace(/\s+/g, ' ')
+    expect(kasim).toContain('Kasım 2026')
+    expect(kasim).toContain('−₺100,00')
+    expect(kasim).toContain('taksit 2/6')
+    expect(w.text()).toContain('ilki Eylül 2026')
+    vi.useRealTimers()
   })
 })

@@ -15,6 +15,19 @@ export function kategoriNoktasi(k: RenkliKategori | null | undefined): string {
 }
 
 /**
+ * İşlem satırındaki tarih kutusu: kategori renginin açık tonu zemin, koyu tonu yazı; kategorisizde nötr gri.
+ */
+export function kategoriKutusu(k: RenkliKategori | null | undefined): {
+  background: string
+  color: string
+} {
+  if (!k) return { background: 'var(--p-surface-100)', color: 'var(--p-surface-600)' }
+  const renk = kartRengi(k)
+
+  return { background: `var(--p-${renk}-100)`, color: `var(--p-${renk}-700)` }
+}
+
+/**
  * İşlem satırının solundaki çok yumuşak, yarı saydam (%50) gradient: kenarda kategori rengi, sağa doğru tamamen
  * saydama söner. Kategorisiz satır aynı yumuşaklıkta nötr gri.
  */

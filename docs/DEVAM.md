@@ -22,6 +22,10 @@ Yok: canlıda yayın bekleyen yok (son yayın 2026-11-15: dış yapay zekâ ekst
 
 Gerçek PDF'ler yalnızca bu bilgisayarda (`C:\Users\surbas\Downloads`: Garanti `bonusSureyya.pdf`, Yapı Kredi `Kredi_Karti_Hesap_Ozeti_…20261015…pdf`, Enpara `10.11.2026 tarihli Enpara…pdf`); doğrulama betiği scratchpad'de (`e2e/ekstre-altin.php`), depoya girmez. Komutlar: `cd backend && php artisan migrate && php artisan test`; `cd frontend && npm run type-check && npm run lint && npx vitest run`.
 
+## Şirket geçmişi + renkli tarih kutusu ([planlar/sirket-gecmisi.md](planlar/sirket-gecmisi.md))
+- Durum: kod bitti (2026-11-16); ön yüz 146/146 geçti; `SirketGecmisiTest` yazıldı, **çalıştırılmadı: MySQL kapalı**
+- **Sıradaki adım:** MySQL açılınca `php artisan test` (temettü testleriyle birlikte); geçerse ILERLEME'ye satır, bu kaydı sil, commit + push
+
 ## Temettü ve bedelsiz ([planlar/temettu.md](planlar/temettu.md))
 - Durum: başladı (2026-11-16)
 - Yapılanlar: migration `bag_turu`, `IslemTuru` temettu / bedelsiz, `Pozisyon`, `PortfoyHesabi` (temettu alanı, gecmis), `TemettuKaydi`, `IslemController`, `Islem::ozet`, demo verisi, `TemettuTest` (yazıldı, **çalıştırılmadı: MySQL kapalıydı**); arayüz (tipler, form, liste, pozisyon / özet / hesap başlığı, `temettu.spec.ts`); type-check, lint, vitest 134/134 geçti (bu makinede paralelde Bütçe testleri 5 sn zaman aşımına düşüyor; `--testTimeout=30000` ile hepsi geçiyor)
