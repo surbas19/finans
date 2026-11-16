@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import HizliIslemler from '@/components/HizliIslemler.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -30,6 +31,9 @@ function seciliMi(ad: string): boolean {
 
   return simdiki === ad
 }
+
+/** Hızlı işlemden kayıt yapılınca artar: açık sayfa yeniden kurulup güncel veriyi yükler */
+const yenileme = ref(0)
 
 async function cikis(): Promise<void> {
   await auth.cikis()
@@ -82,6 +86,7 @@ async function cikis(): Promise<void> {
           >
             <KisiResmi :ad="auth.kullanici?.ad_soyad ?? ''" :resim="auth.kullanici?.resim" />
           </RouterLink>
+          <HizliIslemler v-if="auth.kullanici" @kaydedildi="yenileme++" />
           <Button
             icon="pi pi-sign-out"
             text
@@ -103,7 +108,7 @@ async function cikis(): Promise<void> {
     >
       <!-- Yol (parametreler dahil) değişince sayfa yeniden kurulur; sorgu değişince kurulmaz (Özet'in ?hesap=) -->
       <RouterView v-slot="{ Component, route: r }">
-        <component :is="Component" :key="r.path" class="sayfa-giris" />
+        <component :is="Component" :key="`${r.path}:${yenileme}`" class="sayfa-giris" />
       </RouterView>
     </main>
 

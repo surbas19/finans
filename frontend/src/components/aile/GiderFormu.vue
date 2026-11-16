@@ -25,6 +25,8 @@ const props = defineProps<{
   gider?: DuzenliGider | null
   varsayilan?: Partial<DuzenliGiderGirdisi>
   kaynaklar: GiderKaynagi[]
+  /** Pencere başlığı (varsayılan: "Gider ekle" / "Gideri düzenle"); hızlı işlemlerde "Nakit harcama" */
+  baslik?: string
 }>()
 const gorunur = defineModel<boolean>('visible', { default: false })
 const emit = defineEmits<{ kaydedildi: [] }>()
@@ -125,7 +127,7 @@ function sil(): void {
 <template>
   <UygulamaPenceresi
     v-model:visible="gorunur"
-    :baslik="gider ? 'Gideri düzenle' : 'Gider ekle'"
+    :baslik="baslik ?? (gider ? 'Gideri düzenle' : 'Gider ekle')"
     :genislik="34"
   >
     <form class="flex flex-col gap-4" @submit.prevent="kaydet">
