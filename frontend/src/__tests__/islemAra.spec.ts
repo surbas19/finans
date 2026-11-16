@@ -68,6 +68,7 @@ async function kur() {
         KartIslemListesi: true,
         KartEtiketi: true,
         KategoriSecDialog: true,
+        KategorisizBolumu: true,
       },
     },
   })

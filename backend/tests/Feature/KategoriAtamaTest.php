@@ -103,6 +103,29 @@ class KategoriAtamaTest extends TestCase
         $this->assertSame('2026-11', $a->fresh()->rapor_donemi);
     }
 
+    public function test_kategori_listesi_kullanim_sayisini_verir(): void
+    {
+        $market = $this->kategori('Market');
+        $giyim = $this->kategori('Giyim');
+        foreach (['A1', 'A2', 'A3'] as $a) {
+            $this->satir($this->kartA, $a, '2026-11-03')->update(['kategori_id' => $market]);
+        }
+        $this->satir($this->kartA, 'B1', '2026-11-04')->update(['kategori_id' => $giyim]);
+        $this->satir($this->kartA, 'T1', '2026-11-05', null, KartIslemDurumu::Taslak)->update(['kategori_id' => $giyim]);   // taslak sayılmaz
+        $this->satir($this->kartA, 'K1', '2026-11-06');                                                                      // kategorisiz sayılmaz
+
+        $kat = collect($this->getJson('/api/v1/aile/kategoriler')->assertOk()->json('kategoriler'))->keyBy('ad');
+        $this->assertSame(3, $kat['Market']['kullanim']);
+        $this->assertSame(1, $kat['Giyim']['kullanim']);
+        $this->assertSame(0, $kat['Eğitim']['kullanim']);
+
+        // Başka hane kendi sayısını görür (bu hanenin kullanımı sızmaz)
+        $yabanci = User::factory()->create();
+        app(HaneYonetimi::class)->hazirla($yabanci);
+        $this->actingAs($yabanci);
+        $this->assertSame(0, collect($this->getJson('/api/v1/aile/kategoriler')->json('kategoriler'))->sum('kullanim'));
+    }
+
     public function test_uzun_aciklama_kelime_sinirinda_kisaltilir_ve_kisa_aciklamada_kural_olmaz(): void
     {
         $market = $this->kategori('Market');

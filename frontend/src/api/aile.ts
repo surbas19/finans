@@ -333,6 +333,8 @@ export interface Kategori {
   renk: string | null
   fatura: boolean
   sira: number
+  /** Kategorideki onaylı kart satırı sayısı (en çok kullanılana göre sıralamak için) */
+  kullanim?: number
   kurallar?: { id: number; desen: string }[]
 }
 

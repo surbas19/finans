@@ -53,10 +53,27 @@ export const useAileStore = defineStore('aile', () => {
     return yukleniyor
   }
 
+  /** Yalnız kategorileri (kullanım sayıları) yeniler; kategori verince çağrılır */
+  async function kategorileriYenile(): Promise<void> {
+    kategoriler.value = await aileApi.kategoriler()
+  }
+
   /** Oturum kapanınca / hane değişince */
   function bosalt(): void {
     hane.value = null
   }
+
+  /** Kategoriler en çok kullanılandan başlayarak (eşitlikte ayarlardaki sıra) */
+  const kategorilerKullanima = computed(() =>
+    [...kategoriler.value].sort(
+      (a, b) =>
+        (b.kullanim ?? 0) - (a.kullanim ?? 0) || a.sira - b.sira || a.ad.localeCompare(b.ad, 'tr'),
+    ),
+  )
+  /** Sık kullanılan 4 kategori (fatura kategorisi otomatik atanır, hızlı seçeneklerde yer almaz) */
+  const sikKategoriler = computed(() =>
+    kategorilerKullanima.value.filter((k) => !k.fatura).slice(0, 4),
+  )
 
   const uyeler = computed(() => hane.value?.uyeler ?? [])
   const aktifUyeler = computed(() => uyeler.value.filter((u) => u.aktif))
@@ -84,6 +101,9 @@ export const useAileStore = defineStore('aile', () => {
     uyeler,
     aktifUyeler,
     yukle,
+    kategorileriYenile,
+    kategorilerKullanima,
+    sikKategoriler,
     bosalt,
     uye,
     uyeAdi,

@@ -27,6 +27,14 @@ const yeniAd = ref('')
 const yeniRenk = ref<string | null>(null)
 
 const secili = computed(() => props.islem?.kategori_id ?? null)
+/** "Sık kullanılan" 4 kategori ve geri kalanı (ikisi de en çok kullanılandan başlar) */
+const sik = computed(() => aile.sikKategoriler)
+/** Geri kalanlar kullanım sırasıyla; otomatik atanan fatura kategorisi en sonda */
+const digerleri = computed(() => {
+  const kalan = aile.kategorilerKullanima.filter((k) => !sik.value.includes(k))
+
+  return [...kalan.filter((k) => !k.fatura), ...kalan.filter((k) => k.fatura)]
+})
 
 watch(gorunur, (a) => {
   if (!a) return
@@ -42,6 +50,8 @@ async function ata(kategoriId: number | null): Promise<void> {
     const sonuc = await aileApi.kartIslemiKategori(props.islem.id, kategoriId)
     toast.add({ severity: 'success', summary: sonuc.message, life: 3500 })
     gorunur.value = false
+    // Kullanım sayıları değişti: "sık kullanılan" sırası yenilenir
+    void aile.kategorileriYenile().catch(() => {})
     emit('degisti')
   } catch (e) {
     toast.add({ severity: 'error', summary: 'Yapılamadı', detail: hataMesaji(e), life: 5000 })
@@ -78,8 +88,38 @@ async function yeniEkle(): Promise<void> {
     <p class="mb-2 text-xs text-surface-500">
       Aynı açıklamalı bütün işlemler ve sonraki ekstreler bu kategoriye girer.
     </p>
+    <div v-if="sik.length" class="mb-3" data-test="kategori-sik">
+      <p class="bolum-etiketi mb-1.5">Sık kullanılan</p>
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          v-for="k in sik"
+          :key="k.id"
+          type="button"
+          class="relative flex items-center gap-2 overflow-hidden rounded-2xl px-3 py-3.5 text-left ring-1 transition-all active:scale-95"
+          :class="secili === k.id ? 'bg-surface-50 ring-surface-400' : 'ring-surface-200'"
+          :disabled="gonderiliyor"
+          data-test="kategori-secenegi"
+          @click="ata(k.id)"
+        >
+          <span
+            class="pointer-events-none absolute inset-y-0 left-0 w-14"
+            :style="{ background: kategoriSeridi(k) }"
+            aria-hidden="true"
+          />
+          <span
+            class="relative size-2.5 shrink-0 rounded-full"
+            :style="{ background: kategoriNoktasi(k) }"
+          />
+          <span class="relative min-w-0 flex-1 truncate font-semibold">{{ k.ad }}</span>
+          <i v-if="secili === k.id" class="pi pi-check relative text-primary-600" />
+        </button>
+      </div>
+    </div>
+    <p v-if="digerleri.length" class="bolum-etiketi mb-1.5">
+      {{ sik.length ? 'Diğerleri' : 'Kategoriler' }}
+    </p>
     <ul class="flex flex-col gap-1.5" data-test="kategori-listesi">
-      <li v-for="k in aile.kategoriler" :key="k.id">
+      <li v-for="k in digerleri" :key="k.id">
         <button
           type="button"
           class="relative flex w-full items-center gap-3 overflow-hidden rounded-2xl px-3 py-3 text-left ring-1 transition-all active:scale-[0.98]"

@@ -16,6 +16,7 @@ import AySecici from '@/components/aile/AySecici.vue'
 import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import KartIslemFormu from '@/components/aile/KartIslemFormu.vue'
 import KartIslemListesi from '@/components/aile/KartIslemListesi.vue'
+import KategorisizBolumu from '@/components/aile/KategorisizBolumu.vue'
 import KategoriSecDialog from '@/components/aile/KategoriSecDialog.vue'
 import {
   aileApi,
@@ -89,6 +90,11 @@ const suzgecVar = computed(
     ara.value.trim() !== '' ||
     ay.value !== null ||
     [uyeId, bankaId, kartId, kategoriId, tur].some((r) => r.value !== null),
+)
+
+/** Kategorisiz harcamalar (listedeki süzgece göre): hızlı kategori çipleriyle ayrı bölümde */
+const kategorisizler = computed(() =>
+  (islemler.value ?? []).filter((i) => i.kategori_id === null && i.tur === 'harcama'),
 )
 
 /** İşlemler kart başına gruplanır (grup başlığındaki gider / dönem sunucudan) */
@@ -342,39 +348,49 @@ function kategoriSec(i: KartIslemi): void {
         />
       </BosDurum>
     </section>
-    <section v-else class="kart p-2" data-test="kart-gruplari">
-      <Accordion
-        v-model:value="acik"
-        multiple
-        class="[&_.p-accordioncontent-wrapper]:min-w-0 [&_.p-accordioncontent-wrapper]:overflow-hidden"
-      >
-        <AccordionPanel v-for="g in gruplar" :key="g.kart" :value="String(g.kart)">
-          <AccordionHeader data-test="kart-grubu-baslik">
-            <span class="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2">
-              <span class="min-w-0">
-                <span class="block truncate font-semibold"><KartEtiketi :kart-id="g.kart" /></span>
-                <span
-                  v-if="g.bilgi?.ekstre_donemi"
-                  class="block text-xs font-normal text-surface-500"
-                  >{{ g.bilgi.ekstre_donemi }} ekstresi</span
-                >
+    <template v-else>
+      <KategorisizBolumu
+        v-if="kategorisizler.length"
+        :islemler="kategorisizler"
+        @degisti="yukle"
+        @diger="kategoriSec"
+      />
+      <section class="kart p-2" data-test="kart-gruplari">
+        <Accordion
+          v-model:value="acik"
+          multiple
+          class="[&_.p-accordioncontent-wrapper]:min-w-0 [&_.p-accordioncontent-wrapper]:overflow-hidden"
+        >
+          <AccordionPanel v-for="g in gruplar" :key="g.kart" :value="String(g.kart)">
+            <AccordionHeader data-test="kart-grubu-baslik">
+              <span class="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2">
+                <span class="min-w-0">
+                  <span class="block truncate font-semibold"
+                    ><KartEtiketi :kart-id="g.kart"
+                  /></span>
+                  <span
+                    v-if="g.bilgi?.ekstre_donemi"
+                    class="block text-xs font-normal text-surface-500"
+                    >{{ g.bilgi.ekstre_donemi }} ekstresi</span
+                  >
+                </span>
+                <span class="shrink-0 text-right">
+                  <span class="block text-sm font-semibold tabular-nums">{{
+                    tl(g.bilgi?.gider ?? null)
+                  }}</span>
+                  <span class="block text-xs font-normal text-surface-500"
+                    >{{ g.liste.length }} satır</span
+                  >
+                </span>
               </span>
-              <span class="shrink-0 text-right">
-                <span class="block text-sm font-semibold tabular-nums">{{
-                  tl(g.bilgi?.gider ?? null)
-                }}</span>
-                <span class="block text-xs font-normal text-surface-500"
-                  >{{ g.liste.length }} satır</span
-                >
-              </span>
-            </span>
-          </AccordionHeader>
-          <AccordionContent>
-            <KartIslemListesi :islemler="g.liste" @sec="sec" @kategori="kategoriSec" />
-          </AccordionContent>
-        </AccordionPanel>
-      </Accordion>
-    </section>
+            </AccordionHeader>
+            <AccordionContent>
+              <KartIslemListesi :islemler="g.liste" @sec="sec" @kategori="kategoriSec" />
+            </AccordionContent>
+          </AccordionPanel>
+        </Accordion>
+      </section>
+    </template>
 
     <KartIslemFormu
       v-model:visible="formAcik"

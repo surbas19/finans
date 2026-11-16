@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1\Aile;
 
+use App\Enums\KartIslemDurumu;
 use App\Http\Controllers\Controller;
 use App\Models\HarcamaKategorisi;
+use App\Models\KartIslemi;
 use App\Models\KategoriKurali;
 use App\Support\Metin;
 use Illuminate\Http\JsonResponse;
@@ -19,10 +21,15 @@ class KategoriController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        // Kullanım sayısı: kategorideki onaylı kart satırı (ön yüz "en çok kullanılan" sırası için)
+        $kullanim = KartIslemi::where('hane_id', $request->user()->hane_id)->where('durum', KartIslemDurumu::Onayli->value)
+            ->whereNotNull('kategori_id')->selectRaw('kategori_id, count(*) as adet')->groupBy('kategori_id')->pluck('adet', 'kategori_id');
+
         return response()->json([
             'kategoriler' => HarcamaKategorisi::hanenin($request->user())->with('kurallar')->orderBy('sira')->orderBy('ad')->get()
                 ->map(fn (HarcamaKategorisi $k): array => [
                     ...$k->ozet(),
+                    'kullanim' => (int) ($kullanim[$k->id] ?? 0),
                     'kurallar' => $k->kurallar->map(fn (KategoriKurali $r): array => ['id' => $r->id, 'desen' => $r->desen])->values(),
                 ]),
         ]);
