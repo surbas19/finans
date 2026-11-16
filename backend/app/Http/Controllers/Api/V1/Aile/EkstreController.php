@@ -234,6 +234,21 @@ class EkstreController extends Controller
         ]);
     }
 
+    /** Onayı kaldır: ekstre incelemeye döner (satırlar düzeltilir / fatura bağlanır, sonra yeniden onaylanır) */
+    public function onayiKaldir(Ekstre $ekstre): JsonResponse
+    {
+        Gate::authorize('hane-kaydi', $ekstre);
+        $this->analizSurmuyor($ekstre);
+        $sonuc = $this->aktarici->onayiKaldir($ekstre);
+
+        return response()->json([
+            'ekstre' => $ekstre->fresh()->ozet(),
+            'message' => "Onay kaldırıldı: {$sonuc['satir']} satır incelemeye döndü"
+                .($sonuc['fatura'] > 0 ? ", {$sonuc['fatura']} fatura bağı çözüldü" : '')
+                .'. Bütçe giderlerinden geçici olarak çıktı; düzeltip yeniden onaylayın.',
+        ]);
+    }
+
     /** Yapay zekâ analizi sürerken satırlar / dönem bilgileri değişmez, onaylanmaz (sonuç bunların üstüne yazılır) */
     private function analizSurmuyor(Ekstre $ekstre): void
     {

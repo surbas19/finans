@@ -129,6 +129,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::get('hesap-ekstreleri/{hesap}', [HesapEkstresiController::class, 'show'])->name('hesap-ekstreleri.show');
             Route::delete('hesap-ekstreleri/{hesap}', [HesapEkstresiController::class, 'destroy'])->name('hesap-ekstreleri.destroy');
             Route::post('ekstreler/{ekstre}/onayla', [EkstreController::class, 'onayla'])->name('ekstreler.onayla');
+            Route::post('ekstreler/{ekstre}/onayi-kaldir', [EkstreController::class, 'onayiKaldir'])->name('ekstreler.onayi-kaldir');
 
             Route::get('fatura-turleri', [SaglayiciController::class, 'turler'])->name('fatura-turleri.index');
             Route::post('fatura-turleri', [SaglayiciController::class, 'turEkle'])->name('fatura-turleri.store');

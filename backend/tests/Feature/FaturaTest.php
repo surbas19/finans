@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Ekstre;
 use App\Models\Fatura;
 use App\Models\FaturaTuru;
 use App\Models\HaneUyesi;
@@ -264,6 +265,67 @@ class FaturaTest extends TestCase
         $this->deleteJson("/api/v1/aile/fatura-turleri/{$internet}")->assertOk();
         $this->postJson('/api/v1/aile/faturalar', ['saglayici_id' => $this->s['iski'], 'tutar' => 10, 'durum' => 'bekliyor'])->assertCreated();
         $this->deleteJson("/api/v1/aile/saglayicilar/{$this->s['iski']}")->assertJsonValidationErrors('saglayici');
+    }
+
+    public function test_onay_kaldirilir_fatura_baglanir_yeniden_onaylanir(): void
+    {
+        // Önceden var olan bekleyen İSKİ faturası (onayda ona bağlanır, kaynağı elle kalır)
+        $bekleyen = $this->postJson('/api/v1/aile/faturalar', ['saglayici_id' => $this->s['iski'], 'hizmet_donemi' => '2026-09', 'tutar' => 300, 'durum' => 'bekliyor'])->assertCreated()->json('fatura.id');
+        $id = $this->ekstreYukle([
+            ['05.10.2026', 'ISKI SU FATURA 2026/09', '312,40'],           // otomatik: bekleyen faturaya bağlanır
+            ['08.10.2026', 'IGDAS OTOMATIK ODEME', '845,00'],             // orta: işaretlenmedi
+            ['12.10.2026', 'MIGROS KADIKOY', '500,00'],                   // fatura değil
+        ]);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.fatura', 1);
+        $this->assertSame($bekleyen, Fatura::where('kart_islemi_id', '!=', null)->value('id'));
+        $this->assertSame(0, Fatura::where('kaynak', 'ekstre')->count());
+        $ekstre = Ekstre::find($id);
+        $this->assertSame('onaylandi', $ekstre->durum->value);
+
+        // Onayı kaldır: satırlar taslak, parmak izi / rapor ayı temiz, bekleyen fatura ödenmedi'ye döner
+        $r = $this->postJson("/api/v1/aile/ekstreler/{$id}/onayi-kaldir")->assertOk()->assertJsonPath('ekstre.durum', 'taslak');
+        $this->assertStringContainsString('3 satır incelemeye döndü', $r->json('message'));
+        $this->assertStringContainsString('1 fatura bağı çözüldü', $r->json('message'));
+        $ekstre->refresh();
+        $this->assertSame('taslak', $ekstre->durum->value);
+        $this->assertNull($ekstre->onayli_kesim_tarihi);
+        $this->assertNull($ekstre->onaylandi_at);
+        $this->assertSame(0, $ekstre->islemler()->where('durum', 'onayli')->count());
+        $this->assertSame(0, $ekstre->islemler()->whereNotNull('parmak_izi')->count());
+        $this->assertSame(0, $ekstre->islemler()->whereNotNull('rapor_donemi')->count());
+        $this->assertSame('bekliyor', Fatura::find($bekleyen)->durum->value);
+        $this->assertNull(Fatura::find($bekleyen)->kart_islemi_id);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayi-kaldir")->assertJsonValidationErrors('ekstre');   // zaten onaylı değil
+
+        // Taslakta artık fatura bağlanabilir: Migros satırı İGDAŞ faturası olarak işaretlenir (Satır düzenleme açık)
+        $satirlar = collect($this->getJson("/api/v1/aile/ekstreler/{$id}")->json('satirlar'));
+        $igdas = $satirlar->firstWhere('aciklama', 'IGDAS OTOMATIK ODEME');
+        $this->putJson("/api/v1/aile/ekstreler/{$id}/satirlar/{$igdas['id']}", ['fatura' => ['secildi' => true, 'hizmet_donemi' => '2026-09']])->assertOk();
+
+        // Yeniden onay: aynı satırlar "zaten kayıtlı" demez; önceki iski kararı korunur, İGDAŞ yeni fatura olur
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk()->assertJsonPath('rapor.fatura', 2);
+        $this->assertSame(2, Fatura::whereNotNull('kart_islemi_id')->count());
+        $this->assertSame('ekstre', Fatura::where('saglayici_id', $this->s['igdas'])->value('kaynak'));
+        $this->assertSame(3, $ekstre->islemler()->where('durum', 'onayli')->count());
+
+        // Ekstreden gelen (kaynağı ekstre) fatura onay kaldırılınca silinir
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayi-kaldir")->assertOk();
+        $this->assertSame(0, Fatura::where('saglayici_id', $this->s['igdas'])->count());
+        $this->assertSame(1, Fatura::where('saglayici_id', $this->s['iski'])->count());
+    }
+
+    public function test_onay_kaldirma_dosyasiz_ekstrede_ve_baska_hanede_yok(): void
+    {
+        $id = $this->ekstreYukle([['05.10.2026', 'ISKI SU FATURA 2026/09', '312,40']]);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayla")->assertOk();
+        Ekstre::whereKey($id)->update(['banka_profili' => 'elle']);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayi-kaldir")->assertJsonValidationErrors('ekstre');
+        Ekstre::whereKey($id)->update(['banka_profili' => 'genel']);
+
+        $yabanci = User::factory()->create();
+        $this->actingAs($yabanci);
+        $this->postJson("/api/v1/aile/ekstreler/{$id}/onayi-kaldir")->assertForbidden();
+        $this->assertSame('onaylandi', Ekstre::find($id)->durum->value);
     }
 
     public function test_baska_hane_faturalari_ve_saglayicilari_goremez(): void

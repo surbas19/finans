@@ -6,6 +6,7 @@ use App\Enums\EkstreDurumu;
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
 use App\Models\Ekstre;
+use App\Models\Fatura;
 use App\Models\FaturaSaglayicisi;
 use App\Models\HarcamaKategorisi;
 use App\Models\Kart;
@@ -483,6 +484,52 @@ class EkstreIceAktarici
             ])->save();
 
             return ['eklenen' => $eklenen, 'atlanan' => $atlanan, 'tekrar' => $tekrar, 'fatura' => $fatura];
+        });
+    }
+
+    /**
+     * Onayı kaldırır: ekstre ve satırları incelemeye (taslak) döner; satırlar düzeltilir, fatura kararı değiştirilir,
+     * sonra yeniden onaylanır. Satırların parmak izi ve rapor ayı silinir (onayda yeniden yazılır). Faturalar:
+     * onayla birlikte açılmış (kaynağı "ekstre") faturalar silinir, önceden var olan faturalar "ödenmedi"ye döner;
+     * satırdaki fatura kararı (işaretli sağlayıcı) korunur, yeniden onayda aynı bağ kurulur. Dosyasız (yalnızca
+     * tutarla girilen) ekstrede satır incelemesi olmadığından kaldırılmaz. Hepsi ya da hiçbiri.
+     *
+     * @return array{satir: int, fatura: int}
+     *
+     * @throws ValidationException
+     */
+    public function onayiKaldir(Ekstre $ekstre): array
+    {
+        if ($ekstre->durum !== EkstreDurumu::Onaylandi) {
+            throw ValidationException::withMessages(['ekstre' => 'Bu ekstre zaten onaylı değil.']);
+        }
+        if ($ekstre->banka_profili === 'elle') {
+            throw ValidationException::withMessages(['ekstre' => 'Yalnızca tutarla girilen ekstrenin satır incelemesi yoktur; onayı kaldırılamaz, silip yeniden girin.']);
+        }
+
+        return DB::transaction(function () use ($ekstre): array {
+            $satir = 0;
+            $fatura = 0;
+            foreach ($ekstre->islemler()->where('durum', KartIslemDurumu::Onayli->value)->get() as $islem) {
+                foreach (Fatura::where('kart_islemi_id', $islem->id)->get() as $f) {
+                    if ($f->kaynak === 'ekstre') {
+                        $f->delete();
+                    } else {
+                        $this->faturalar->coz($f);
+                    }
+                    $fatura++;
+                }
+                $islem->forceFill(['durum' => KartIslemDurumu::Taslak, 'parmak_izi' => null, 'rapor_donemi' => null])->save();
+                $satir++;
+            }
+            $ekstre->forceFill([
+                'durum' => EkstreDurumu::Taslak,
+                'onayli_kesim_tarihi' => null,
+                'onaylayan_id' => null,
+                'onaylandi_at' => null,
+            ])->save();
+
+            return ['satir' => $satir, 'fatura' => $fatura];
         });
     }
 
