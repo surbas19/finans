@@ -26,6 +26,7 @@ import {
 } from '@/api/finans'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
+import { useSayfaBasligi } from '@/composables/useSayfaBasligi'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAuthStore } from '@/stores/auth'
 import { fiyat, miktar, tarihSaat, tl } from '@/utils/bicim'
@@ -40,6 +41,7 @@ type Ayrinti = Varlik & {
   izleniyor: boolean
 }
 const varlik = ref<Ayrinti | null>(null)
+useSayfaBasligi(() => varlik.value?.kod ?? varlik.value?.ad)
 /** Nakit ve bireysel emeklilik: fiyatı, grafiği, izlemesi yok */
 const sabit = computed(() => sabitFiyatli(varlik.value?.tur))
 const toplam = ref<Pozisyon | null>(null)

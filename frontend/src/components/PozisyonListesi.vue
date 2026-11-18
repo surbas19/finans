@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import type { MenuItem } from 'primevue/menuitem'
+import Menu from 'primevue/menu'
 import Tag from 'primevue/tag'
 import type { Pozisyon } from '@/api/finans'
 import { VARLIK_TURLERI } from '@/api/finans'
@@ -35,6 +38,29 @@ function altSatir(p: Pozisyon): string {
     props.hesapAdi?.(p) || ((p.hesap_sayisi ?? 0) > 1 ? `${p.hesap_sayisi} hesapta` : null)
 
   return [ilk, hesap].filter(Boolean).join(' · ')
+}
+
+/** Telefondaki ⋯ menüsü: Aktar (BES hariç) ve genel toplama dahil / hariç */
+const eylemMenusu = ref<InstanceType<typeof Menu> | null>(null)
+const eylemler = ref<MenuItem[]>([])
+function eylemAc(olay: Event, p: Pozisyon): void {
+  eylemler.value = [
+    ...(p.varlik.tur !== 'bes'
+      ? [
+          {
+            label: 'Başka hesaba aktar',
+            icon: 'pi pi-arrow-right-arrow-left',
+            command: () => emit('aktar', p),
+          },
+        ]
+      : []),
+    {
+      label: p.dahil === false ? 'Genel toplama ekle' : 'Genel toplamdan çıkar',
+      icon: p.dahil === false ? 'pi pi-eye' : 'pi pi-eye-slash',
+      command: () => emit('dahilDegistir', p, p.dahil === false),
+    },
+  ]
+  eylemMenusu.value?.toggle(olay)
 }
 </script>
 
@@ -111,11 +137,20 @@ function altSatir(p: Pozisyon): string {
           </template>
         </span>
       </RouterLink>
-      <!-- Satır eylemleri: telefonda alt alta, geniş ekranda yan yana -->
-      <div
+      <!-- Telefonda satır eylemleri tek ⋯ düğmesinde (44 px dokunma alanı) -->
+      <button
         v-if="degistirilebilir && p.hesap_id !== null"
-        class="flex shrink-0 flex-col sm:flex-row"
+        type="button"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-surface-500 hover:bg-surface-100 sm:hidden"
+        :aria-label="`${p.varlik.ad} eylemleri`"
+        aria-haspopup="true"
+        data-test="satir-eylemleri"
+        @click="eylemAc($event, p)"
       >
+        <i class="pi pi-ellipsis-v" />
+      </button>
+      <!-- Geniş ekranda satır eylemleri yan yana -->
+      <div v-if="degistirilebilir && p.hesap_id !== null" class="hidden shrink-0 sm:flex">
         <!-- Başka hesaba aktar (bireysel emeklilik aktarılamaz) -->
         <button
           v-if="p.varlik.tur !== 'bes'"
@@ -152,4 +187,5 @@ function altSatir(p: Pozisyon): string {
       </div>
     </li>
   </ul>
+  <Menu ref="eylemMenusu" :model="eylemler" popup data-test="satir-eylem-menusu" />
 </template>

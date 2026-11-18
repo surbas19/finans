@@ -11,6 +11,7 @@ import TabList from 'primevue/tablist'
 import TabPanel from 'primevue/tabpanel'
 import TabPanels from 'primevue/tabpanels'
 import Tabs from 'primevue/tabs'
+import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useToast } from 'primevue/usetoast'
@@ -56,6 +57,8 @@ const yeniSifre = ref('')
 const sifreFormu = useFormGonder()
 
 const haneler = ref<YonetimHanesi[]>([])
+/** İlk yükleme bitene kadar iskelet (boş liste "yok" gibi görünmesin) */
+const yuklendi = ref(false)
 
 async function yukle(): Promise<void> {
   const [k, d, h] = await Promise.all([
@@ -66,6 +69,7 @@ async function yukle(): Promise<void> {
   kullanicilar.value = k
   kaynaklar.value = d
   haneler.value = h
+  yuklendi.value = true
 }
 
 /** Hane seçenekleri: mevcut haneler (içindekilerle) + yeni hane */
@@ -143,7 +147,11 @@ async function sifreKaydet(): Promise<void> {
 <template>
   <div>
     <SayfaBasligi baslik="Yönetim" />
-    <section class="kart p-2 sm:p-4">
+    <div v-if="!yuklendi" class="flex flex-col gap-3">
+      <Skeleton height="3rem" border-radius="1rem" />
+      <Skeleton v-for="n in 3" :key="n" height="4.5rem" border-radius="1.25rem" />
+    </div>
+    <section v-else class="kart p-2 sm:p-4">
       <Tabs v-model:value="sekme">
         <TabList>
           <Tab value="kaynaklar">Fiyat kaynakları</Tab>

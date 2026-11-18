@@ -65,8 +65,19 @@ body {
   }
 }
 
-/* Zemin: açık gri üzerinde köşelerden gelen hafif turkuaz ışık; kartlar bunun üzerinde beyaz durur. */
+/*
+ * Zemin: açık gri üzerinde köşelerden gelen hafif turkuaz ışık; kartlar bunun üzerinde beyaz durur. Işık sabit bir
+ * katmanda (`background-attachment: fixed` iOS'ta çalışmaz, Android'de kaydırırken takılır).
+ */
 body {
+  background: var(--p-surface-50);
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(
       60rem 40rem at 0% 0%,
@@ -79,7 +90,6 @@ body {
       transparent 70%
     ),
     var(--p-surface-50);
-  background-attachment: fixed;
 }
 
 /* Ortak kart: bütün içerik kutuları. Yuvarlak köşe, ince çerçeve, çok hafif gölge. */

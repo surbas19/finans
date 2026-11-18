@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useToast } from 'primevue/usetoast'
@@ -32,8 +33,12 @@ const yeniSaglayici = ref({
   desen: '',
 })
 
+/** Hane kayıtları gelene kadar iskelet (boş listeler "yok" gibi görünmesin) */
+const hazir = ref(false)
+
 onMounted(async () => {
   await aile.yukle()
+  hazir.value = true
   haneAdi.value = aile.hane?.hane.ad ?? ''
   yeniSaglayici.value.fatura_turu_id = aile.turler[0]?.id ?? null
 })
@@ -125,7 +130,10 @@ async function desenEkle(s: Saglayici): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div v-if="!hazir" class="flex flex-col gap-4">
+    <Skeleton v-for="n in 3" :key="n" height="9rem" border-radius="1.5rem" />
+  </div>
+  <div v-else class="flex flex-col gap-4">
     <!-- Hane ve üyeler -->
     <section class="kart p-4 sm:p-5">
       <h2 class="bolum-etiketi mb-3">Hane</h2>

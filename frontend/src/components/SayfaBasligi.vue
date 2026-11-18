@@ -20,7 +20,10 @@ defineProps<{
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="min-w-0" :class="{ 'flex-1': $slots.baslik }">
         <slot name="baslik">
-          <h2 v-if="baslik" class="text-lg font-semibold text-surface-900">{{ baslik }}</h2>
+          <!-- Telefonda sayfa adı üst çubukta; burada yalnız geniş ekranda -->
+          <h2 v-if="baslik" class="hidden text-lg font-semibold text-surface-900 md:block">
+            {{ baslik }}
+          </h2>
         </slot>
         <p v-if="aciklama" class="text-sm text-surface-500">{{ aciklama }}</p>
       </div>

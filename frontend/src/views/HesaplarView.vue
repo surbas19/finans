@@ -11,6 +11,7 @@ import { finansApi, HESAP_TURLERI, type HesapOzeti } from '@/api/finans'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useAuthStore } from '@/stores/auth'
 import { tl } from '@/utils/bicim'
+import { hesapRengi } from '@/utils/halka'
 
 const auth = useAuthStore()
 const hesaplar = ref<HesapOzeti[] | null>(null)
@@ -57,7 +58,7 @@ onMounted(yukle)
         <div class="flex items-center gap-3">
           <span
             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white"
-            :style="{ background: `var(--p-${h.renk ?? 'teal'}-500)` }"
+            :style="{ background: `var(${hesapRengi(h)})` }"
           >
             <i :class="HESAP_TURLERI[h.tur].ikon" />
           </span>

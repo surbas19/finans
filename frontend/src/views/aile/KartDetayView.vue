@@ -17,6 +17,7 @@ import KartIslemFormu from '@/components/aile/KartIslemFormu.vue'
 import KartIslemListesi from '@/components/aile/KartIslemListesi.vue'
 import { aileApi, type Ekstre, type Fatura, type Kart, type KartIslemi } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
+import { useSayfaBasligi } from '@/composables/useSayfaBasligi'
 import { useAileStore } from '@/stores/aile'
 import { tarih, tl } from '@/utils/bicim'
 import { kartRengiCss } from '@/utils/kartRengi'
@@ -31,6 +32,7 @@ const confirm = useConfirm()
 const toast = useToast()
 
 const kart = ref<Kart | null>(null)
+useSayfaBasligi(() => kart.value?.ad)
 const ekstreler = ref<Ekstre[]>([])
 const islemler = ref<KartIslemi[] | null>(null)
 const faturalar = ref<Fatura[]>([])

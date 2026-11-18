@@ -34,8 +34,10 @@ import {
   type VarlikTuru,
 } from '@/api/finans'
 import { hataMesaji } from '@/api/http'
+import { useSayfaBasligi } from '@/composables/useSayfaBasligi'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { tl } from '@/utils/bicim'
+import { hesapRengi } from '@/utils/halka'
 
 const props = defineProps<{ id: number }>()
 const router = useRouter()
@@ -43,6 +45,7 @@ const confirm = useConfirm()
 const toast = useToast()
 
 const hesap = ref<HesapOzeti | null>(null)
+useSayfaBasligi(() => hesap.value?.ad)
 const pozisyonlar = ref<Pozisyon[]>([])
 const dagilim = ref<DagilimDilimi[]>([])
 const islemler = ref<Islem[]>([])
@@ -136,7 +139,7 @@ function hesabiSil(): void {
             <span
               v-if="hesap"
               class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg text-white"
-              :style="{ background: `var(--p-${hesap.renk ?? 'teal'}-500)` }"
+              :style="{ background: `var(${hesapRengi(hesap)})` }"
             >
               <i :class="HESAP_TURLERI[hesap.tur].ikon" />
             </span>
