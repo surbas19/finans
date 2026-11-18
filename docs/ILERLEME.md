@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-18) Ev nakdi kasası + giderde Ev / Banka seçimi + Borç / Alacak defteri (Bütçe sekmesi, hızlı işlem). 2 yeni migration. Testler: arka uç 269, ön yüz 174.
 - (2026-11-16) Hızlı işlemler menüsü (üst çubukta ⚡: nakit harcama, tasarruf, ekstre yükle, gelir ekle; kayıt sonrası açık sayfa yenilenir) ve ay çarkında fare tekerleği bir tıkta bir ay ([planlar/hizli-islemler.md](planlar/hizli-islemler.md)). Nakit harcama sade hızlı formla (tutar, açıklama, kategori çipleri, tarih) girilir. Testler: ön yüz 166.
 - (2026-11-16) Ekstre: "Onayı kaldır" (onaylı ekstre incelemeye döner, faturalar çözülür, düzeltip yeniden onaylanır; fatura bağlamanın yolu) ve fatura önerileri ekstre ekranının en üstünde. Testler: ön yüz 154, FaturaTest 11.
 - (2026-11-16) Bütçe → İşlemler: "Kategorisiz harcamalar" bölümü + tek dokunuşla en çok kullanılan kategori çipleri; kategoriler kullanım sayısına göre sıralı, seçicide "Sık kullanılan" çipleri. Testler: ön yüz 151, KategoriAtamaTest.
