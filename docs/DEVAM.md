@@ -4,7 +4,7 @@
 
 
 ## Yayın bekleyenler
-Yok (2026-11-18, kullanıcı bildirdi): ay çarkı, şirket geçmişi + renkli tarih kutusu, ekstre ayı = son ödeme ayı, temettü + bedelsiz ve 16–18 Kasım işleri (onayı kaldır, hızlı işlemler, kategorisiz bölümü) canlıda.
+Yok (2026-11-18): canlıda ab7aecd (koyu tema, yeni gezinme, Portföy Özet, ekstre çöp kutusu dahil).
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
