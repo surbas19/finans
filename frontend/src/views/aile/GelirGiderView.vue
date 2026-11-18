@@ -33,7 +33,7 @@ watch(sira, (i) => {
 <template>
   <div class="flex flex-col gap-3">
     <!-- Ay çarkı: iki panelin üstünde ortak -->
-    <AySecici v-model="donem" :ileri-sinir="null" />
+    <AySecici v-model="donem" :ileri-sinir="null" class="ay-carki-yapiskan" />
 
     <KaydirmaliPaneller
       v-model:sira="sira"

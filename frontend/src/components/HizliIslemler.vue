@@ -52,6 +52,8 @@ const HIZLI_ISLEMLER: HizliIslem[] = [
   },
 ]
 
+/** `dugmesiz`: kendi ⚡ düğmesi çizilmez; menüyü dışarıdaki düğme (alt çubuktaki + ) `ac` ile açar */
+defineProps<{ dugmesiz?: boolean }>()
 const emit = defineEmits<{ kaydedildi: [] }>()
 
 const aile = useAileStore()
@@ -68,6 +70,7 @@ const yukleniyor = ref<HizliIslemAdi | null>(null)
 function ac(olay: Event): void {
   menu.value?.toggle(olay)
 }
+defineExpose({ ac })
 
 /** Seçilen işlemin formu: gereken veri yüklenir (önbellekli), sonra pencere açılır */
 async function sec(islem: HizliIslem): Promise<void> {
@@ -95,6 +98,7 @@ async function sec(islem: HizliIslem): Promise<void> {
 
 <template>
   <Button
+    v-if="!dugmesiz"
     icon="pi pi-bolt"
     text
     rounded
@@ -106,11 +110,7 @@ async function sec(islem: HizliIslem): Promise<void> {
   />
   <Popover ref="menu" class="hizli-menu" data-test="hizli-menu">
     <div class="flex w-60 flex-col gap-0.5" role="menu" aria-label="Hızlı işlemler">
-      <p
-        class="px-2 pt-0.5 pb-1.5 text-[11px] font-bold tracking-widest text-surface-500 uppercase"
-      >
-        Hızlı işlemler
-      </p>
+      <p class="px-2 pt-0.5 pb-1.5 text-sm font-bold text-surface-900">Hızlı işlemler</p>
       <button
         v-for="i in HIZLI_ISLEMLER"
         :key="i.ad"

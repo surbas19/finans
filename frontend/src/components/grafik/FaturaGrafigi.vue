@@ -68,7 +68,7 @@ const seriler = computed<ZamanSerisi[]>(() => {
       :aciklama="`${yil} yılı aylık fatura toplamı ve fatura türleri`"
       bos-metin="Bu yıl için fatura yok."
     />
-    <p v-if="gorunum === 'oran'" class="mt-2 text-[11px] text-surface-500">
+    <p v-if="gorunum === 'oran'" class="mt-2 text-xs text-surface-500">
       Oran: o ayın fatura tutarı / o ayın geliri. Geliri girilmemiş ayda oran gösterilmez.
     </p>
   </DonemGrafikKarti>

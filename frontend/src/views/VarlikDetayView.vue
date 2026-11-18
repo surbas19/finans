@@ -136,7 +136,7 @@ async function elleKaydet(): Promise<void> {
                   v-if="varlik.gecikmeli"
                   value="~15 dk gecikmeli"
                   severity="secondary"
-                  class="!text-[10px]"
+                  class="!text-xs"
                 />
               </p>
             </div>

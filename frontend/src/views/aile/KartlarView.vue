@@ -105,7 +105,11 @@ function sonEkstre(kartId: number): Ekstre | undefined {
 <template>
   <div class="flex flex-col gap-4">
     <!-- Ekstre dönemi çarkı: kartlardaki ekstre borcu / son ödeme seçilen dönemin ekstresinden gelir -->
-    <div v-if="enYeni && aile.kartlar.length" data-test="kart-donem-secici">
+    <div
+      v-if="enYeni && aile.kartlar.length"
+      class="ay-carki-yapiskan"
+      data-test="kart-donem-secici"
+    >
       <AySecici v-model="donemModeli" :ileri-sinir="enYeni">
         <template #ek>
           <button
@@ -195,7 +199,7 @@ function sonEkstre(kartId: number): Ekstre | undefined {
                 <span class="truncate text-xs font-semibold tracking-wide uppercase opacity-90">{{
                   bankaAdi(k)
                 }}</span>
-                <span v-if="!k.aktif" class="rounded-full bg-white/25 px-2 py-0.5 text-[11px]"
+                <span v-if="!k.aktif" class="rounded-full bg-white/25 px-2 py-0.5 text-xs"
                   >Pasif</span
                 >
                 <i v-else class="pi pi-credit-card text-lg opacity-90" />
@@ -208,7 +212,7 @@ function sonEkstre(kartId: number): Ekstre | undefined {
               </span>
               <span class="mt-4 flex min-h-[2.75rem] items-end justify-between gap-3">
                 <span v-if="sonEkstre(k.id)">
-                  <span class="block text-[11px] opacity-80" data-test="kart-ekstre-etiketi"
+                  <span class="block text-xs opacity-80" data-test="kart-ekstre-etiketi"
                     >{{ donemEtiketi(aktifDonem) }} ekstre borcu</span
                   >
                   <span class="block text-lg font-semibold tabular-nums">{{
@@ -218,9 +222,7 @@ function sonEkstre(kartId: number): Ekstre | undefined {
                 <span v-else class="text-xs opacity-80">{{
                   ekstreler?.length ? 'Bu dönem ekstre yok' : 'Henüz ekstre yok'
                 }}</span>
-                <span
-                  v-if="sonEkstre(k.id)?.son_odeme_tarihi"
-                  class="text-right text-[11px] opacity-90"
+                <span v-if="sonEkstre(k.id)?.son_odeme_tarihi" class="text-right text-xs opacity-90"
                   >son ödeme<br />{{ tarih(sonEkstre(k.id)!.son_odeme_tarihi) }}</span
                 >
               </span>

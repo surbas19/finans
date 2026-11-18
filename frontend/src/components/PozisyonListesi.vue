@@ -126,7 +126,7 @@ function altSatir(p: Pozisyon): string {
           @click="emit('aktar', p)"
         >
           <i class="pi pi-arrow-right-arrow-left text-base" />
-          <span class="hidden text-[10px] leading-none font-semibold sm:block">Aktar</span>
+          <span class="hidden text-xs leading-none font-semibold sm:block">Aktar</span>
         </button>
         <!-- Genel toplama dahil: kapalıysa satır toplamlara ve zekâta girmez -->
         <button
@@ -145,7 +145,7 @@ function altSatir(p: Pozisyon): string {
             :class="p.dahil === false ? 'pi pi-eye-slash' : 'pi pi-eye text-primary-600'"
             class="text-base"
           />
-          <span class="hidden text-[10px] leading-none font-semibold sm:block">{{
+          <span class="hidden text-xs leading-none font-semibold sm:block">{{
             p.dahil === false ? 'Hariç' : 'Dahil'
           }}</span>
         </button>

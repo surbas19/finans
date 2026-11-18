@@ -217,7 +217,7 @@ function kategoriSec(i: KartIslemi): void {
 <template>
   <div class="flex flex-col gap-4">
     <!-- Ekstre dönemi çarkı: "Tümü" seçiliyken "Tüm dönemler" yazar, çarkı oynatınca bir dönem seçilir -->
-    <div data-test="donem-secici">
+    <div class="ay-carki-yapiskan" data-test="donem-secici">
       <AySecici v-model="donemModeli" :ileri-sinir="enYeni ?? undefined" :bos="donem === null">
         <template #ek>
           <button
@@ -252,7 +252,7 @@ function kategoriSec(i: KartIslemi): void {
       data-test="ay-cipi"
       @click="ay = null"
     >
-      {{ donemEtiketi(ay) }} (Bütçe Özet ayı) <i class="pi pi-times text-[10px]" />
+      {{ donemEtiketi(ay) }} (Bütçe Özet ayı) <i class="pi pi-times text-xs" />
     </button>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
       <Select
@@ -318,13 +318,13 @@ function kategoriSec(i: KartIslemi): void {
         <p class="text-xs text-surface-500">Satır</p>
         <p class="font-semibold tabular-nums">{{ toplam.adet }}</p>
       </div>
-      <p class="col-span-3 text-[11px] text-surface-500" data-test="islem-not">
+      <p class="col-span-3 text-xs text-surface-500" data-test="islem-not">
         Gider: harcama ve faiz / ücret eklenir, iade düşülür. Kart borcu ödemesi, transfer ve nakit
         avans gider sayılmaz (ekstredeki harcamalar zaten sayıldı).
       </p>
     </section>
-    <p class="-mt-2 text-center text-[11px] text-surface-400" data-test="uzun-basma-ipucu">
-      <i class="pi pi-tag text-[10px]" /> Kategori vermek için işleme basılı tutun
+    <p class="-mt-2 text-center text-xs text-surface-400" data-test="uzun-basma-ipucu">
+      <i class="pi pi-tag text-xs" /> Kategori vermek için işleme basılı tutun
     </p>
 
     <div v-if="islemler === null" class="kart flex flex-col gap-2 p-4">

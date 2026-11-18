@@ -74,7 +74,7 @@ function tikla(i: KartIslemi): void {
           data-test="tarih-kutusu"
         >
           <span class="text-sm font-bold">{{ gun(i.islem_tarihi) }}</span>
-          <span class="mt-0.5 text-[10px] font-semibold">{{ ay(i.islem_tarihi) }}</span>
+          <span class="mt-0.5 text-xs font-semibold">{{ ay(i.islem_tarihi) }}</span>
         </span>
         <span class="min-w-0 flex-1">
           <span class="block truncate font-semibold text-surface-900">{{ i.aciklama }}</span>

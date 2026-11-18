@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import AltSekmeler from '@/components/AltSekmeler.vue'
 
 /**
- * Bütçe bölümü: üstte sekmeler (Özet · Gelir / Gider · Tasarruf · Kartlar · İşlemler · Faturalar · Ayarlar), altında sayfa.
- * Telefonda sekmeler yana kayar.
+ * Bütçe bölümü: üstte yapışkan alt sekmeler (Özet · Gelir / Gider · Tasarruf · Kartlar · İşlemler · Faturalar), sağda
+ * ⚙ Bütçe ayarları; altında sayfa. Sayfaların ay çarkı (AySecici) sekmelerin hemen altında yapışkan durur.
  */
 const route = useRoute()
 
 const SEKMELER = [
-  { ad: 'aile', etiket: 'Özet', ikon: 'pi pi-chart-bar' },
-  { ad: 'aile-gelir-gider', etiket: 'Gelir / Gider', ikon: 'pi pi-arrow-right-arrow-left' },
-  { ad: 'aile-tasarruf', etiket: 'Tasarruf', ikon: 'pi pi-wallet' },
-  { ad: 'aile-kartlar', etiket: 'Kartlar', ikon: 'pi pi-credit-card' },
-  { ad: 'aile-islemler', etiket: 'İşlemler', ikon: 'pi pi-list' },
-  { ad: 'aile-faturalar', etiket: 'Faturalar', ikon: 'pi pi-bolt' },
-  { ad: 'aile-ayarlar', etiket: 'Ayarlar', ikon: 'pi pi-sliders-h' },
+  { ad: 'aile', etiket: 'Özet' },
+  { ad: 'aile-gelir-gider', etiket: 'Gelir / Gider' },
+  { ad: 'aile-tasarruf', etiket: 'Tasarruf' },
+  { ad: 'aile-kartlar', etiket: 'Kartlar' },
+  { ad: 'aile-islemler', etiket: 'İşlemler' },
+  { ad: 'aile-faturalar', etiket: 'Faturalar' },
 ] as const
 
 /** Kart detayı, ekstreler (aktarım merkezi, inceleme, banka hesabı önizlemesi) Kartlar sekmesindedir */
@@ -35,26 +35,23 @@ function seciliMi(ad: string): boolean {
 
 <template>
   <div class="flex flex-col gap-4">
-    <nav
-      class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      aria-label="Bütçe bölümleri"
-    >
-      <RouterLink
-        v-for="s in SEKMELER"
-        :key="s.ad"
-        :to="{ name: s.ad }"
-        class="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors"
-        :class="
-          seciliMi(s.ad)
-            ? 'bg-primary-600 text-white'
-            : 'bg-white text-surface-600 ring-1 ring-surface-200'
-        "
-        :aria-current="seciliMi(s.ad) ? 'page' : undefined"
-      >
-        <i :class="s.ikon" class="text-xs" />
-        {{ s.etiket }}
-      </RouterLink>
-    </nav>
+    <AltSekmeler :sekmeler="SEKMELER" :secili-mi="seciliMi" etiket="Bütçe bölümleri">
+      <template #sag>
+        <RouterLink
+          :to="{ name: 'aile-ayarlar' }"
+          class="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-surface-100"
+          :class="
+            route.name === 'aile-ayarlar' ? 'bg-primary-50 text-primary-700' : 'text-surface-500'
+          "
+          aria-label="Bütçe ayarları"
+          title="Bütçe ayarları"
+          :aria-current="route.name === 'aile-ayarlar' ? 'page' : undefined"
+          data-test="butce-ayarlar"
+        >
+          <i class="pi pi-cog" />
+        </RouterLink>
+      </template>
+    </AltSekmeler>
     <RouterView />
   </div>
 </template>

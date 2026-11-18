@@ -131,15 +131,15 @@ const gunAy = (t: string | null): string =>
       <template v-else>
         <div class="grid grid-cols-3 gap-2" data-test="gecmis-ozet">
           <div class="rounded-2xl bg-surface-50 p-2.5">
-            <span class="block text-[11px] text-surface-500">Toplam</span>
+            <span class="block text-xs text-surface-500">Toplam</span>
             <span class="block text-sm font-bold tabular-nums">{{ tl(veri.toplam) }}</span>
           </div>
           <div class="rounded-2xl bg-surface-50 p-2.5">
-            <span class="block text-[11px] text-surface-500">Aylık ort.</span>
+            <span class="block text-xs text-surface-500">Aylık ort.</span>
             <span class="block text-sm font-bold tabular-nums">{{ tl(veri.aylik_ortalama) }}</span>
           </div>
           <div class="rounded-2xl bg-surface-50 p-2.5">
-            <span class="block text-[11px] text-surface-500">Bu ay</span>
+            <span class="block text-xs text-surface-500">Bu ay</span>
             <span class="block text-sm font-bold tabular-nums">{{ tl(veri.bu_ay) }}</span>
           </div>
         </div>

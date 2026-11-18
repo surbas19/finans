@@ -29,12 +29,12 @@ const emit = defineEmits<{ ekle: [donem: ZekatDonemi]; sil: [odeme: ZekatOdemesi
             <span class="text-sm font-semibold">{{ d.etiket }}</span>
             <span
               v-if="d.guncel"
-              class="rounded-full bg-primary-100 px-2 py-0.5 text-[11px] font-semibold text-primary-800"
+              class="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-800"
               >Bu yıl</span
             >
             <span
               v-if="d.kalan === 0 && d.gereken !== null && d.gereken > 0"
-              class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
+              class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800"
               data-test="zekat-tamam"
               >Tamamlandı</span
             >

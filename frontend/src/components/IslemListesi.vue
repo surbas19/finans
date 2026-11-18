@@ -163,7 +163,7 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
               <span v-if="s.islem.not" class="mt-0.5 block truncate text-xs text-surface-400">{{
                 s.islem.not
               }}</span>
-              <span class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-surface-400">
+              <span class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-surface-400">
                 <IslemNo :no="s.islem.no" />
                 <span>{{ TARIH_ETIKETI[s.islem.tur] }}: {{ tarih(s.islem.tarih) }}</span>
                 <span v-if="s.islem.islem_zamani" data-test="islem-zamani"
@@ -225,7 +225,7 @@ function ayrintiMetni(i: Islem, tarihli: boolean): string {
             <div v-if="s.islem.not" class="mt-0.5 truncate text-xs text-surface-400">
               {{ s.islem.not }}
             </div>
-            <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-surface-400">
+            <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-surface-400">
               <IslemNo :no="s.islem.no" />
               <span>{{ TARIH_ETIKETI[s.islem.tur] }}: {{ tarih(s.islem.tarih) }}</span>
               <span v-if="s.islem.islem_zamani" data-test="islem-zamani"

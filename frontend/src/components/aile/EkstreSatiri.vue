@@ -114,7 +114,7 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
         <!-- PDF'deki satır: karşılaştırma için -->
         <p
           v-if="satir.ham_metin"
-          class="mt-1 truncate font-mono text-[11px] text-surface-400"
+          class="mt-1 truncate font-mono text-xs text-surface-400"
           :title="satir.ham_metin"
         >
           {{ satir.ham_metin }}
@@ -244,7 +244,7 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
         {{ aile.saglayici(oneri?.saglayici_id)?.ad ?? 'Sağlayıcı yok' }} ·
         {{ donemEtiketi(oneri?.hizmet_donemi) }}
       </p>
-      <p v-if="oneri && oneri.hizmet_donemi && duzenlenebilir" class="text-[11px] text-surface-500">
+      <p v-if="oneri && oneri.hizmet_donemi && duzenlenebilir" class="text-xs text-surface-500">
         Dönem
         {{
           oneri.donem_kaynagi === 'aciklama'

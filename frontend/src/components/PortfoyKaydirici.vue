@@ -221,7 +221,7 @@ onBeforeUnmount(() => {
               <div
                 class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
               >
-                <span class="text-[11px] leading-tight text-surface-500">{{ s.merkez.ust }}</span>
+                <span class="text-xs leading-tight text-surface-500">{{ s.merkez.ust }}</span>
                 <span class="text-sm font-bold text-surface-900 tabular-nums">{{
                   s.merkez.alt
                 }}</span>

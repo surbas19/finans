@@ -44,7 +44,7 @@ const seriler = computed<ZamanSerisi[]>(() => {
       :aciklama="`${yil} yılı kartların aylık dönem sonu ödemeleri`"
       bos-metin="Bu yıl için onaylı ekstre yok."
     />
-    <p class="mt-2 text-[11px] text-surface-500">
+    <p class="mt-2 text-xs text-surface-500">
       Dönem sonu ödeme: ayında kesilen onaylı ekstrenin dönem borcu.
     </p>
   </DonemGrafikKarti>

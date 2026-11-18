@@ -116,8 +116,8 @@ async function kodlaEklendi(v: Varlik): Promise<void> {
           <span class="min-w-0 flex-1">
             <span class="flex items-center gap-2">
               <VarlikAdi :kod="v.kod" :ad="v.ad" />
-              <Tag v-if="v.gecikmeli" value="gecikmeli" severity="secondary" class="!text-[10px]" />
-              <Tag v-if="v.fiyat?.elle" value="elle" severity="warn" class="!text-[10px]" />
+              <Tag v-if="v.gecikmeli" value="gecikmeli" severity="secondary" class="!text-xs" />
+              <Tag v-if="v.fiyat?.elle" value="elle" severity="warn" class="!text-xs" />
             </span>
             <span class="block text-xs text-surface-500">{{ neZaman(v.fiyat?.zaman) }}</span>
           </span>
@@ -127,7 +127,7 @@ async function kodlaEklendi(v: Varlik): Promise<void> {
             </span>
             <span
               v-if="v.fiyat?.alis && v.fiyat?.satis"
-              class="text-[11px] text-surface-400 tabular-nums"
+              class="text-xs text-surface-400 tabular-nums"
             >
               alış {{ fiyat(v.fiyat.alis, v.para_birimi) }}
             </span>

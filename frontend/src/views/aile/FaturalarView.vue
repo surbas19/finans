@@ -114,7 +114,7 @@ async function coz(f: Fatura): Promise<void> {
 <template>
   <div class="flex flex-col gap-4">
     <!-- "Dönemi bilinmeyen" görünümünde ay seçilmez: çark soluk -->
-    <AySecici v-model="donem" :pasif="gorunum !== 'ay'" />
+    <AySecici v-model="donem" :pasif="gorunum !== 'ay'" class="ay-carki-yapiskan" />
     <div class="flex flex-wrap items-center justify-between gap-3">
       <SelectButton
         v-model="gorunum"
@@ -194,7 +194,7 @@ async function coz(f: Fatura): Promise<void> {
           <span class="flex flex-col items-end gap-1">
             <span class="font-semibold tabular-nums">{{ tl(f.tutar) }}</span>
             <span
-              class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+              class="rounded-full px-2 py-0.5 text-xs font-semibold"
               :class="durumEtiketi(f).renk"
               >{{ durumEtiketi(f).metin }}</span
             >

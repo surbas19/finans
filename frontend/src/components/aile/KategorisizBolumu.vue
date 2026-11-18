@@ -97,7 +97,7 @@ async function ata(islem: KartIslemi, kategoriId: number): Promise<void> {
                   data-test="kategorisiz-diger"
                   @click="emit('diger', i)"
                 >
-                  <i class="pi pi-ellipsis-h text-[10px]" /> Diğer
+                  <i class="pi pi-ellipsis-h text-xs" /> Diğer
                 </button>
               </div>
             </li>

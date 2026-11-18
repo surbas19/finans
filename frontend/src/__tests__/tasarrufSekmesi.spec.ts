@@ -152,7 +152,7 @@ describe('Bütçe → Tasarruf sekmesi', () => {
     expect(numaralar.map((n) => n.text())).toEqual(['T-1', 'İ-31'])
     for (const n of numaralar) {
       expect(n.classes()).toContain('text-red-600')
-      expect(n.classes()).toContain('text-[10px]')
+      expect(n.classes()).toContain('text-xs')
       expect(n.classes()).toContain('lowercase')
     }
     expect(alinan.text()).toContain('Alım: 10.11.2026')

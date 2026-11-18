@@ -50,7 +50,7 @@ const emit = defineEmits<{ sil: [k: Tasarruf]; dahil: [k: Tasarruf, dahil: boole
         ><template v-if="kalem.not">{{ kalem.not }}</template>
       </span>
       <span
-        class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-surface-400"
+        class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-surface-400"
       >
         <IslemNo :no="kalem.no" />
         <IslemNo v-if="kalem.islem_no" :no="kalem.islem_no" />

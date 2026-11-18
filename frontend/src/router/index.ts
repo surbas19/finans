@@ -1,9 +1,16 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+/** Ana bölüm: alt menüde / üst menüde seçili görünen */
+export type Bolum = 'portfoy' | 'butce' | 'izleme' | 'profil' | 'yonetim'
+
 declare module 'vue-router' {
   interface RouteMeta {
     baslik?: string
+    /** Ana bölüm (üst rotadan miras alınır) */
+    bolum?: Bolum
+    /** Detay sayfası: üst çubukta ‹ geri düğmesi; tarayıcı geçmişi yoksa bu rotaya gider */
+    geri?: string
     /** Giriş yapmadan açılır */
     misafir?: boolean
     yonetici?: boolean
@@ -25,44 +32,45 @@ export const rotalar: RouteRecordRaw[] = [
         path: '',
         name: 'ozet',
         component: () => import('@/views/OzetView.vue'),
-        meta: { baslik: 'Özet' },
+        meta: { baslik: 'Özet', bolum: 'portfoy' },
       },
       {
         path: 'hesaplar',
         name: 'hesaplar',
         component: () => import('@/views/HesaplarView.vue'),
-        meta: { baslik: 'Hesaplar' },
+        meta: { baslik: 'Hesaplar', bolum: 'portfoy' },
       },
       {
         path: 'hesaplar/:id(\\d+)',
         name: 'hesap',
         component: () => import('@/views/HesapDetayView.vue'),
         props: (r) => ({ id: Number(r.params.id) }),
-        meta: { baslik: 'Hesap' },
+        meta: { baslik: 'Hesap', bolum: 'portfoy', geri: 'hesaplar' },
       },
       {
         path: 'izleme',
         name: 'izleme',
         component: () => import('@/views/IzlemeView.vue'),
-        meta: { baslik: 'İzleme listesi' },
+        meta: { baslik: 'İzleme listesi', bolum: 'izleme' },
       },
       {
         path: 'varliklar/:id(\\d+)',
         name: 'varlik',
         component: () => import('@/views/VarlikDetayView.vue'),
         props: (r) => ({ id: Number(r.params.id) }),
-        meta: { baslik: 'Varlık' },
+        meta: { baslik: 'Varlık', bolum: 'izleme', geri: 'izleme' },
       },
       {
         path: 'islemler',
         name: 'islemler',
         component: () => import('@/views/IslemlerView.vue'),
-        meta: { baslik: 'İşlemler' },
+        meta: { baslik: 'Portföy işlemleri', bolum: 'portfoy' },
       },
       {
         // Aile finansı (Bütçe): hanenin gelirleri, kartları, ekstreleri, faturaları
         path: 'aile',
         component: () => import('@/layouts/AileDuzeni.vue'),
+        meta: { bolum: 'butce' },
         children: [
           {
             path: '',
@@ -105,27 +113,27 @@ export const rotalar: RouteRecordRaw[] = [
             name: 'aile-kart',
             component: () => import('@/views/aile/KartDetayView.vue'),
             props: (r) => ({ id: Number(r.params.id) }),
-            meta: { baslik: 'Kart' },
+            meta: { baslik: 'Kart', geri: 'aile-kartlar' },
           },
           {
             path: 'ekstreler',
             name: 'aile-ekstreler',
             component: () => import('@/views/aile/EkstrelerView.vue'),
-            meta: { baslik: 'Ekstreler' },
+            meta: { baslik: 'Ekstreler', geri: 'aile-kartlar' },
           },
           {
             path: 'hesap-ekstreleri/:id(\\d+)',
             name: 'aile-hesap-ekstresi',
             component: () => import('@/views/aile/HesapEkstresiView.vue'),
             props: (r) => ({ id: Number(r.params.id) }),
-            meta: { baslik: 'Banka hesabı ekstresi' },
+            meta: { baslik: 'Banka hesabı ekstresi', geri: 'aile-ekstreler' },
           },
           {
             path: 'ekstreler/:id(\\d+)',
             name: 'aile-ekstre',
             component: () => import('@/views/aile/EkstreView.vue'),
             props: (r) => ({ id: Number(r.params.id) }),
-            meta: { baslik: 'Ekstre' },
+            meta: { baslik: 'Ekstre', geri: 'aile-ekstreler' },
           },
           {
             path: 'islemler',
@@ -157,13 +165,13 @@ export const rotalar: RouteRecordRaw[] = [
         path: 'profil',
         name: 'profil',
         component: () => import('@/views/ProfilView.vue'),
-        meta: { baslik: 'Profil' },
+        meta: { baslik: 'Profil', bolum: 'profil' },
       },
       {
         path: 'yonetim',
         name: 'yonetim',
         component: () => import('@/views/YonetimView.vue'),
-        meta: { baslik: 'Yönetim', yonetici: true },
+        meta: { baslik: 'Yönetim', yonetici: true, bolum: 'yonetim' },
       },
     ],
   },

@@ -7,7 +7,7 @@ defineProps<{ no: string }>()
 
 <template>
   <span
-    class="text-[10px] leading-none font-medium whitespace-nowrap text-red-600 lowercase"
+    class="text-xs leading-none font-medium whitespace-nowrap text-red-600 lowercase"
     data-test="islem-no"
     title="İşlem numarası"
     >{{ no }}</span

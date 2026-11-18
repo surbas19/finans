@@ -10,6 +10,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import AySecici from '@/components/aile/AySecici.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
+import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import GiderFormu from '@/components/aile/GiderFormu.vue'
 import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
@@ -33,7 +34,7 @@ import { useSonIstek } from '@/composables/useSonIstek'
 import { useAuthStore } from '@/stores/auth'
 import { useAileStore } from '@/stores/aile'
 import { bugun, tarih, tl } from '@/utils/bicim'
-import { buAy } from '@/utils/donem'
+import { buAy, donemEtiketi } from '@/utils/donem'
 import { kartRengiCss } from '@/utils/kartRengi'
 
 /**
@@ -94,6 +95,8 @@ watch(donem, () => {
   void yukle()
 })
 
+const uyarilarAcik = ref(false)
+
 const uyariVar = computed(
   () =>
     !!ozet.value &&
@@ -101,6 +104,29 @@ const uyariVar = computed(
       ozet.value.uyarilar.bekleyen_faturalar.length > 0 ||
       (auth.yonetici && (ozet.value.uyarilar.zekat?.length ?? 0) > 0)),
 )
+
+/**
+ * Ayın sonucu çubuğu (yüzde): gider, tasarruf ve kalan gelirin parçası. Gider + tasarruf gelirden fazlaysa çubuk
+ * onların toplamına göre çizilir (kalan dilimi yok, altında kırmızı uyarı).
+ */
+const sonuc = computed(() => {
+  const o = ozet.value
+  if (!o) return { toplam: 0, gider: 0, tasarruf: 0, kalan: 0, kalanOrani: null as number | null }
+  const gider = Math.max(o.gider.toplam, 0)
+  const tasarruf = Math.max(o.tasarruf.toplam, 0)
+  const kalan = Math.max(o.kalan, 0)
+  const toplam = Math.max(o.gelir.toplam, gider + tasarruf)
+  const yuzde = (n: number): number => (toplam > 0 ? Math.round((n / toplam) * 1000) / 10 : 0)
+
+  return {
+    toplam,
+    gider: yuzde(gider),
+    tasarruf: yuzde(tasarruf),
+    kalan: yuzde(kalan),
+    kalanOrani:
+      o.gelir.toplam > 0 && o.kalan >= 0 ? Math.round((o.kalan / o.gelir.toplam) * 100) : null,
+  }
+})
 
 const grafik = computed(() => {
   const k = ozet.value?.gider.kategoriler.filter((x) => x.toplam > 0) ?? []
@@ -158,129 +184,178 @@ const gunMetni = (gun: number | null | undefined) =>
 
 <template>
   <div class="flex flex-col gap-4">
-    <AySecici v-model="donem" :ileri-sinir="null" />
-    <p v-if="aile.hane" class="-mt-2 text-right text-xs text-surface-500">
-      {{ aile.hane.hane.ad }}
-    </p>
-
+    <AySecici v-model="donem" :ileri-sinir="null" class="ay-carki-yapiskan" />
     <Skeleton v-if="!ozet" height="10rem" border-radius="1.5rem" />
     <template v-else>
-      <!-- Uyarılar -->
-      <section v-if="uyariVar" class="kart flex flex-col gap-2 p-4" aria-label="Uyarılar">
-        <RouterLink
-          v-for="f in ozet.uyarilar.gecikmis_faturalar"
-          :key="`g${f.id}`"
-          :to="{ name: 'aile-faturalar' }"
-          class="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800"
-        >
-          <i class="pi pi-exclamation-circle" />
-          <span class="min-w-0 flex-1 truncate"
-            >{{ f.saglayici_ad }} {{ f.hizmet_donemi_etiketi ?? '' }} faturası gecikti</span
+      <!-- Uyarılar: tek satırda sayaçlar; dokununca liste -->
+      <button
+        v-if="uyariVar"
+        type="button"
+        class="kart flex items-center gap-2 px-3 py-2.5 text-left"
+        aria-haspopup="dialog"
+        data-test="uyari-ozeti"
+        @click="uyarilarAcik = true"
+      >
+        <span class="flex min-w-0 flex-1 flex-wrap gap-1.5">
+          <span
+            v-if="ozet.uyarilar.gecikmis_faturalar.length"
+            class="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-800 ring-1 ring-red-200"
+            >{{ ozet.uyarilar.gecikmis_faturalar.length }} gecikmiş fatura</span
           >
-          <span class="font-semibold whitespace-nowrap"
-            >{{ tl(f.tutar) }} · {{ gunMetni(f.gun) }}</span
+          <span
+            v-if="ozet.uyarilar.bekleyen_faturalar.length"
+            class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200"
+            >{{ ozet.uyarilar.bekleyen_faturalar.length }} ödenmemiş fatura</span
           >
-        </RouterLink>
-        <RouterLink
-          v-for="f in ozet.uyarilar.bekleyen_faturalar"
-          :key="`b${f.id}`"
-          :to="{ name: 'aile-faturalar' }"
-          class="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900"
-        >
-          <i class="pi pi-clock" />
-          <span class="min-w-0 flex-1 truncate"
-            >{{ f.saglayici_ad }} {{ f.hizmet_donemi_etiketi ?? '' }} ödenmedi</span
+          <span
+            v-if="auth.yonetici && ozet.uyarilar.zekat?.length"
+            class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-200"
+            >Zekât hatırlatması</span
           >
-          <span class="font-semibold whitespace-nowrap"
-            >{{ tl(f.tutar)
-            }}<template v-if="f.son_odeme_tarihi"> · {{ gunMetni(f.gun) }}</template></span
-          >
-        </RouterLink>
-        <RouterLink
-          v-for="z in auth.yonetici ? (ozet.uyarilar.zekat ?? []) : []"
-          :key="`z${z.tur}${z.yil_id ?? ''}`"
-          :to="{ name: 'yonetim', query: { sekme: 'zekat' } }"
-          class="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
-          data-test="zekat-uyari"
-        >
-          <i class="pi pi-heart" />
-          <span class="min-w-0 flex-1">{{ z.mesaj }}</span>
-          <span v-if="z.kalan" class="font-semibold whitespace-nowrap">{{ tl(z.kalan) }}</span>
-        </RouterLink>
-      </section>
+        </span>
+        <i class="pi pi-chevron-right text-xs text-surface-400" />
+      </button>
 
-      <!-- Gelir / gider / tasarruf / kalan -->
-      <section class="kart grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 sm:p-5">
-        <div>
-          <p class="text-xs text-surface-500">Gelir</p>
-          <p
-            class="text-base font-bold text-emerald-700 tabular-nums min-[400px]:text-lg"
-            data-test="ozet-gelir"
-          >
-            {{ tl(ozet.gelir.toplam) }}
+      <!-- Ayın sonucu: kalan büyük; çubuk geliri gidere, tasarrufa ve kalana böler -->
+      <section class="kart p-4 sm:p-5" data-test="ay-sonucu">
+        <div class="flex items-baseline justify-between gap-3">
+          <p class="text-sm text-surface-500">{{ donemEtiketi(donem) }} sonunda kalan</p>
+          <p v-if="sonuc.kalanOrani !== null" class="text-xs text-surface-500">
+            gelirin %{{ sonuc.kalanOrani }}
           </p>
         </div>
-        <div>
-          <p class="text-xs text-surface-500">Gider</p>
-          <p
-            class="text-base font-bold text-surface-900 tabular-nums min-[400px]:text-lg"
-            data-test="ozet-gider"
-          >
-            {{ tl(ozet.gider.toplam) }}
-          </p>
+        <p
+          class="text-3xl font-extrabold tracking-tight tabular-nums"
+          :class="ozet.kalan >= 0 ? 'text-emerald-700' : 'text-red-600'"
+          data-test="ozet-kalan"
+        >
+          {{ tl(ozet.kalan) }}
+        </p>
+        <div
+          v-if="sonuc.toplam > 0"
+          class="mt-3 flex h-2.5 overflow-hidden rounded-full bg-surface-100"
+          role="img"
+          :aria-label="`Gider %${sonuc.gider}, tasarruf %${sonuc.tasarruf}, kalan %${sonuc.kalan}`"
+          data-test="sonuc-cubugu"
+        >
+          <span class="bg-surface-400" :style="{ width: `${sonuc.gider}%` }" />
+          <span class="bg-sky-500" :style="{ width: `${sonuc.tasarruf}%` }" />
+          <span class="bg-emerald-500" :style="{ width: `${sonuc.kalan}%` }" />
         </div>
-        <div>
-          <p class="text-xs text-surface-500">Tasarruf</p>
-          <p
-            class="text-base font-bold text-sky-700 tabular-nums min-[400px]:text-lg"
-            data-test="ozet-tasarruf"
-          >
-            {{ tl(ozet.tasarruf.toplam) }}
-          </p>
-        </div>
-        <div>
-          <p class="text-xs text-surface-500">Kalan</p>
-          <p
-            class="text-base font-bold tabular-nums min-[400px]:text-lg"
-            :class="ozet.kalan >= 0 ? 'text-emerald-700' : 'text-red-600'"
-            data-test="ozet-kalan"
-          >
-            {{ tl(ozet.kalan) }}
-          </p>
-        </div>
-        <p class="col-span-2 text-xs text-surface-500 sm:col-span-4" data-test="ozet-fark">
-          Kalan = gelir − gider − tasarruf (tasarruf öncesi fark {{ tl(ozet.fark) }}).
+        <p v-if="ozet.kalan < 0" class="mt-1.5 text-xs font-semibold text-red-600">
+          Gider ve tasarruf gelirden {{ tl(-ozet.kalan) }} fazla.
+        </p>
+        <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+          <div class="flex items-center gap-2">
+            <span class="size-2.5 shrink-0 rounded-sm bg-emerald-500/30 ring-1 ring-emerald-500" />
+            <dt class="text-surface-600">Gelir</dt>
+            <dd class="ml-auto font-semibold tabular-nums" data-test="ozet-gelir">
+              {{ tl(ozet.gelir.toplam) }}
+            </dd>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="size-2.5 shrink-0 rounded-sm bg-surface-400" />
+            <dt class="text-surface-600">Gider</dt>
+            <dd class="ml-auto font-semibold tabular-nums" data-test="ozet-gider">
+              {{ tl(ozet.gider.toplam) }}
+            </dd>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="size-2.5 shrink-0 rounded-sm bg-sky-500" />
+            <dt class="text-surface-600">Tasarruf</dt>
+            <dd class="ml-auto font-semibold tabular-nums" data-test="ozet-tasarruf">
+              {{ tl(ozet.tasarruf.toplam) }}
+            </dd>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="size-2.5 shrink-0 rounded-sm bg-emerald-500" />
+            <dt class="text-surface-600">Kalan</dt>
+            <dd class="ml-auto font-semibold tabular-nums">{{ tl(ozet.kalan) }}</dd>
+          </div>
+        </dl>
+        <p class="mt-2 text-xs text-surface-500" data-test="ozet-fark">
+          Kalan = gelir − gider − tasarruf; tasarruf öncesi fark {{ tl(ozet.fark) }}.
         </p>
         <p
           v-if="auth.yonetici && ozet.zekat && ozet.zekat.adet > 0"
-          class="col-span-2 text-xs text-emerald-800 sm:col-span-4"
+          class="mt-1 text-xs text-emerald-800"
           data-test="ozet-zekat"
         >
           Bu ay verilen zekât: {{ tl(ozet.zekat.verilen) }} (bilgi; gider ve kalana dahil değil).
         </p>
       </section>
 
-      <!-- Kişiler -->
-      <section class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div v-for="k in ozet.gelir.kisiler" :key="k.uye.id" class="kart p-4">
-          <div class="flex items-baseline justify-between gap-2">
-            <h3 class="font-bold text-surface-900">{{ k.uye.ad }}</h3>
-            <span class="font-semibold tabular-nums">{{ tl(k.toplam) }}</span>
-          </div>
-          <p class="mt-1 text-xs text-surface-500">
-            Maaş ve düzenli {{ tl(k.duzenli) }} · ek / düzensiz
-            {{ tl(k.duzensiz + k.tek_seferlik) }}
-          </p>
-          <ul v-if="k.turler.length" class="mt-2 flex flex-col gap-1 text-sm">
-            <li v-for="t in k.turler" :key="t.gelir_turu_id" class="flex justify-between gap-2">
-              <span class="text-surface-600">{{ t.etiket }}</span>
-              <span class="tabular-nums">{{ tl(t.toplam) }}</span>
+      <!-- Giderler -->
+      <section class="kart p-4 sm:p-5">
+        <div class="mb-2 flex items-baseline justify-between">
+          <h2 class="bolum-etiketi">Kategorilere göre gider</h2>
+          <RouterLink
+            :to="{ name: 'aile-islemler', query: { ay: donem } }"
+            class="text-sm font-semibold text-primary-600"
+            >İşlemler</RouterLink
+          >
+        </div>
+        <p v-if="!ozet.gider.kategoriler.length" class="py-3 text-sm text-surface-500">
+          Bu ay gider yok.
+        </p>
+        <div v-else class="grid grid-cols-1 items-center gap-4 sm:grid-cols-2">
+          <VeriGrafigi
+            tur="doughnut"
+            :etiketler="grafik.etiketler"
+            :seriler="grafik.seriler"
+            aciklama="Kategorilere göre gider"
+            yukseklik="13rem"
+            :gosterge="false"
+            :deger-bicimi="tl"
+          />
+          <ul class="flex flex-col gap-1.5 text-sm">
+            <li v-for="k in ozet.gider.kategoriler" :key="k.ad">
+              <button
+                type="button"
+                class="flex w-full items-center justify-between gap-2 text-left"
+                :disabled="k.diger"
+                @click="
+                  router.push({
+                    name: 'aile-islemler',
+                    query: { ay: donem, kategori_id: k.kategori_id ?? 'yok' },
+                  })
+                "
+              >
+                <span class="flex items-center gap-2 text-surface-700">
+                  <span
+                    class="h-2.5 w-2.5 rounded-full"
+                    :style="{ background: `var(--p-${k.renk ?? 'slate'}-500)` }"
+                  />
+                  {{ k.ad }}
+                </span>
+                <span
+                  class="font-semibold tabular-nums"
+                  :class="k.toplam < 0 ? 'text-emerald-700' : ''"
+                  >{{ tl(k.toplam) }}</span
+                >
+              </button>
             </li>
           </ul>
-          <p v-if="k.beklenen_sayisi" class="mt-2 text-xs text-amber-700">
-            {{ k.beklenen_sayisi }} beklenen gelir (alınmadı)
-          </p>
         </div>
+        <ul
+          v-if="
+            ozet.gider.haric.length ||
+            ozet.gider.kartsiz_faturalar > 0 ||
+            ozet.gider.duzenli.toplam > 0
+          "
+          class="mt-3 flex flex-col gap-1 rounded-2xl bg-surface-50 p-3 text-xs text-surface-600"
+        >
+          <li v-if="ozet.gider.duzenli.toplam > 0">
+            Düzenli ödemeler ve tek seferlik giderler {{ tl(ozet.gider.duzenli.toplam) }} giderde
+            (Giderler).
+          </li>
+          <li v-if="ozet.gider.kartsiz_faturalar > 0">
+            Kartsız ödenen faturalar {{ tl(ozet.gider.kartsiz_faturalar) }} giderde (Faturalar).
+          </li>
+          <li v-for="h in ozet.gider.haric" :key="h.tur">
+            {{ h.etiket }} {{ tl(h.toplam) }}: ekstre borcunun içinde, ayrıca eklenmedi.
+          </li>
+        </ul>
       </section>
 
       <section v-if="ozet.gelir.beklenenler.length" class="kart p-4">
@@ -433,77 +508,27 @@ const gunMetni = (gun: number | null | undefined) =>
         </ul>
       </section>
 
-      <!-- Giderler -->
-      <section class="kart p-4 sm:p-5">
-        <div class="mb-2 flex items-baseline justify-between">
-          <h2 class="bolum-etiketi">Kategorilere göre gider</h2>
-          <RouterLink
-            :to="{ name: 'aile-islemler', query: { ay: donem } }"
-            class="text-sm font-semibold text-primary-600"
-            >İşlemler</RouterLink
-          >
-        </div>
-        <p v-if="!ozet.gider.kategoriler.length" class="py-3 text-sm text-surface-500">
-          Bu ay gider yok.
-        </p>
-        <div v-else class="grid grid-cols-1 items-center gap-4 sm:grid-cols-2">
-          <VeriGrafigi
-            tur="doughnut"
-            :etiketler="grafik.etiketler"
-            :seriler="grafik.seriler"
-            aciklama="Kategorilere göre gider"
-            yukseklik="13rem"
-            :gosterge="false"
-            :deger-bicimi="tl"
-          />
-          <ul class="flex flex-col gap-1.5 text-sm">
-            <li v-for="k in ozet.gider.kategoriler" :key="k.ad">
-              <button
-                type="button"
-                class="flex w-full items-center justify-between gap-2 text-left"
-                :disabled="k.diger"
-                @click="
-                  router.push({
-                    name: 'aile-islemler',
-                    query: { ay: donem, kategori_id: k.kategori_id ?? 'yok' },
-                  })
-                "
-              >
-                <span class="flex items-center gap-2 text-surface-700">
-                  <span
-                    class="h-2.5 w-2.5 rounded-full"
-                    :style="{ background: `var(--p-${k.renk ?? 'slate'}-500)` }"
-                  />
-                  {{ k.ad }}
-                </span>
-                <span
-                  class="font-semibold tabular-nums"
-                  :class="k.toplam < 0 ? 'text-emerald-700' : ''"
-                  >{{ tl(k.toplam) }}</span
-                >
-              </button>
+      <!-- Kişiler -->
+      <section class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div v-for="k in ozet.gelir.kisiler" :key="k.uye.id" class="kart p-4">
+          <div class="flex items-baseline justify-between gap-2">
+            <h3 class="font-bold text-surface-900">{{ k.uye.ad }}</h3>
+            <span class="font-semibold tabular-nums">{{ tl(k.toplam) }}</span>
+          </div>
+          <p class="mt-1 text-xs text-surface-500">
+            Maaş ve düzenli {{ tl(k.duzenli) }} · ek / düzensiz
+            {{ tl(k.duzensiz + k.tek_seferlik) }}
+          </p>
+          <ul v-if="k.turler.length" class="mt-2 flex flex-col gap-1 text-sm">
+            <li v-for="t in k.turler" :key="t.gelir_turu_id" class="flex justify-between gap-2">
+              <span class="text-surface-600">{{ t.etiket }}</span>
+              <span class="tabular-nums">{{ tl(t.toplam) }}</span>
             </li>
           </ul>
+          <p v-if="k.beklenen_sayisi" class="mt-2 text-xs text-amber-700">
+            {{ k.beklenen_sayisi }} beklenen gelir (alınmadı)
+          </p>
         </div>
-        <ul
-          v-if="
-            ozet.gider.haric.length ||
-            ozet.gider.kartsiz_faturalar > 0 ||
-            ozet.gider.duzenli.toplam > 0
-          "
-          class="mt-3 flex flex-col gap-1 rounded-2xl bg-surface-50 p-3 text-xs text-surface-600"
-        >
-          <li v-if="ozet.gider.duzenli.toplam > 0">
-            Düzenli ödemeler ve tek seferlik giderler {{ tl(ozet.gider.duzenli.toplam) }} giderde
-            (Giderler).
-          </li>
-          <li v-if="ozet.gider.kartsiz_faturalar > 0">
-            Kartsız ödenen faturalar {{ tl(ozet.gider.kartsiz_faturalar) }} giderde (Faturalar).
-          </li>
-          <li v-for="h in ozet.gider.haric" :key="h.tur">
-            {{ h.etiket }} {{ tl(h.toplam) }}: ekstre borcunun içinde, ayrıca eklenmedi.
-          </li>
-        </ul>
       </section>
 
       <section
@@ -539,7 +564,7 @@ const gunMetni = (gun: number | null | undefined) =>
                   </span>
                   <span class="text-right">
                     <span class="block font-semibold tabular-nums">{{ tl(t.aya_dusen) }}</span>
-                    <span class="block text-[11px] text-surface-500">bu aya düşen</span>
+                    <span class="block text-xs text-surface-500">bu aya düşen</span>
                   </span>
                 </li>
               </ul>
@@ -663,10 +688,10 @@ const gunMetni = (gun: number | null | undefined) =>
             katılmaz.
           </li>
           <li>
-            Gider: kart gideri, o ay kesilen ekstrenin dönem borcunun tamamıdır (devreden borç,
-            taksit, faiz, ödeme ve bonus dahil; ayrılmaz). Kategori grafiği ekstre satırlarından
-            çıkar, borçla farkı "Ekstredeki diğer" olarak görünür. Ekstresi henüz gelmemiş elle
-            girilen kart harcamaları ay giderine eklenir.
+            Gider: kart gideri, son ödemesi o ayda olan ekstrenin dönem borcunun tamamıdır (devreden
+            borç, taksit, faiz, ödeme ve bonus dahil; ayrılmaz). Kategori grafiği ekstre
+            satırlarından çıkar, borçla farkı "Ekstredeki diğer" olarak görünür. Ekstresi henüz
+            gelmemiş elle girilen kart harcamaları ay giderine eklenir.
           </li>
           <li>
             Kartla ödenen fatura ekstre borcunun içindedir, ayrıca sayılmaz; kartsız ödenen fatura
@@ -687,6 +712,55 @@ const gunMetni = (gun: number | null | undefined) =>
       </details>
     </template>
 
+    <UygulamaPenceresi v-model:visible="uyarilarAcik" baslik="Uyarılar" :genislik="30">
+      <div
+        v-if="ozet"
+        class="flex flex-col gap-2 pb-2"
+        data-test="uyari-listesi"
+        @click="uyarilarAcik = false"
+      >
+        <RouterLink
+          v-for="f in ozet.uyarilar.gecikmis_faturalar"
+          :key="`g${f.id}`"
+          :to="{ name: 'aile-faturalar' }"
+          class="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800"
+        >
+          <i class="pi pi-exclamation-circle" />
+          <span class="min-w-0 flex-1 truncate"
+            >{{ f.saglayici_ad }} {{ f.hizmet_donemi_etiketi ?? '' }} faturası gecikti</span
+          >
+          <span class="font-semibold whitespace-nowrap"
+            >{{ tl(f.tutar) }} · {{ gunMetni(f.gun) }}</span
+          >
+        </RouterLink>
+        <RouterLink
+          v-for="f in ozet.uyarilar.bekleyen_faturalar"
+          :key="`b${f.id}`"
+          :to="{ name: 'aile-faturalar' }"
+          class="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900"
+        >
+          <i class="pi pi-clock" />
+          <span class="min-w-0 flex-1 truncate"
+            >{{ f.saglayici_ad }} {{ f.hizmet_donemi_etiketi ?? '' }} ödenmedi</span
+          >
+          <span class="font-semibold whitespace-nowrap"
+            >{{ tl(f.tutar)
+            }}<template v-if="f.son_odeme_tarihi"> · {{ gunMetni(f.gun) }}</template></span
+          >
+        </RouterLink>
+        <RouterLink
+          v-for="z in auth.yonetici ? (ozet.uyarilar.zekat ?? []) : []"
+          :key="`z${z.tur}${z.yil_id ?? ''}`"
+          :to="{ name: 'yonetim', query: { sekme: 'zekat' } }"
+          class="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          data-test="zekat-uyari"
+        >
+          <i class="pi pi-heart" />
+          <span class="min-w-0 flex-1">{{ z.mesaj }}</span>
+          <span v-if="z.kalan" class="font-semibold whitespace-nowrap">{{ tl(z.kalan) }}</span>
+        </RouterLink>
+      </div>
+    </UygulamaPenceresi>
     <GiderFormu
       v-model:visible="giderFormuAcik"
       :varsayilan="giderVarsayilan"

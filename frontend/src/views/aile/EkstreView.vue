@@ -408,7 +408,7 @@ function sil(): void {
             <p
               v-for="o in ekstre.denetim.teshis.ornekler"
               :key="o"
-              class="mt-0.5 truncate font-mono text-[11px]"
+              class="mt-0.5 truncate font-mono text-xs"
             >
               {{ o }}
             </p>

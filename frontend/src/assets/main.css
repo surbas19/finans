@@ -13,6 +13,12 @@
     'Plus Jakarta Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Yapışkan katmanların yüksekliği: üst çubuk (çentik payıyla) ve onun altındaki bölüm sekmeleri */
+:root {
+  --ust-yukseklik: calc(3.5rem + env(safe-area-inset-top));
+  --alt-sekme-yukseklik: 2.75rem;
+}
+
 html,
 body {
   margin: 0;
@@ -86,13 +92,30 @@ body {
     0 12px 32px -16px rgb(15 23 42 / 0.1);
 }
 
-/* Bölüm etiketi: kart başındaki küçük, aralıklı, büyük harfli başlık ("YOKLAMA", "SAYFALAR"). */
+/*
+ * Bölüm başlığı: kart başındaki başlık ("Varlıklarım", "Performans"). Normal yazım, 15 px kalın, koyu; büyük harf ve
+ * renk yok (her başlık aynı vurguyla bağırmasın). En küçük yazı 12 px (`text-xs`); 10–11 px kullanılmaz.
+ */
 @utility bolum-etiketi {
-  font-size: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.35;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--p-primary-700);
+  letter-spacing: -0.005em;
+  color: var(--p-surface-900);
+}
+
+/*
+ * Ay çarkı Bütçe sekmelerinin hemen altında yapışkan durur: aşağı kaydırırken hangi ayın rakamına bakıldığı görünür.
+ * Zemin kenarlara kadar uzar (gölge + clip-path; yerleşim ve iç konumlar değişmez).
+ */
+@utility ay-carki-yapiskan {
+  position: sticky;
+  top: calc(var(--ust-yukseklik) + var(--alt-sekme-yukseklik));
+  z-index: 9;
+  background: color-mix(in srgb, var(--p-surface-50) 92%, transparent);
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--p-surface-50) 92%, transparent);
+  clip-path: inset(0 -100vmax);
+  backdrop-filter: blur(8px);
 }
 
 /* Ay çarkının solundaki küçük ek düğme ("Tümü", "En yeni"); `aria-pressed` ise dolu */

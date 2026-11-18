@@ -241,7 +241,7 @@ function sil(): void {
         />
         <pre
           v-if="jsonAcik"
-          class="max-h-80 overflow-auto rounded-xl bg-surface-50 p-2 font-mono text-[11px] whitespace-pre text-surface-800"
+          class="max-h-80 overflow-auto rounded-xl bg-surface-50 p-2 font-mono text-xs whitespace-pre text-surface-800"
           >{{ JSON.stringify(cikti, null, 2) }}</pre>
       </section>
 

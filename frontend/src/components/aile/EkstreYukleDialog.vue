@@ -258,7 +258,7 @@ async function yukle(): Promise<void> {
           :model-value="istem"
           readonly
           rows="8"
-          class="mt-2 w-full font-mono text-[11px]"
+          class="mt-2 w-full font-mono text-xs"
           aria-label="Yapay zekâ istemi"
           data-test="istem-metni"
           @focus="($event.target as HTMLTextAreaElement).select()"
@@ -291,7 +291,7 @@ async function yukle(): Promise<void> {
               @click="secilenKart = k.id"
             >
               {{ k.ad
-              }}<span v-if="k.son" class="ml-1 text-[11px] font-normal text-surface-500"
+              }}<span v-if="k.son" class="ml-1 text-xs font-normal text-surface-500"
                 >son: {{ donemEtiketi(k.son) }}</span
               >
             </button>

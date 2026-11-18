@@ -149,7 +149,7 @@ function cubuk(a: Pick<TasarrufAyi, 'gider_orani' | 'tasarruf_orani' | 'kalan_or
               <span class="h-full bg-sky-500" :style="{ width: `${cubuk(a).tasarruf}%` }" />
               <span class="h-full bg-emerald-500" :style="{ width: `${cubuk(a).kalan}%` }" />
             </div>
-            <p class="mt-0.5 text-[11px] text-surface-500 tabular-nums" data-test="oran-metni">
+            <p class="mt-0.5 text-xs text-surface-500 tabular-nums" data-test="oran-metni">
               Gider {{ oranMetni(a.gider_orani) }} · Tasarruf {{ oranMetni(a.tasarruf_orani) }} ·
               Kalan {{ oranMetni(a.kalan_orani) }}
             </p>
