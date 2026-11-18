@@ -54,13 +54,17 @@ describe('Ev nakdi kartı', () => {
       ],
     })
     const { default: EvNakdiKarti } = await import('@/components/aile/EvNakdiKarti.vue')
-    const w = mount(EvNakdiKarti, { global: { plugins, stubs } })
+    const w = mount(EvNakdiKarti, {
+      global: { plugins, stubs: { ...stubs, RouterLink: { template: '<a><slot /></a>' } } },
+    })
     await flushPromises()
     expect(w.get('[data-test="ev-bakiye"]').text()).toContain('25')
     expect(w.get('[data-test="ev-bakiye"]').classes()).toContain('text-red-600')
     expect(w.find('[data-test="ev-eksi"]').exists()).toBe(true)
     // Harcama satırı silinemez, para ekleme silinebilir
     expect(w.findAll('[data-test="ev-hareket-sil"]')).toHaveLength(1)
+    // Tüm nakit harcamalar listesine bağlantı (Gelir / Gider → Gider paneli)
+    expect(w.find('[data-test="ev-tum-nakit"]').exists()).toBe(true)
     w.unmount()
   })
 })

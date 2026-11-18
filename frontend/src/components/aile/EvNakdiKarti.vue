@@ -113,6 +113,12 @@ const ETIKET = { ekleme: 'Para eklendi', cikarma: 'Para çıkarıldı', harcama:
           />
         </li>
       </ul>
+      <RouterLink
+        :to="{ name: 'aile-gelir-gider', query: { panel: 'gider' } }"
+        class="mt-2 inline-block text-sm font-semibold text-primary-600"
+        data-test="ev-tum-nakit"
+        >Tüm nakit harcamalar</RouterLink
+      >
     </template>
     <EvNakdiHareketFormu v-model:visible="formAcik" :tur="formTuru" @kaydedildi="ozet = $event" />
   </section>

@@ -2,12 +2,15 @@
 import KartEtiketi from '@/components/aile/KartEtiketi.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
+import SelectButton from 'primevue/selectbutton'
 import Skeleton from 'primevue/skeleton'
+import Tag from 'primevue/tag'
 import BosDurum from '@/components/BosDurum.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import GiderFormu from '@/components/aile/GiderFormu.vue'
 import GiderKaynagiFormu from '@/components/aile/GiderKaynagiFormu.vue'
+import NakitHarcamaFormu from '@/components/aile/NakitHarcamaFormu.vue'
 import {
   aileApi,
   GELIR_SIKLIKLARI,
@@ -59,6 +62,29 @@ watch(
     ozet.value = null
     void yukle()
   },
+)
+
+/** Düzenli ödemeye bağlı gerçekleşenler / bağlı olmayan kartsız giderler (nakit harcama, tek seferlik) */
+const duzenliKalemler = computed(
+  () => ozet.value?.gider.duzenli.kalemler.filter((g) => g.gider_kaynagi_id !== null) ?? [],
+)
+const nakitKalemler = computed(
+  () => ozet.value?.gider.duzenli.kalemler.filter((g) => g.gider_kaynagi_id === null) ?? [],
+)
+const NAKIT_SUZGECLERI = [
+  { deger: 'hepsi', etiket: 'Tümü' },
+  { deger: 'ev', etiket: 'Ev' },
+  { deger: 'banka', etiket: 'Banka' },
+]
+const nakitSuzgec = ref<'hepsi' | 'ev' | 'banka'>('hepsi')
+const nakitAcik = ref(false)
+const nakitGorunen = computed(() =>
+  nakitSuzgec.value === 'hepsi'
+    ? nakitKalemler.value
+    : nakitKalemler.value.filter((g) => g.odeme_yeri === nakitSuzgec.value),
+)
+const nakitToplam = computed(
+  () => Math.round(nakitGorunen.value.reduce((t, g) => t + g.tutar * 100, 0)) / 100,
 )
 
 /** Kart gideri = kesimi bu aya düşen onaylı ekstrenin dönem borcu (sunucu hesaplar) */
@@ -181,9 +207,9 @@ function kaynakAdi(id: number | null): string {
 
       <!-- Düzenli ödemeler -->
       <section class="kart p-4 sm:p-5" data-test="gider-duzenli-liste">
-        <h2 class="bolum-etiketi mb-2">Düzenli ödemeler ve diğer giderler</h2>
+        <h2 class="bolum-etiketi mb-2">Düzenli ödemeler</h2>
         <ul class="divide-y divide-surface-100">
-          <li v-for="g in ozet.gider.duzenli.kalemler" :key="g.id">
+          <li v-for="g in duzenliKalemler" :key="g.id">
             <button
               type="button"
               class="flex w-full items-center gap-3 py-3 text-left"
@@ -194,9 +220,6 @@ function kaynakAdi(id: number | null): string {
                 <span class="block text-xs text-surface-500">
                   {{ aile.kategori(g.kategori_id)?.ad ?? 'Kategorisiz' }} ·
                   {{ tarih(g.tarih) }}
-                  <template v-if="g.odeme_yeri">
-                    · {{ g.odeme_yeri === 'ev' ? 'Ev' : 'Banka' }}</template
-                  >
                   <template v-if="g.gider_kaynagi_id">
                     · {{ kaynakAdi(g.gider_kaynagi_id) || 'düzenli' }}</template
                   >
@@ -224,13 +247,76 @@ function kaynakAdi(id: number | null): string {
           </li>
         </ul>
         <p
-          v-if="!ozet.gider.duzenli.kalemler.length && !ozet.gider.beklenenler.length"
+          v-if="!duzenliKalemler.length && !ozet.gider.beklenenler.length"
           class="py-3 text-sm text-surface-500"
         >
-          Bu ay düzenli ödeme ya da tek seferlik gider yok.
+          Bu ay düzenli ödeme yok.
         </p>
         <p v-if="ozet.gider.kartsiz_faturalar > 0" class="mt-2 text-xs text-surface-500">
           Kartsız ödenen faturalar {{ tl(ozet.gider.kartsiz_faturalar) }} de giderde (Faturalar).
+        </p>
+      </section>
+
+      <!-- Nakit harcamalar: düzenli ödemeye bağlı olmayan kartsız giderler (hızlı nakit harcama, tek seferlikler) -->
+      <section id="nakit-harcamalar" class="kart p-4 sm:p-5" data-test="nakit-liste">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <div>
+            <h2 class="bolum-etiketi">Nakit harcamalar</h2>
+            <p class="text-sm font-semibold text-surface-900 tabular-nums" data-test="nakit-toplam">
+              {{ tl(nakitToplam) }}
+            </p>
+          </div>
+          <Button
+            label="Nakit harcama"
+            icon="pi pi-plus"
+            size="small"
+            severity="secondary"
+            outlined
+            data-test="nakit-ekle"
+            @click="nakitAcik = true"
+          />
+        </div>
+        <SelectButton
+          v-model="nakitSuzgec"
+          :options="NAKIT_SUZGECLERI"
+          option-label="etiket"
+          option-value="deger"
+          :allow-empty="false"
+          aria-label="Ödeme yeri süzgeci"
+          class="mb-1 w-full [&>.p-togglebutton]:flex-1"
+          data-test="nakit-suzgec"
+        />
+        <BosDurum
+          v-if="!nakitGorunen.length"
+          kucuk
+          baslik="Bu ay nakit harcama yok"
+          aciklama="Hızlı işlemlerden ya da yukarıdaki düğmeyle nakit harcama ekleyin."
+          ikon="pi pi-wallet"
+        />
+        <ul v-else class="divide-y divide-surface-100">
+          <li v-for="g in nakitGorunen" :key="g.id" data-test="nakit-satir">
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 py-3 text-left"
+              @click="giderDuzenle(g)"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-semibold text-surface-900">{{ g.aciklama }}</span>
+                <span class="flex flex-wrap items-center gap-x-1.5 text-xs text-surface-500">
+                  {{ aile.kategori(g.kategori_id)?.ad ?? 'Kategorisiz' }} · {{ tarih(g.tarih) }}
+                  <Tag
+                    v-if="g.odeme_yeri"
+                    :value="g.odeme_yeri === 'ev' ? 'Ev' : 'Banka'"
+                    :severity="g.odeme_yeri === 'ev' ? 'success' : 'info'"
+                  />
+                </span>
+              </span>
+              <span class="font-semibold whitespace-nowrap tabular-nums">{{ tl(g.tutar) }}</span>
+            </button>
+          </li>
+        </ul>
+        <p v-if="nakitSuzgec === 'ev'" class="mt-2 text-xs text-surface-500">
+          Bu tutar ev nakdinden düşer (Bütçe Özet → Ev nakdi).
         </p>
       </section>
 
@@ -284,6 +370,7 @@ function kaynakAdi(id: number | null): string {
       :kaynak="duzenlenenKaynak"
       @kaydedildi="yukle"
     />
+    <NakitHarcamaFormu v-model:visible="nakitAcik" @kaydedildi="yukle" />
     <ElleEkstreDialog v-model:visible="elleAcik" />
   </div>
 </template>
