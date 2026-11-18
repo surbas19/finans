@@ -67,6 +67,8 @@ class DuzenliGiderController extends Controller
             'aciklama' => ['required', 'string', 'max:120'],
             'tutar' => ['required', 'numeric', 'gt:0', 'max:1000000000', 'decimal:0,2'],
             'tarih' => ['required', 'date', 'before_or_equal:today'],
+            // Paranın çıktığı yer: ev nakdi kasasından düşer; banka yalnız etiket
+            'odeme_yeri' => ['nullable', 'in:ev,banka'],
             // Ait olduğu ay: geçmiş aylar serbest; en çok gelecek ay
             'donem' => ['required', 'regex:'.Donem::DESEN, function (string $alan, mixed $deger, \Closure $hata): void {
                 if (is_string($deger) && Donem::gecerli($deger) && $deger > Donem::ekle(Donem::buAy(), 1)) {

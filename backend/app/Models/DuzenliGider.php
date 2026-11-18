@@ -15,7 +15,7 @@ class DuzenliGider extends Model
 
     protected $table = 'duzenli_giderler';
 
-    protected $fillable = ['hane_id', 'gider_kaynagi_id', 'kategori_id', 'aciklama', 'tutar', 'tarih', 'donem', 'not', 'olusturan_id'];
+    protected $fillable = ['hane_id', 'gider_kaynagi_id', 'kategori_id', 'aciklama', 'tutar', 'tarih', 'odeme_yeri', 'donem', 'not', 'olusturan_id'];
 
     /**
      * @return array<string, string>
@@ -37,6 +37,7 @@ class DuzenliGider extends Model
             'aciklama' => $this->aciklama,
             'tutar' => Kurus::tl(Kurus::kurus($this->tutar)),
             'tarih' => $this->tarih->toDateString(),
+            'odeme_yeri' => $this->odeme_yeri,
             'donem' => $this->donem,
             'not' => $this->not,
         ];

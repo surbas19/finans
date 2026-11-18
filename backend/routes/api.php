@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Aile\BankaController;
+use App\Http\Controllers\Api\V1\Aile\BorcController;
 use App\Http\Controllers\Api\V1\Aile\DuzenliGiderController;
 use App\Http\Controllers\Api\V1\Aile\EkstreAnalizController;
 use App\Http\Controllers\Api\V1\Aile\EkstreController;
+use App\Http\Controllers\Api\V1\Aile\EvNakdiController;
 use App\Http\Controllers\Api\V1\Aile\FaturaController;
 use App\Http\Controllers\Api\V1\Aile\GelirController;
 use App\Http\Controllers\Api\V1\Aile\GelirKaynagiController;
@@ -91,6 +93,14 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
 
             Route::apiResource('gider-kaynaklari', GiderKaynagiController::class)->except('show')->parameters(['gider-kaynaklari' => 'kaynak']);
             Route::apiResource('duzenli-giderler', DuzenliGiderController::class)->except('show')->parameters(['duzenli-giderler' => 'gider']);
+
+            Route::get('ev-nakdi', [EvNakdiController::class, 'index'])->name('ev-nakdi.index');
+            Route::post('ev-nakdi/hareketler', [EvNakdiController::class, 'store'])->name('ev-nakdi.store');
+            Route::delete('ev-nakdi/hareketler/{hareket}', [EvNakdiController::class, 'destroy'])->name('ev-nakdi.destroy');
+
+            Route::apiResource('borclar', BorcController::class)->except('show')->parameters(['borclar' => 'borc']);
+            Route::post('borclar/{borc}/odemeleri', [BorcController::class, 'odemeEkle'])->name('borclar.odemeler.store');
+            Route::delete('borclar/{borc}/odemeleri/{odeme}', [BorcController::class, 'odemeSil'])->name('borclar.odemeler.destroy');
 
             Route::get('tasarruf-ozeti', TasarrufOzetController::class)->name('tasarruf.ozeti');
             Route::get('grafikler', GrafikController::class)->name('grafikler');

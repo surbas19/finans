@@ -1,0 +1,97 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use App\Services\Aile\HaneYonetimi;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Tests\TestCase;
+
+/**
+ * Ev nakdi kasası: bakiye = eklenen − çıkarılan − ödeme yeri "ev" olan giderler; banka / belirtilmemiş düşmez;
+ * hane izolasyonu.
+ */
+class EvNakdiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $ben;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow('2026-11-13 10:00:00');
+        $this->ben = User::factory()->create();
+        app(HaneYonetimi::class)->hazirla($this->ben);
+    }
+
+    /**
+     * @param  array<string, mixed>  $alan
+     * @return array<string, mixed>
+     */
+    private function gider(array $alan = []): array
+    {
+        return ['aciklama' => 'Simit', 'tutar' => 40, 'tarih' => '2026-11-12', 'donem' => '2026-11', ...$alan];
+    }
+
+    public function test_bakiye_ekleme_cikarma_ve_ev_harcamasindan_olusur(): void
+    {
+        $this->actingAs($this->ben);
+        $this->getJson('/api/v1/aile/ev-nakdi')->assertOk()->assertJsonPath('bakiye', 0)->assertJsonCount(0, 'hareketler');
+
+        $this->postJson('/api/v1/aile/ev-nakdi/hareketler', ['tur' => 'ekleme', 'tutar' => 1000, 'tarih' => '2026-11-10'])->assertCreated()->assertJsonPath('bakiye', 1000);
+        $this->postJson('/api/v1/aile/ev-nakdi/hareketler', ['tur' => 'cikarma', 'tutar' => 100.5, 'tarih' => '2026-11-11', 'not' => 'Bankaya yatırıldı'])->assertCreated()->assertJsonPath('bakiye', 899.5);
+
+        // Ev harcaması düşer; banka ve belirtilmemiş (eski kayıt) düşmez
+        $this->postJson('/api/v1/aile/duzenli-giderler', $this->gider(['odeme_yeri' => 'ev', 'tutar' => 49.5]))->assertCreated()->assertJsonPath('gider.odeme_yeri', 'ev');
+        $this->postJson('/api/v1/aile/duzenli-giderler', $this->gider(['odeme_yeri' => 'banka', 'tutar' => 300]))->assertCreated();
+        $id = $this->postJson('/api/v1/aile/duzenli-giderler', $this->gider(['tutar' => 70]))->assertCreated()->assertJsonPath('gider.odeme_yeri', null)->json('gider.id');
+
+        $ozet = $this->getJson('/api/v1/aile/ev-nakdi')->assertOk()
+            ->assertJsonPath('bakiye', 850)->assertJsonPath('giren', 1000)->assertJsonPath('cikan', 100.5)->assertJsonPath('harcama', 49.5);
+        $this->assertCount(3, $ozet->json('hareketler'));
+        $this->assertSame('harcama', $ozet->json('hareketler.0.tip'));
+
+        // Bütçe gider toplamı ev / banka ayrımından etkilenmez (hepsi gider)
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertOk()->assertJsonPath('gider.duzenli.toplam', 419.5);
+
+        // Ev harcaması silinince bakiye geri gelir
+        $evId = $ozet->json('hareketler.0.id');
+        $this->deleteJson("/api/v1/aile/duzenli-giderler/{$evId}")->assertOk();
+        $this->getJson('/api/v1/aile/ev-nakdi')->assertJsonPath('bakiye', 899.5);
+        $this->assertNotNull($id);
+    }
+
+    public function test_bakiye_eksiye_dusebilir_ve_hareket_silinir(): void
+    {
+        $this->actingAs($this->ben);
+        $this->postJson('/api/v1/aile/duzenli-giderler', $this->gider(['odeme_yeri' => 'ev', 'tutar' => 25]))->assertCreated();
+        $this->getJson('/api/v1/aile/ev-nakdi')->assertJsonPath('bakiye', -25);
+
+        $id = $this->postJson('/api/v1/aile/ev-nakdi/hareketler', ['tur' => 'ekleme', 'tutar' => 100, 'tarih' => '2026-11-13'])->json('hareketler.0.id');
+        $this->deleteJson("/api/v1/aile/ev-nakdi/hareketler/{$id}")->assertOk()->assertJsonPath('bakiye', -25);
+    }
+
+    public function test_dogrulama(): void
+    {
+        $this->actingAs($this->ben);
+        $this->postJson('/api/v1/aile/ev-nakdi/hareketler', ['tur' => 'x', 'tutar' => 10, 'tarih' => '2026-11-10'])->assertStatus(422)->assertJsonValidationErrors('tur');
+        $this->postJson('/api/v1/aile/ev-nakdi/hareketler', ['tur' => 'ekleme', 'tutar' => 0, 'tarih' => '2026-11-10'])->assertStatus(422)->assertJsonValidationErrors('tutar');
+        $this->postJson('/api/v1/aile/ev-nakdi/hareketler', ['tur' => 'ekleme', 'tutar' => 5, 'tarih' => '2026-12-31'])->assertStatus(422)->assertJsonValidationErrors('tarih');
+        $this->postJson('/api/v1/aile/duzenli-giderler', $this->gider(['odeme_yeri' => 'sepet']))->assertStatus(422)->assertJsonValidationErrors('odeme_yeri');
+    }
+
+    public function test_baska_hane_gormez_ve_silemez(): void
+    {
+        $this->actingAs($this->ben);
+        $id = $this->postJson('/api/v1/aile/ev-nakdi/hareketler', ['tur' => 'ekleme', 'tutar' => 500, 'tarih' => '2026-11-10'])->json('hareketler.0.id');
+        $this->postJson('/api/v1/aile/duzenli-giderler', $this->gider(['odeme_yeri' => 'ev']))->assertCreated();
+
+        $baska = User::factory()->create();
+        app(HaneYonetimi::class)->hazirla($baska);
+        $this->actingAs($baska);
+        $this->getJson('/api/v1/aile/ev-nakdi')->assertOk()->assertJsonPath('bakiye', 0)->assertJsonCount(0, 'hareketler');
+        $this->deleteJson("/api/v1/aile/ev-nakdi/hareketler/{$id}")->assertForbidden();
+    }
+}
