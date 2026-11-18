@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { temaSurumu } from '@/composables/useTema'
 import { computed, onMounted, ref, watch } from 'vue'
 import Chart from 'primevue/chart'
 import SelectButton from 'primevue/selectbutton'
@@ -54,6 +55,7 @@ const kz = computed(() => donemKz(gecmis.value))
 const eksik = computed(() => (gecmis.value ?? []).some((n) => n.eksik))
 
 function css(degisken: string, yedek: string): string {
+  void temaSurumu.value // tema değişince yeniden okunur
   return getComputedStyle(document.documentElement).getPropertyValue(degisken).trim() || yedek
 }
 

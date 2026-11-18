@@ -81,7 +81,7 @@ async function ata(islem: KartIslemi, kategoriId: number): Promise<void> {
                   v-for="k in aile.sikKategoriler"
                   :key="k.id"
                   type="button"
-                  class="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold ring-1 ring-surface-200 transition-all active:scale-95 disabled:opacity-50"
+                  class="inline-flex items-center gap-1.5 rounded-full bg-surface-0 px-3 py-1.5 text-xs font-semibold ring-1 ring-surface-200 transition-all active:scale-95 disabled:opacity-50"
                   :disabled="gonderilen !== null"
                   data-test="kategorisiz-cip"
                   @click="ata(i, k.id)"

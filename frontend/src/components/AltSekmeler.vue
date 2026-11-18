@@ -15,8 +15,9 @@ defineProps<{
   <div
     class="alt-sekmeler sticky top-[var(--ust-yukseklik)] z-10 -mx-4 -mt-4 flex h-[var(--alt-sekme-yukseklik)] items-stretch border-b border-surface-200/80 bg-surface-50/90 px-4 backdrop-blur"
   >
+    <!-- Sağ kenar hafifçe söner: sığmayan sekmenin yana kaydığı anlaşılır, yazı kesik görünmez -->
     <nav
-      class="flex min-w-0 flex-1 gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="flex min-w-0 flex-1 gap-5 overflow-x-auto pr-4 [mask-image:linear-gradient(to_right,#000_calc(100%-1.5rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       :aria-label="etiket"
     >
       <RouterLink

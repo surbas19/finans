@@ -54,7 +54,7 @@ function cubuk(a: Pick<TasarrufAyi, 'gider_orani' | 'tasarruf_orani' | 'kalan_or
   <div class="flex flex-col gap-4" data-test="tasarruf-sayfasi">
     <div class="flex items-center justify-between gap-2">
       <div
-        class="inline-flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-surface-200"
+        class="inline-flex items-center gap-1 rounded-full bg-surface-0 p-1 ring-1 ring-surface-200"
         data-test="yil-secici"
       >
         <Button

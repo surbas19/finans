@@ -566,7 +566,7 @@ function sil(): void {
 
       <!-- Telefonda alt çubuğun üstünde sabit onay; masaüstünde akışta -->
       <div
-        class="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 flex justify-center gap-2 border-t border-surface-200 bg-white/95 p-3 backdrop-blur md:static md:border-0 md:bg-transparent md:p-0"
+        class="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 flex justify-center gap-2 border-t border-surface-200 bg-surface-0/95 p-3 backdrop-blur md:static md:border-0 md:bg-transparent md:p-0"
       >
         <Button
           v-if="taslak"

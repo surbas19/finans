@@ -147,7 +147,7 @@ async function iptal(): Promise<void> {
             ? 'bg-sky-200 text-sky-900'
             : i === asamaSirasi
               ? 'bg-sky-600 font-semibold text-white'
-              : 'bg-white text-sky-700'
+              : 'bg-surface-0 text-sky-700'
         "
       >
         {{ a.etiket }}

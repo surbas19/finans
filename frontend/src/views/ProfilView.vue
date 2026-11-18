@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Password from 'primevue/password'
+import SelectButton from 'primevue/selectbutton'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
@@ -13,11 +14,18 @@ import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import { finansApi } from '@/api/finans'
 import { useFormGonder } from '@/composables/useFormGonder'
+import { useTema, type Tema } from '@/composables/useTema'
 import { useAuthStore } from '@/stores/auth'
 import { kareKucult } from '@/utils/profilResmi'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { tema, temaSec } = useTema()
+const TEMALAR: { deger: Tema; etiket: string }[] = [
+  { deger: 'sistem', etiket: 'Sistem' },
+  { deger: 'acik', etiket: 'Açık' },
+  { deger: 'koyu', etiket: 'Koyu' },
+]
 const confirm = useConfirm()
 const toast = useToast()
 const form = ref({ mevcut_sifre: '', yeni_sifre: '', yeni_sifre_confirmation: '' })
@@ -148,6 +156,27 @@ async function cikis(): Promise<void> {
           @click="cikis"
         />
       </div>
+    </section>
+
+    <!-- Görünüm: açık / koyu / cihazın ayarı (bu tarayıcıda saklanır) -->
+    <section class="kart flex flex-col gap-3 p-5" data-test="gorunum">
+      <div>
+        <h2 class="bolum-etiketi">Görünüm</h2>
+        <p class="text-sm text-surface-500">
+          "Sistem" telefonun ya da bilgisayarın gece / gündüz ayarını izler.
+        </p>
+      </div>
+      <SelectButton
+        :model-value="tema"
+        :options="TEMALAR"
+        option-label="etiket"
+        option-value="deger"
+        :allow-empty="false"
+        aria-label="Görünüm"
+        class="self-start"
+        data-test="tema-secimi"
+        @update:model-value="temaSec"
+      />
     </section>
 
     <UygulamaPenceresi v-model:visible="onizlemeAcik" baslik="Profil resmi" :genislik="24">

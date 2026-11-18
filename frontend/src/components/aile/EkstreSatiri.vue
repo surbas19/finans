@@ -62,7 +62,7 @@ function donemSec(d: Date | Date[] | (Date | null)[] | null | undefined): void {
 <template>
   <li
     class="flex flex-col gap-2 rounded-2xl p-3 ring-1 transition-colors"
-    :class="dahil ? 'bg-white ring-surface-200' : 'bg-surface-50 ring-surface-100'"
+    :class="dahil ? 'bg-surface-0 ring-surface-200' : 'bg-surface-50 ring-surface-100'"
     data-test="ekstre-satiri"
   >
     <div class="flex items-start gap-3">

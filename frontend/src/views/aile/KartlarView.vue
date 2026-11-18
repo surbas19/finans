@@ -146,7 +146,7 @@ function sonEkstre(kartId: number): Ekstre | undefined {
         <li v-for="e in bekleyenler" :key="e.id">
           <RouterLink
             :to="{ name: 'aile-ekstre', params: { id: e.id } }"
-            class="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 ring-1 ring-amber-200"
+            class="flex items-center justify-between gap-3 rounded-2xl bg-surface-0 p-3 ring-1 ring-amber-200"
           >
             <span class="min-w-0">
               <span class="flex items-center gap-1 truncate font-semibold"

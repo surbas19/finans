@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { temaSurumu } from '@/composables/useTema'
 import { computed, ref, watch } from 'vue'
 import Chart from 'primevue/chart'
 import { tl } from '@/utils/bicim'
@@ -63,6 +64,7 @@ const veriVar = computed(() =>
 )
 
 function cssRengi(deger: string): string {
+  void temaSurumu.value // tema değişince yeniden okunur
   const ad = deger.startsWith('var(') ? deger.slice(4, -1).trim() : deger
   if (!ad.startsWith('--')) return deger
 

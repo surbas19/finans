@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { temaSurumu } from '@/composables/useTema'
 import { computed } from 'vue'
 import Chart from 'primevue/chart'
 
@@ -54,6 +55,7 @@ const GRAFIK_RENKLERI = [
 ]
 
 function cssRengi(deger: string): string {
+  void temaSurumu.value // tema değişince yeniden okunur
   if (!deger.startsWith('--')) return deger
 
   return getComputedStyle(document.documentElement).getPropertyValue(deger).trim() || '#6366f1'

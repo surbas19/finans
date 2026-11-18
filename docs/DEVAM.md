@@ -6,12 +6,6 @@
 ## Yayın bekleyenler
 Yok (2026-11-18, kullanıcı bildirdi): ay çarkı, şirket geçmişi + renkli tarih kutusu, ekstre ayı = son ödeme ayı, temettü + bedelsiz ve 16–18 Kasım işleri (onayı kaldır, hızlı işlemler, kategorisiz bölümü) canlıda.
 
-## Arayüz iyileştirmesi ([planlar/arayuz-iyilestirme.md](planlar/arayuz-iyilestirme.md))
-- Durum: başladı (2026-11-18)
-- Yapılanlar: plan
-- **Sıradaki adım:** 1. K1 metni, 2. yazı ölçeği (plandaki sırayla)
-- Komutlar: frontend `npm run type-check && npm run lint`, vitest PowerShell'den `D:\` ile `--testTimeout=30000`
-
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
 

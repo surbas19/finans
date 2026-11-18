@@ -16,7 +16,13 @@ defineProps<{
 </script>
 
 <template>
-  <header class="mb-4 flex flex-col gap-3">
+  <!-- Yalnız başlık varsa telefonda hiç yer kaplamaz (sayfa adı üst çubukta) -->
+  <header
+    class="mb-4 flex-col gap-3"
+    :class="
+      aciklama || $slots.eylemler || $slots.filtreler || $slots.baslik ? 'flex' : 'hidden md:flex'
+    "
+  >
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="min-w-0" :class="{ 'flex-1': $slots.baslik }">
         <slot name="baslik">

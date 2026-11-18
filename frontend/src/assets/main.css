@@ -6,6 +6,8 @@
 @import 'primeicons/primeicons.css';
 /* Mikro-animasyonlar: token'lar, utility'ler, PrimeVue yumuşatmaları, hareketi azalt desteği */
 @import './hareket.css';
+/* Koyu tema (html.koyu): palet basamakları ters çevrilir; scripts/koyu-tema-uret.mjs üretir */
+@import './koyu-tema.css';
 
 /* Tipografi: Plus Jakarta Sans (uygulamayla birlikte gelir, harici istek yok). Kurallar: okul sisteminin docs/TASARIM.md belgesi */
 @theme {
@@ -119,7 +121,8 @@ body::before {
  * Zemin kenarlara kadar uzar (gölge + clip-path; yerleşim ve iç konumlar değişmez).
  */
 @utility ay-carki-yapiskan {
-  position: sticky;
+  /* !important: AySecici kökündeki `relative` ezmesin (relative + top çarkı aşağı iterdi) */
+  position: sticky !important;
   top: calc(var(--ust-yukseklik) + var(--alt-sekme-yukseklik));
   z-index: 9;
   background: color-mix(in srgb, var(--p-surface-50) 92%, transparent);

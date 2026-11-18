@@ -284,7 +284,7 @@ async function yukle(): Promise<void> {
               :class="
                 secilenKart === k.id
                   ? 'bg-primary-50 text-primary-800 ring-primary-400'
-                  : 'bg-white text-surface-800 ring-amber-200'
+                  : 'bg-surface-0 text-surface-800 ring-amber-200'
               "
               :aria-pressed="secilenKart === k.id"
               data-test="eksik-kart"

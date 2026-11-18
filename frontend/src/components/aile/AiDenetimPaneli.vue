@@ -169,7 +169,7 @@ async function kopyala(): Promise<void> {
     <pre
       v-if="json !== null"
       data-test="json"
-      class="max-h-80 overflow-auto rounded-xl bg-white p-2 font-mono text-xs whitespace-pre text-surface-800"
+      class="max-h-80 overflow-auto rounded-xl bg-surface-0 p-2 font-mono text-xs whitespace-pre text-surface-800"
       >{{ json }}</pre>
     <p v-if="json !== null" class="text-xs text-sky-800">
       Kart / IBAN / telefon / kimlik numarası maskelidir.
