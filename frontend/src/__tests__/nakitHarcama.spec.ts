@@ -95,6 +95,7 @@ describe('Nakit harcama: sade hızlı form', () => {
     expect(g).toMatchObject({
       gider_kaynagi_id: null,
       kategori_id: 2,
+      odeme_yeri: 'ev',
       aciklama: 'Market',
       tutar: 125.5,
       donem: ay,
@@ -126,6 +127,19 @@ describe('Nakit harcama: sade hızlı form', () => {
     await w.get('[data-test="nakit-form"]').trigger('submit')
     await flushPromises()
     expect(ekle.mock.calls[0]![0]).toMatchObject({ aciklama: 'Nakit harcama', kategori_id: null })
+    w.unmount()
+  })
+
+  it('ödeme yeri varsayılan Ev; Banka seçilirse banka gönderilir', async () => {
+    const w = await kur()
+    expect(w.text()).toContain('Ev nakdinden düşer')
+    await w.get('#nh-tutar').setValue('60')
+    await w.get('#nh-tutar').trigger('blur')
+    const banka = w.findAll('[data-test="nakit-odeme-yeri"] .p-togglebutton')[1]!
+    await banka.trigger('click')
+    await w.get('[data-test="nakit-form"]').trigger('submit')
+    await flushPromises()
+    expect(ekle.mock.calls[0]![0]).toMatchObject({ odeme_yeri: 'banka', tutar: 60 })
     w.unmount()
   })
 

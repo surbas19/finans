@@ -5,6 +5,7 @@ import DatePicker from 'primevue/datepicker'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
 import Textarea from 'primevue/textarea'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
@@ -36,6 +37,11 @@ const confirm = useConfirm()
 const toast = useToast()
 const { hatalar, gonderiliyor, gonder } = useFormGonder()
 
+const ODEME_YERLERI = [
+  { deger: 'ev', etiket: 'Ev' },
+  { deger: 'banka', etiket: 'Banka' },
+]
+
 function bos(): DuzenliGiderGirdisi {
   return {
     gider_kaynagi_id: null,
@@ -43,6 +49,7 @@ function bos(): DuzenliGiderGirdisi {
     aciklama: '',
     tutar: null,
     tarih: tarihMetni(new Date()),
+    odeme_yeri: null,
     donem: buAy(),
     not: null,
   }
@@ -63,6 +70,7 @@ watch(gorunur, (acik) => {
         aciklama: g.aciklama,
         tutar: g.tutar,
         tarih: g.tarih,
+        odeme_yeri: g.odeme_yeri ?? null,
         donem: g.donem,
         not: g.not,
       }
@@ -203,6 +211,22 @@ function sil(): void {
           />
         </FormAlani>
       </div>
+      <FormAlani
+        etiket="Ödeme yeri"
+        for="gider-odeme-yeri"
+        :hata="hatalar.odeme_yeri"
+        ipucu="Ev seçilirse tutar ev nakdinden düşer; banka yalnızca etikettir"
+      >
+        <SelectButton
+          v-model="form.odeme_yeri"
+          :options="ODEME_YERLERI"
+          option-label="etiket"
+          option-value="deger"
+          aria-label="Ödeme yeri"
+          class="[&>.p-togglebutton]:flex-1"
+          data-test="gider-odeme-yeri"
+        />
+      </FormAlani>
       <p class="rounded-2xl bg-surface-50 p-3 text-xs text-surface-600">
         Kartla ödediyseniz bu gider kart ekstresine girer; burada tekrar girmeyin (iki kez sayılır).
       </p>

@@ -5,6 +5,7 @@ import DatePicker from 'primevue/datepicker'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
 import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
@@ -32,6 +33,12 @@ const aciklama = ref('')
 const kategoriId = ref<number | null>(null)
 const tarih = ref<Date>(new Date())
 const digerAcik = ref(false)
+/** Paranın çıktığı yer: ev nakdinden düşer; banka yalnız etiket */
+const odemeYeri = ref<'ev' | 'banka'>('ev')
+const ODEME_YERLERI = [
+  { deger: 'ev', etiket: 'Ev' },
+  { deger: 'banka', etiket: 'Banka' },
+]
 
 /** Çiplerde en çok kullanılan 4; seçili kategori çiplerde yoksa (Diğer'den seçildiyse) başa eklenir */
 const cipler = computed(() => {
@@ -49,6 +56,7 @@ watch(gorunur, async (acik) => {
   kategoriId.value = null
   tarih.value = new Date()
   digerAcik.value = false
+  odemeYeri.value = 'ev'
   await nextTick()
   tutaraOdaklan()
 })
@@ -82,6 +90,7 @@ async function kaydet(): Promise<void> {
       aciklama: ad,
       tutar: tutar.value,
       tarih: tarihMetni(tarih.value),
+      odeme_yeri: odemeYeri.value,
       donem: tarihtenDonem(tarih.value),
       not: null,
     }),
@@ -117,6 +126,23 @@ async function kaydet(): Promise<void> {
           data-test="nakit-tutar"
         />
       </FormAlani>
+      <div>
+        <SelectButton
+          v-model="odemeYeri"
+          :options="ODEME_YERLERI"
+          option-label="etiket"
+          option-value="deger"
+          :allow-empty="false"
+          aria-label="Ödeme yeri"
+          class="w-full [&>.p-togglebutton]:flex-1"
+          data-test="nakit-odeme-yeri"
+        />
+        <p class="mt-1 text-center text-xs text-surface-500">
+          {{
+            odemeYeri === 'ev' ? 'Ev nakdinden düşer' : 'Banka (bakiye takibi yok, yalnızca etiket)'
+          }}
+        </p>
+      </div>
       <FormAlani etiket="Açıklama" for="nh-aciklama" :hata="hatalar.aciklama">
         <InputText
           id="nh-aciklama"

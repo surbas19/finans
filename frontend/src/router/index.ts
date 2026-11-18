@@ -103,6 +103,12 @@ export const rotalar: RouteRecordRaw[] = [
             meta: { baslik: 'Tasarruf' },
           },
           {
+            path: 'borclar',
+            name: 'aile-borclar',
+            component: () => import('@/views/aile/BorclarView.vue'),
+            meta: { baslik: 'Borç / Alacak' },
+          },
+          {
             path: 'kartlar',
             name: 'aile-kartlar',
             component: () => import('@/views/aile/KartlarView.vue'),

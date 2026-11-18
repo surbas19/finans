@@ -115,9 +115,13 @@ export interface DuzenliGider {
   aciklama: string
   tutar: number
   tarih: string
+  /** Paranın çıktığı yer: ev nakdinden düşer; banka yalnız etiket; eski kayıtta null */
+  odeme_yeri?: 'ev' | 'banka' | null
   donem: string
   not: string | null
 }
+
+export type OdemeYeri = 'ev' | 'banka'
 
 export interface DuzenliGiderGirdisi {
   gider_kaynagi_id: number | null
@@ -125,7 +129,55 @@ export interface DuzenliGiderGirdisi {
   aciklama: string
   tutar: number | null
   tarih: string
+  odeme_yeri?: OdemeYeri | null
   donem: string
+  not: string | null
+}
+
+export interface EvNakdiHareketi {
+  tip: 'ekleme' | 'cikarma' | 'harcama'
+  id: number
+  tutar: number
+  tarih: string
+  aciklama: string | null
+}
+
+export interface EvNakdiOzeti {
+  bakiye: number
+  giren: number
+  cikan: number
+  harcama: number
+  hareketler: EvNakdiHareketi[]
+}
+
+export interface BorcOdemesi {
+  id: number
+  tutar: number
+  tarih: string
+  not: string | null
+}
+
+export interface Borc {
+  id: number
+  yon: 'borc' | 'alacak'
+  kisi: string
+  tutar: number
+  odenen: number
+  kalan: number
+  durum: 'acik' | 'kapali'
+  tarih: string
+  vade: string | null
+  vade_gecti: boolean
+  not: string | null
+  odemeler: BorcOdemesi[]
+}
+
+export interface BorcGirdisi {
+  yon: 'borc' | 'alacak'
+  kisi: string
+  tutar: number | null
+  tarih: string
+  vade: string | null
   not: string | null
 }
 
@@ -935,6 +987,30 @@ export const aileApi = {
   duzenliGiderGuncelle: (id: number, veri: DuzenliGiderGirdisi) =>
     http.put<{ gider: DuzenliGider }>(`/aile/duzenli-giderler/${id}`, veri).then((r) => r.data),
   duzenliGiderSil: (id: number) => http.delete(`/aile/duzenli-giderler/${id}`),
+
+  evNakdi: () => http.get<EvNakdiOzeti>('/aile/ev-nakdi').then((r) => r.data),
+  evNakdiHareketEkle: (veri: {
+    tur: 'ekleme' | 'cikarma'
+    tutar: number | null
+    tarih: string
+    not: string | null
+  }) => http.post<EvNakdiOzeti>('/aile/ev-nakdi/hareketler', veri).then((r) => r.data),
+  evNakdiHareketSil: (id: number) =>
+    http.delete<EvNakdiOzeti>(`/aile/ev-nakdi/hareketler/${id}`).then((r) => r.data),
+
+  borclar: () =>
+    http
+      .get<{ borclar: Borc[]; toplam_borc: number; toplam_alacak: number }>('/aile/borclar')
+      .then((r) => r.data),
+  borcEkle: (veri: BorcGirdisi) =>
+    http.post<{ borc: Borc }>('/aile/borclar', veri).then((r) => r.data),
+  borcGuncelle: (id: number, veri: BorcGirdisi) =>
+    http.put<{ borc: Borc }>(`/aile/borclar/${id}`, veri).then((r) => r.data),
+  borcSil: (id: number) => http.delete(`/aile/borclar/${id}`),
+  borcOdemeEkle: (id: number, veri: { tutar: number | null; tarih: string; not: string | null }) =>
+    http.post<{ borc: Borc }>(`/aile/borclar/${id}/odemeleri`, veri).then((r) => r.data),
+  borcOdemeSil: (id: number, odemeId: number) =>
+    http.delete<{ borc: Borc }>(`/aile/borclar/${id}/odemeleri/${odemeId}`).then((r) => r.data),
 
   tasarrufEkle: (veri: TasarrufGirdisi) =>
     http

@@ -194,6 +194,9 @@ function kaynakAdi(id: number | null): string {
                 <span class="block text-xs text-surface-500">
                   {{ aile.kategori(g.kategori_id)?.ad ?? 'Kategorisiz' }} ·
                   {{ tarih(g.tarih) }}
+                  <template v-if="g.odeme_yeri">
+                    · {{ g.odeme_yeri === 'ev' ? 'Ev' : 'Banka' }}</template
+                  >
                   <template v-if="g.gider_kaynagi_id">
                     · {{ kaynakAdi(g.gider_kaynagi_id) || 'düzenli' }}</template
                   >

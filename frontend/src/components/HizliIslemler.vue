@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import Button from 'primevue/button'
 import Popover from 'primevue/popover'
 import { useToast } from 'primevue/usetoast'
+import BorcFormu from '@/components/aile/BorcFormu.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import NakitHarcamaFormu from '@/components/aile/NakitHarcamaFormu.vue'
@@ -16,7 +17,8 @@ import { useAileStore } from '@/stores/aile'
  * bağımsız, hemen açılır. Menü bir listeden üretilir: yeni işlem eklemek için `HIZLI_ISLEMLER`'e bir satır ve
  * aşağıdaki şablona formu eklemek yeter. Kayıttan sonra `kaydedildi` olayı yayılır (açık sayfa yenilenir).
  */
-export type HizliIslemAdi = 'nakit-harcama' | 'tasarruf' | 'ekstre-yukle' | 'gelir-ekle'
+export type HizliIslemAdi =
+  'nakit-harcama' | 'tasarruf' | 'ekstre-yukle' | 'gelir-ekle' | 'borc-alacak'
 
 export interface HizliIslem {
   ad: HizliIslemAdi
@@ -50,6 +52,12 @@ const HIZLI_ISLEMLER: HizliIslem[] = [
     aciklama: 'Maaş, ek ders ve diğerleri',
     ikon: 'pi pi-plus-circle',
   },
+  {
+    ad: 'borc-alacak',
+    etiket: 'Borç / alacak',
+    aciklama: 'Kime verdiniz, kimden aldınız',
+    ikon: 'pi pi-users',
+  },
 ]
 
 /** `dugmesiz`: kendi ⚡ düğmesi çizilmez; menüyü dışarıdaki düğme (alt çubuktaki + ) `ac` ile açar */
@@ -64,6 +72,7 @@ const giderAcik = ref(false)
 const tasarrufAcik = ref(false)
 const ekstreAcik = ref(false)
 const gelirAcik = ref(false)
+const borcAcik = ref(false)
 const gelirKaynaklari = ref<GelirKaynagi[]>([])
 const yukleniyor = ref<HizliIslemAdi | null>(null)
 
@@ -83,6 +92,8 @@ async function sec(islem: HizliIslem): Promise<void> {
     } else if (islem.ad === 'gelir-ekle') {
       gelirKaynaklari.value = await aileApi.kaynaklar()
       gelirAcik.value = true
+    } else if (islem.ad === 'borc-alacak') {
+      borcAcik.value = true
     } else if (islem.ad === 'tasarruf') {
       tasarrufAcik.value = true
     } else {
@@ -135,6 +146,7 @@ async function sec(islem: HizliIslem): Promise<void> {
   </Popover>
 
   <NakitHarcamaFormu v-model:visible="giderAcik" @kaydedildi="emit('kaydedildi')" />
+  <BorcFormu v-model:visible="borcAcik" @kaydedildi="emit('kaydedildi')" />
   <TasarrufFormu v-model:visible="tasarrufAcik" @kaydedildi="emit('kaydedildi')" />
   <EkstreYukleDialog v-model:visible="ekstreAcik" />
   <GelirFormu

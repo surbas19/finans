@@ -11,6 +11,7 @@ import Skeleton from 'primevue/skeleton'
 import AySecici from '@/components/aile/AySecici.vue'
 import KisiEtiketi from '@/components/KisiEtiketi.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
+import EvNakdiKarti from '@/components/aile/EvNakdiKarti.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import GiderFormu from '@/components/aile/GiderFormu.vue'
 import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
@@ -449,6 +450,8 @@ const gunMetni = (gun: number | null | undefined) =>
           >Tüm dönemler</RouterLink
         >
       </section>
+
+      <EvNakdiKarti />
 
       <!-- Altın / döviz günleri -->
       <section class="kart p-4 sm:p-5" data-test="gunler-bolumu">

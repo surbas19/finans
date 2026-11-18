@@ -12,6 +12,7 @@ const SEKMELER = [
   { ad: 'aile', etiket: 'Özet' },
   { ad: 'aile-gelir-gider', etiket: 'Gelir / Gider' },
   { ad: 'aile-tasarruf', etiket: 'Tasarruf' },
+  { ad: 'aile-borclar', etiket: 'Borç / Alacak' },
   { ad: 'aile-kartlar', etiket: 'Kartlar' },
   { ad: 'aile-islemler', etiket: 'İşlemler' },
   { ad: 'aile-faturalar', etiket: 'Faturalar' },

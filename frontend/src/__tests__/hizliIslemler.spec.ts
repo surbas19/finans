@@ -46,6 +46,7 @@ const Nakit = sahte('NakitHarcamaFormu')
 const Tasarruf = sahte('TasarrufFormu')
 const Ekstre = sahte('EkstreYukleDialog')
 const Gelir = sahte('GelirFormu')
+const Borc = sahte('BorcFormu')
 const Popover = defineComponent({
   setup(_, { slots, expose }) {
     expose({ toggle: () => {}, hide: () => {} })
@@ -65,6 +66,7 @@ async function kur() {
         TasarrufFormu: Tasarruf,
         EkstreYukleDialog: Ekstre,
         GelirFormu: Gelir,
+        BorcFormu: Borc,
         Popover,
       },
     },
@@ -85,18 +87,25 @@ describe('Hızlı işlemler menüsü', () => {
     kaynaklar.mockResolvedValue([{ id: 9 }])
   })
 
-  it('düğme var; menüde dört işlem, ikon + ad + açıklama satırıyla', async () => {
+  it('düğme var; menüde beş işlem, ikon + ad + açıklama satırıyla', async () => {
     const w = await kur()
     expect(w.get('[data-test="hizli-dugme"]').attributes('aria-label')).toBe('Hızlı işlemler')
     const satirlar = w.findAll('[role="menuitem"]').map((e) => e.text())
-    expect(satirlar).toHaveLength(4)
+    expect(satirlar).toHaveLength(5)
     expect(satirlar[0]).toContain('Nakit harcama')
     expect(satirlar[0]).toContain('Kartsız gideri hemen yaz')
     expect(satirlar[1]).toContain('Tasarruf')
     expect(satirlar[2]).toContain('Ekstre yükle')
     expect(satirlar[3]).toContain('Gelir ekle')
+    expect(satirlar[4]).toContain('Borç / alacak')
     // Başlangıçta hiçbir form açık değil
-    for (const f of ['NakitHarcamaFormu', 'TasarrufFormu', 'EkstreYukleDialog', 'GelirFormu']) {
+    for (const f of [
+      'NakitHarcamaFormu',
+      'TasarrufFormu',
+      'EkstreYukleDialog',
+      'GelirFormu',
+      'BorcFormu',
+    ]) {
       expect(gorunur(w, f)).toBe('false')
     }
     w.unmount()
@@ -125,6 +134,14 @@ describe('Hızlı işlemler menüsü', () => {
     await w.get('[data-test="hizli-ekstre-yukle"]').trigger('click')
     await flushPromises()
     expect(gorunur(w, 'EkstreYukleDialog')).toBe('true')
+    w.unmount()
+  })
+
+  it('borç / alacak: kendi formu açılır', async () => {
+    const w = await kur()
+    await w.get('[data-test="hizli-borc-alacak"]').trigger('click')
+    await flushPromises()
+    expect(gorunur(w, 'BorcFormu')).toBe('true')
     w.unmount()
   })
 
