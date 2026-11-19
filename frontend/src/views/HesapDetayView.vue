@@ -180,7 +180,9 @@ function hesabiSil(): void {
             </p>
             <p class="mt-1 flex flex-wrap gap-x-3 text-sm text-surface-500">
               <span>K/Z <DegisimEtiketi :tutar="hesap.kz" :yuzde="hesap.kz_yuzde" /></span>
-              <span>Bugün <DegisimEtiketi :tutar="hesap.gunluk_degisim" /></span>
+              <span
+                >Bugün <DegisimEtiketi :tutar="hesap.gunluk_degisim" :yuzde="hesap.gunluk_yuzde"
+              /></span>
               <span v-if="(hesap.temettu ?? 0) > 0"
                 >Temettü <DegisimEtiketi :tutar="hesap.temettu"
               /></span>

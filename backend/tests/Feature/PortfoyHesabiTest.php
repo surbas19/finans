@@ -44,6 +44,9 @@ class PortfoyHesabiTest extends TestCase
         $this->assertFalse($poz['gerceklesen_kz_eksik']);
         // Günlük: fiyat %10 arttı → dünkü 290; 120 × 29
         $this->assertEqualsWithDelta(3480, $poz['gunluk_degisim'], 0.01);
+        // Günlük yüzde: 3480 / dünkü değer (120 × 290) = %10; hesap toplamında da
+        $this->assertEqualsWithDelta(10, $p['toplam']['gunluk_yuzde'], 0.01);
+        $this->assertEqualsWithDelta(10, $p['hesaplar'][0]['gunluk_yuzde'], 0.01);
         $this->assertEqualsWithDelta(38280, $p['toplam']['deger'], 0.01);
         $this->assertEqualsWithDelta(3845.6 / 34434.4 * 100, $p['toplam']['kz_yuzde'], 0.01);
     }
@@ -88,6 +91,12 @@ class PortfoyHesabiTest extends TestCase
         $this->assertEqualsWithDelta(1, $poz['fiyat_tl'], 1e-9);
         $this->assertEqualsWithDelta(0, $poz['kz'], 0.01);
         $this->assertNull($poz['gunluk_degisim']);
+        // Nakit değişmez: günlük yüzde 0 (bilinmiyor değil)
+        $this->assertEqualsWithDelta(0, $p['toplam']['gunluk_yuzde'], 0.001);
+        // Nakitle karışık hesapta yüzde bütün değere göre: hisse 120 × 29 = 3480 / (12000 + 34800)
+        $hisse = $this->varlik('THYAO', fiyat: 319, degisim: 10);
+        $this->islem($hesap, $hisse->id, IslemTuru::Alis, 120, 280, 0, 5);
+        $this->assertEqualsWithDelta(3480 / 46800 * 100, app(PortfoyHesabi::class)->hesapla($hesap->user)['toplam']['gunluk_yuzde'], 0.01);
         $this->assertSame(0, $p['toplam']['fiyatsiz']);
         $this->assertFalse($p['toplam']['maliyeti_eksik']);
         $this->assertSame([['tur' => 'nakit', 'etiket' => 'Nakit', 'deger' => 12000.0]], $p['dagilim']);

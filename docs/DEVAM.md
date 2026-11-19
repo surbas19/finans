@@ -4,7 +4,7 @@
 
 
 ## Yayın bekleyenler
-Canlıya çıkmayanlar (MySQL'de doğrulandı 2026-11-19, arka uç 282/282, ön yüz 201): grafik Hiçbiri, ekstre → kart düğmesi, kart şeridi + kaydırma, ekstre silme çöp kutusu (Kartlar, ekstre ekranı üstü), Faturalar ödeme panosu (migration yok), Portföy sırası + varlık akordiyonu, tasarruf düzeltme, ev nakdi = "Ev" hesabı (migration `2026_11_24_000100_hane_ev_hesabi`). Canlıda son: c22d4aa.
+Canlıya çıkmayanlar (MySQL'de doğrulandı 2026-11-19, arka uç 282/282, ön yüz 201): bugün K/Z yüzdesi, grafik Hiçbiri, ekstre → kart düğmesi, kart şeridi + kaydırma, ekstre silme çöp kutusu (Kartlar, ekstre ekranı üstü), Faturalar ödeme panosu (migration yok), Portföy sırası + varlık akordiyonu, tasarruf düzeltme, ev nakdi = "Ev" hesabı (migration `2026_11_24_000100_hane_ev_hesabi`). Canlıda son: c22d4aa.
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).

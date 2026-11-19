@@ -221,7 +221,10 @@ async function elleYenile(): Promise<void> {
           <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-surface-500">
             <DegisimEtiketi :tutar="secili.toplam.kz" :yuzde="secili.toplam.kz_yuzde" />
             <span class="inline-flex items-center gap-1"
-              >Bugün <DegisimEtiketi :tutar="secili.toplam.gunluk_degisim"
+              >Bugün
+              <DegisimEtiketi
+                :tutar="secili.toplam.gunluk_degisim"
+                :yuzde="secili.toplam.gunluk_yuzde"
             /></span>
           </p>
         </div>

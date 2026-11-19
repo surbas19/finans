@@ -364,6 +364,12 @@ class PortfoyHesabi
         $acik = $satirlar->filter(fn (array $s): bool => $s['miktar'] > Pozisyon::EPS);
         $maliyet = (float) $acik->whereNotNull('kz')->sum('maliyet');
         $kz = (float) $acik->whereNotNull('kz')->sum('kz');
+        // Günlük yüzde: değişim / dünkü değer. Dünkü fiyatı bilinen satırlar ve sabit fiyatlılar (nakit, BES: değişim 0,
+        // dünkü değer = bugünkü) sayılır; dünkü fiyatı bilinmeyen satır paydaya da girmez (uydurulmaz)
+        $gunlukluler = $acik->filter(fn (array $s): bool => $s['deger'] !== null
+            && ($s['gunluk_degisim'] !== null || ($s['varlik']['kaynak'] ?? null) === 'sabit'));
+        $gunluk = (float) $gunlukluler->sum(fn (array $s): float => $s['gunluk_degisim'] ?? 0);
+        $dunku = (float) $gunlukluler->sum(fn (array $s): float => $s['deger'] - ($s['gunluk_degisim'] ?? 0));
 
         return [
             'deger' => round((float) $acik->sum(fn (array $s): float => $s['deger'] ?? 0), 2),
@@ -371,6 +377,7 @@ class PortfoyHesabi
             'kz' => round($kz, 2),
             'kz_yuzde' => $maliyet > 0 ? round($kz / $maliyet * 100, 2) : null,
             'gunluk_degisim' => round((float) $acik->sum(fn (array $s): float => $s['gunluk_degisim'] ?? 0), 2),
+            'gunluk_yuzde' => $dunku > 0 ? round($gunluk / $dunku * 100, 2) : null,
             'gerceklesen_kz' => round((float) $satirlar->sum(fn (array $s): float => $s['gerceklesen_kz'] ?? 0), 2),
             // Satılmış (kapalı) hisselerin temettüsü de sayılır
             'temettu' => round((float) $satirlar->sum(fn (array $s): float => $s['temettu'] ?? 0), 2),

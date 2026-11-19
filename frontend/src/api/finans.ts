@@ -44,6 +44,8 @@ export interface Toplam {
   kz: number
   kz_yuzde: number | null
   gunluk_degisim: number
+  /** Günlük değişim / dünkü değer (dünkü fiyatı bilinen + nakit / BES); hesaplanamazsa null */
+  gunluk_yuzde?: number | null
   gerceklesen_kz: number
   /** Alınan net temettü toplamı (satılmış hisseler dahil) */
   temettu?: number

@@ -79,7 +79,7 @@ onMounted(yukle)
           <span class="flex flex-col items-end">
             <DegisimEtiketi :tutar="h.kz" :yuzde="h.kz_yuzde" kucuk />
             <span class="text-xs text-surface-400"
-              >bugün <DegisimEtiketi :tutar="h.gunluk_degisim" kucuk
+              >bugün <DegisimEtiketi :tutar="h.gunluk_degisim" :yuzde="h.gunluk_yuzde" kucuk
             /></span>
           </span>
         </div>
