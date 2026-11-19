@@ -238,4 +238,95 @@ class KategoriAtamaTest extends TestCase
         $this->assertSame(0, KategoriKurali::where('hane_id', $this->ben->hane_id)->where('desen', 'SECRET SHOP')->count());
         $this->getJson('/api/v1/aile/kart-islemleri?guncel=1')->assertOk()->assertJsonCount(0, 'islemler');
     }
+
+    public function test_yalniz_bu_islem_kapsami_kurala_ve_digerlerine_dokunmaz(): void
+    {
+        $market = $this->kategori('Market');
+        $giyim = $this->kategori('Giyim');
+        $a = $this->satir($this->kartA, 'KAHVE DUNYASI KADIKOY', '2026-11-03');
+        $b = $this->satir($this->kartB, 'KAHVE DUNYASI KADIKOY', '2026-10-05');
+        $this->putJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori", ['kategori_id' => $market])->assertOk()->assertJsonPath('guncellenen', 2);
+
+        $this->putJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori", ['kategori_id' => $giyim, 'kapsam' => 'tek'])->assertOk()
+            ->assertJsonPath('guncellenen', 1)->assertJsonPath('geri_al.kural', null);
+        $this->assertSame($giyim, $a->fresh()->kategori_id);
+        $this->assertSame($market, $b->fresh()->kategori_id);
+        $this->assertSame($market, KategoriKurali::where('desen', 'KAHVE DUNYASI KADIKOY')->value('kategori_id'));
+        $this->putJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori", ['kategori_id' => $giyim, 'kapsam' => 'bazi'])->assertStatus(422);
+    }
+
+    public function test_geri_al_satirlari_ve_kurali_onceki_haline_dondurur(): void
+    {
+        $market = $this->kategori('Market');
+        $giyim = $this->kategori('Giyim');
+        $a = $this->satir($this->kartA, 'KAHVE DUNYASI KADIKOY', '2026-11-03');
+        $b = $this->satir($this->kartB, 'KAHVE DUNYASI KADIKOY', '2026-10-05');
+        $c = $this->satir($this->kartB, 'KAHVE DUNYASI KADIKOY', '2026-09-05');
+        $b->update(['kategori_id' => $giyim]);
+
+        // Kural yokken atama → geri al: kural silinir, satırlar eski kategorilerine (a, c kategorisiz; b Giyim)
+        $geri = $this->putJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori", ['kategori_id' => $market])->assertOk()
+            ->assertJsonPath('geri_al.kural.var', false)->json('geri_al');
+        $this->postJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori-geri-al", $geri)->assertOk()->assertJsonPath('message', 'Geri alındı.');
+        $this->assertNull($a->fresh()->kategori_id);
+        $this->assertSame($giyim, $b->fresh()->kategori_id);
+        $this->assertNull($c->fresh()->kategori_id);
+        $this->assertSame(0, KategoriKurali::where('desen', 'KAHVE DUNYASI KADIKOY')->count());
+
+        // Kural varken başka kategoriye çevirme → geri al: kural eski kategorisine döner
+        $this->putJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori", ['kategori_id' => $market])->assertOk();
+        $geri = $this->putJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori", ['kategori_id' => null])->assertOk()->json('geri_al');
+        $this->assertSame(0, KategoriKurali::where('desen', 'KAHVE DUNYASI KADIKOY')->count());
+        $this->postJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori-geri-al", $geri)->assertOk();
+        $this->assertSame($market, KategoriKurali::where('desen', 'KAHVE DUNYASI KADIKOY')->value('kategori_id'));
+        $this->assertSame($market, $c->fresh()->kategori_id);
+    }
+
+    public function test_geri_al_baska_hanenin_satirini_ve_kategorisini_kabul_etmez(): void
+    {
+        $a = $this->satir($this->kartA, 'KAHVE DUNYASI KADIKOY', '2026-11-03');
+        $yabanci = User::factory()->create();
+        app(HaneYonetimi::class)->hazirla($yabanci);
+        $onunKategorisi = (int) HarcamaKategorisi::where('hane_id', $yabanci->hane_id)->where('ad', 'Market')->value('id');
+        $onunSatiri = KartIslemi::create([
+            'hane_id' => $yabanci->hane_id, 'kart_id' => $this->kartA, 'durum' => KartIslemDurumu::Onayli, 'islem_tarihi' => '2026-11-03',
+            'aciklama' => 'X', 'tutar' => '1.00', 'tur' => KartIslemTuru::Harcama, 'rapor_donemi' => '2026-11', 'parmak_izi' => md5('yabanci'),
+        ]);
+
+        $this->postJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori-geri-al", ['gruplar' => [['kategori_id' => null, 'idler' => [$onunSatiri->id]]], 'kural' => null])
+            ->assertStatus(422);
+        $this->postJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori-geri-al", ['gruplar' => [['kategori_id' => $onunKategorisi, 'idler' => [$a->id]]], 'kural' => null])
+            ->assertStatus(422);
+        // Başka hane bu hanenin satırı üzerinden geri alamaz, öneri de göremez
+        $this->actingAs($yabanci)->postJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori-geri-al", ['gruplar' => [], 'kural' => null])->assertForbidden();
+        $this->getJson("/api/v1/aile/kart-islemleri/{$a->id}/kategori-onerisi")->assertForbidden();
+    }
+
+    public function test_oneri_kuraldan_ya_da_ayni_ilk_kelimeli_satirlardan(): void
+    {
+        $market = $this->kategori('Market');
+        $yeme = $this->kategori('Yeme-içme');
+        // Varsayılan kural: MIGROS → Market
+        $migros = $this->satir($this->kartA, 'MIGROS KADIKOY 2134', '2026-11-03');
+        $this->satir($this->kartA, 'MIGROS KADIKOY 2134', '2026-10-03');
+        $this->getJson("/api/v1/aile/kart-islemleri/{$migros->id}/kategori-onerisi")->assertOk()
+            ->assertJsonPath('ayni_aciklamali', 2)
+            ->assertJsonPath('oneri.kategori_id', $market)->assertJsonPath('oneri.gerekce', 'kural');
+        // Zaten o kategorideyse öneri yok
+        $migros->update(['kategori_id' => $market]);
+        $this->getJson("/api/v1/aile/kart-islemleri/{$migros->id}/kategori-onerisi")->assertJsonPath('oneri', null);
+
+        // Kural yok: ilk kelimesi aynı, açıklaması farklı kategorili satırlardan en çok kullanılan
+        $this->satir($this->kartA, 'KAHVE DUNYASI KADIKOY', '2026-11-01')->update(['kategori_id' => $yeme]);
+        $this->satir($this->kartA, 'KAHVE DUNYASI BESIKTAS', '2026-11-02')->update(['kategori_id' => $yeme]);
+        $this->satir($this->kartA, 'KAHVE ATOLYESI', '2026-11-02')->update(['kategori_id' => $market]);
+        $yeni = $this->satir($this->kartB, 'KAHVE DUNYASI ATASEHIR', '2026-11-05');
+        $this->getJson("/api/v1/aile/kart-islemleri/{$yeni->id}/kategori-onerisi")->assertOk()
+            ->assertJsonPath('ayni_aciklamali', 1)
+            ->assertJsonPath('oneri.kategori_id', $yeme)->assertJsonPath('oneri.gerekce', 'benzer')->assertJsonPath('oneri.adet', 2);
+
+        // Dayanak yoksa öneri yok (uydurulmaz)
+        $bos = $this->satir($this->kartA, 'ZZZ TICARET', '2026-11-05');
+        $this->getJson("/api/v1/aile/kart-islemleri/{$bos->id}/kategori-onerisi")->assertJsonPath('oneri', null);
+    }
 }

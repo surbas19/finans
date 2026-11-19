@@ -120,6 +120,8 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::delete('kategori-kurallari/{kural}', [KategoriController::class, 'kuralSil'])->name('kategori-kurallari.destroy');
             Route::apiResource('kart-islemleri', KartIslemiController::class)->except('show')->parameters(['kart-islemleri' => 'islem']);
             Route::put('kart-islemleri/{islem}/kategori', [KartIslemiController::class, 'kategori'])->name('kart-islemleri.kategori');
+            Route::get('kart-islemleri/{islem}/kategori-onerisi', [KartIslemiController::class, 'kategoriOnerisi'])->name('kart-islemleri.kategori-onerisi');
+            Route::post('kart-islemleri/{islem}/kategori-geri-al', [KartIslemiController::class, 'kategoriGeriAl'])->name('kart-islemleri.kategori-geri-al');
             Route::get('kart-islemleri/{islem}/gecmis', [KartIslemiController::class, 'gecmis'])->name('kart-islemleri.gecmis');
             Route::get('ekstreler', [EkstreController::class, 'index'])->name('ekstreler.index');
             Route::post('ekstreler', [EkstreController::class, 'store'])->middleware('throttle:ekstre')->name('ekstreler.store');

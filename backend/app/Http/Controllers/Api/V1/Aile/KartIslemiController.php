@@ -123,7 +123,11 @@ class KartIslemiController extends Controller
     public function kategori(Request $request, KartIslemi $islem, KategoriAtayici $atayici): JsonResponse
     {
         Gate::authorize('hane-kaydi', $islem);
-        $veri = $request->validate(['kategori_id' => ['nullable', 'integer']]);
+        $veri = $request->validate([
+            'kategori_id' => ['nullable', 'integer'],
+            // hepsi: aynı açıklamalı bütün satırlar + kural (varsayılan); tek: yalnız bu satır, kural değişmez
+            'kapsam' => ['nullable', Rule::in(['hepsi', 'tek'])],
+        ]);
         $kategori = null;
         if (($veri['kategori_id'] ?? null) !== null) {
             $kategori = HarcamaKategorisi::where('hane_id', $islem->hane_id)->find($veri['kategori_id']);
@@ -131,16 +135,64 @@ class KartIslemiController extends Controller
                 throw ValidationException::withMessages(['kategori_id' => 'Kategori bulunamadı.']);
             }
         }
-        $sayi = $atayici->ata($islem, $kategori);
+        $sonuc = $atayici->ata($islem, $kategori, ($veri['kapsam'] ?? 'hepsi') === 'tek');
+        $sayi = $sonuc['sayi'];
 
         return response()->json([
             'islem' => $islem->fresh()->ozet(),
             'guncellenen' => $sayi,
             'kategori_ad' => $kategori?->ad,
+            'geri_al' => $sonuc['geri_al'],
             'message' => $kategori
                 ? ($sayi > 1 ? "{$sayi} işlem \"{$kategori->ad}\" olarak işaretlendi." : "İşlem \"{$kategori->ad}\" olarak işaretlendi.")
                 : ($sayi > 1 ? "{$sayi} işlemin kategorisi kaldırıldı." : 'İşlemin kategorisi kaldırıldı.'),
         ]);
+    }
+
+    /** Kategori seçicinin bilgisi: aynı açıklamalı satır sayısı ve önerilen kategori (yoksa null) */
+    public function kategoriOnerisi(KartIslemi $islem, KategoriAtayici $atayici): JsonResponse
+    {
+        Gate::authorize('hane-kaydi', $islem);
+
+        return response()->json([
+            'ayni_aciklamali' => $atayici->ayniAciklamaliSayisi($islem),
+            'oneri' => $atayici->oneri($islem),
+        ]);
+    }
+
+    /**
+     * Kategori atamasını geri alır: atamanın yanıtındaki `geri_al` aynen gönderilir. Satırlar ve kategoriler hanede
+     * olmalıdır (başka hanenin kaydı değiştirilemez).
+     */
+    public function kategoriGeriAl(Request $request, KartIslemi $islem, KategoriAtayici $atayici): JsonResponse
+    {
+        Gate::authorize('hane-kaydi', $islem);
+        $veri = $request->validate([
+            'gruplar' => ['present', 'array', 'max:100'],
+            'gruplar.*.kategori_id' => ['nullable', 'integer'],
+            'gruplar.*.idler' => ['required', 'array', 'min:1', 'max:5000'],
+            'gruplar.*.idler.*' => ['integer'],
+            'kural' => ['nullable', 'array'],
+            'kural.var' => ['required_with:kural', 'boolean'],
+            'kural.kategori_id' => ['nullable', 'integer'],
+        ]);
+        $haneId = (int) $islem->hane_id;
+        $idler = collect($veri['gruplar'])->flatMap(fn (array $g): array => $g['idler'])->map(fn ($i): int => (int) $i)->unique();
+        if (KartIslemi::where('hane_id', $haneId)->whereIn('id', $idler)->count() !== $idler->count()) {
+            throw ValidationException::withMessages(['gruplar' => 'Geri alınacak işlemler bulunamadı.']);
+        }
+        $kategoriler = collect($veri['gruplar'])->pluck('kategori_id')->push($veri['kural']['kategori_id'] ?? null)->filter()->unique();
+        if (HarcamaKategorisi::where('hane_id', $haneId)->whereIn('id', $kategoriler)->count() !== $kategoriler->count()) {
+            throw ValidationException::withMessages(['gruplar' => 'Kategori bulunamadı.']);
+        }
+        $gruplar = collect($veri['gruplar'])->map(fn (array $g): array => [
+            'kategori_id' => isset($g['kategori_id']) ? (int) $g['kategori_id'] : null,
+            'idler' => array_map('intval', $g['idler']),
+        ])->all();
+        $kural = isset($veri['kural']) ? ['var' => (bool) $veri['kural']['var'], 'kategori_id' => isset($veri['kural']['kategori_id']) ? (int) $veri['kural']['kategori_id'] : null] : null;
+        $atayici->geriAl($islem, $gruplar, $kural);
+
+        return response()->json(['message' => 'Geri alındı.']);
     }
 
     /**
