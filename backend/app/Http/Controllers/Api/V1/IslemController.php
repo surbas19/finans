@@ -125,6 +125,9 @@ class IslemController extends Controller
     public function update(Request $request, Islem $islem): JsonResponse
     {
         Gate::authorize('update', $islem);
+        if ($islem->bag_turu === 'harcama') {
+            throw ValidationException::withMessages(['islem' => 'Bu satış bir nakit harcamasından geldi; harcamayı Bütçe\'den düzenleyin.']);
+        }
         if ($islem->aktarim_kodu !== null) {
             throw ValidationException::withMessages(['islem' => $islem->bag_turu === 'temettu'
                 ? 'Temettü kaydı düzenlenemez; silip yeniden girin.'
@@ -180,6 +183,9 @@ class IslemController extends Controller
     public function destroy(Islem $islem): JsonResponse
     {
         Gate::authorize('delete', $islem);
+        if ($islem->bag_turu === 'harcama') {
+            throw ValidationException::withMessages(['islem' => 'Bu satış bir nakit harcamasından geldi; harcamayı Bütçe\'den silin.']);
+        }
         // Aktarımın bir kaydı silinirse eşleşik bütün kayıtlar (kaynak satışı + hedef alışı) birlikte silinir
         $silinecek = $islem->aktarim_kodu !== null ? Islem::where('aktarim_kodu', $islem->aktarim_kodu)->get() : collect([$islem]);
         foreach ($silinecek as $s) {

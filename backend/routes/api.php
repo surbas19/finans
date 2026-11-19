@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Aile\HesapEkstresiController;
 use App\Http\Controllers\Api\V1\Aile\KartController;
 use App\Http\Controllers\Api\V1\Aile\KartIslemiController;
 use App\Http\Controllers\Api\V1\Aile\KategoriController;
+use App\Http\Controllers\Api\V1\Aile\OdemeKaynaklariController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufController;
@@ -94,6 +95,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('gider-kaynaklari', GiderKaynagiController::class)->except('show')->parameters(['gider-kaynaklari' => 'kaynak']);
             Route::apiResource('duzenli-giderler', DuzenliGiderController::class)->except('show')->parameters(['duzenli-giderler' => 'gider']);
 
+            Route::get('odeme-kaynaklari', OdemeKaynaklariController::class)->name('odeme-kaynaklari');
             Route::get('ev-nakdi', [EvNakdiController::class, 'index'])->name('ev-nakdi.index');
             Route::post('ev-nakdi/hareketler', [EvNakdiController::class, 'store'])->name('ev-nakdi.store');
             Route::delete('ev-nakdi/hareketler/{hareket}', [EvNakdiController::class, 'destroy'])->name('ev-nakdi.destroy');
