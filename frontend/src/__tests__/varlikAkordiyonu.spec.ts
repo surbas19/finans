@@ -59,18 +59,26 @@ describe('VarlikAkordiyonu', () => {
     expect(w.get('[data-test="varlik-grubu-nakit"]').text()).not.toContain('K/Z')
   })
 
-  it('hariç satır ve fiyatsız değer toplama girmez; maliyeti bilinmeyen satır grubu "K/Z —" yapar', () => {
+  it('hariç satır ve fiyatsız değer toplama girmez; K/Z yalnız bilinen kısımdan (eksikse kısmi, hiç yoksa —)', () => {
     const w = kur([
       poz(1, 'altin', 400),
       poz(2, 'altin', 600, { dahil: false }),
       poz(3, 'hisse', null),
       poz(4, 'doviz', 200, { kz: null }),
+      poz(5, 'kripto', 300, { kz: 50 }),
+      poz(6, 'kripto', 100, { kz: null }),
     ])
     const altin = w.get('[data-test="varlik-grubu-altin"]').text()
     expect(altin).toContain('₺400,00')
     expect(altin).toContain('2 varlık')
     expect(w.get('[data-test="varlik-grubu-doviz"]').text()).toContain('K/Z —')
     expect(w.get('[data-test="varlik-grubu-hisse"]').text()).toContain('₺0,00')
+    const kripto = w.get('[data-test="varlik-grubu-kripto"]')
+    expect(kripto.text()).toContain('50,00')
+    expect(kripto.find('[data-test="kz-kismi"]').exists()).toBe(true)
+    expect(w.get('[data-test="varlik-grubu-altin"]').find('[data-test="kz-kismi"]').exists()).toBe(
+      false,
+    )
   })
 
   it('başlığa dokununca grup açılır ve satırlar görünür', async () => {

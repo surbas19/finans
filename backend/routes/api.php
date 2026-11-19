@@ -98,6 +98,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::get('odeme-kaynaklari', OdemeKaynaklariController::class)->name('odeme-kaynaklari');
             Route::get('ev-nakdi', [EvNakdiController::class, 'index'])->name('ev-nakdi.index');
             Route::post('ev-nakdi/hareketler', [EvNakdiController::class, 'store'])->name('ev-nakdi.store');
+            Route::put('ev-nakdi/hesap', [EvNakdiController::class, 'hesap'])->name('ev-nakdi.hesap');
             Route::delete('ev-nakdi/hareketler/{hareket}', [EvNakdiController::class, 'destroy'])->name('ev-nakdi.destroy');
 
             Route::apiResource('borclar', BorcController::class)->except('show')->parameters(['borclar' => 'borc']);

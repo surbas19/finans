@@ -3,19 +3,18 @@
 namespace App\Services\Aile;
 
 use App\Enums\IslemTuru;
-use App\Enums\VarlikTuru;
+use App\Models\EvNakdiHareketi;
 use App\Models\Hesap;
 use App\Models\Islem;
 use App\Models\User;
 use App\Models\Varlik;
 use App\Services\Portfoy\PortfoyHesabi;
-use App\Services\Portfoy\Pozisyon;
 use App\Services\Portfoy\YetersizMiktar;
 use App\Support\Kurus;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Kartsız giderin düşüldüğü kaynaklar (tek yer). Ev: ev nakdi kasası (`EvNakdi`). Banka: seçilen portföy hesabının
+ * Kartsız giderin düşüldüğü kaynaklar (tek yer). Ev: seçilen ev hesabının Nakit (TL)'si ya da ayrı ev nakdi kasası (`EvNakdi`). Banka: seçilen portföy hesabının
  * Nakit (TL) bakiyesi; harcama o hesaba `bag_turu = harcama` Nakit satışı olarak yazılır (Hesaplar, toplam ve zekât
  * otomatik doğru kalır). Yetmeyen bakiye hiçbir yerde eksiye düşmez, kayıt reddedilir.
  */
@@ -25,26 +24,19 @@ class NakitKaynaklari
 
     public function nakitVarligi(): ?Varlik
     {
-        return Varlik::where('tur', VarlikTuru::Nakit->value)->orderBy('id')->first();
+        return $this->evNakdi->nakitVarligi();
     }
 
-    /** Hesaptaki Nakit (TL) miktarı (tüm işlemler, tarih sırasıyla) */
+    /** Hesaptaki Nakit (TL) miktarı (EvNakdi::hesapNakit) */
     public function hesapNakit(Hesap $hesap): float
     {
-        $nakit = $this->nakitVarligi();
-        if (! $nakit) {
-            return 0.0;
-        }
-        $p = new Pozisyon($hesap->id, $nakit->id);
-        foreach (PortfoyHesabi::sirala(Islem::where('hesap_id', $hesap->id)->where('varlik_id', $nakit->id)->get()) as $islem) {
-            try {
-                $p->uygula($islem);
-            } catch (YetersizMiktar) {
-                // Bozuk eski satış hesaba katılmaz (PortfoyHesabi::hesapla ile aynı)
-            }
-        }
+        return $this->evNakdi->hesapNakit($hesap);
+    }
 
-        return max(0.0, $p->miktar());
+    /** Ev nakdi olarak seçilmiş portföy hesabı (yoksa ayrı kasa) */
+    public function evHesabi(int $haneId): ?Hesap
+    {
+        return $this->evNakdi->evHesabi($haneId);
     }
 
     /**
@@ -55,7 +47,10 @@ class NakitKaynaklari
     public function kaynaklar(User $user): array
     {
         return [
-            'ev' => ['bakiye' => Kurus::tl(max(0, $this->evNakdi->bakiyeKurus((int) $user->hane_id)))],
+            'ev' => [
+                'bakiye' => Kurus::tl(max(0, $this->evNakdi->bakiyeKurus((int) $user->hane_id))),
+                'hesap' => ($h = $this->evHesabi((int) $user->hane_id)) ? ['id' => $h->id, 'ad' => $h->ad] : null,
+            ],
             'hesaplar' => Hesap::erisilebilir($user)->orderBy('sira')->orderBy('id')->get()
                 ->map(fn (Hesap $h): array => ['id' => $h->id, 'ad' => $h->ad, 'nakit' => round($this->hesapNakit($h), 2)])->values(),
         ];
@@ -73,7 +68,7 @@ class NakitKaynaklari
     /**
      * Banka harcaması: hesaba Nakit (TL) satışı yazar. Hesapta o tarihte yeterli nakit yoksa reddedilir.
      */
-    public function bankaSatisiYaz(User $user, Hesap $hesap, int $tutarKurus, string $tarih, string $aciklama): Islem
+    public function bankaSatisiYaz(User $user, Hesap $hesap, int $tutarKurus, string $tarih, string $aciklama, string $ipucu = 'Önce hesaba nakit ekleyin ya da Ev seçin.'): Islem
     {
         $nakit = $this->nakitVarligi();
         if (! $nakit) {
@@ -88,7 +83,35 @@ class NakitKaynaklari
         try {
             $this->portfoy->dogrula($mevcut->push($islem));
         } catch (YetersizMiktar $e) {
-            throw ValidationException::withMessages(['tutar' => '"'.$hesap->ad.'" hesabında '.self::tl((int) round(max(0, $e->eldeki) * 100)).' nakit var; bu harcama için yetmiyor. Önce hesaba nakit ekleyin ya da Ev seçin.']);
+            throw ValidationException::withMessages(['tutar' => '"'.$hesap->ad.'" hesabında '.self::tl((int) round(max(0, $e->eldeki) * 100)).' nakit var; bu harcama için yetmiyor. '.$ipucu]);
+        }
+        $islem->save();
+
+        return $islem;
+    }
+
+    /**
+     * Hesap kipinde ev nakdine para ekleme / çıkarma: ev hesabına Nakit (TL) alışı / satışı (sıradan portföy işlemi;
+     * Portföy'den düzenlenir). Çıkarma, o tarihte hesaptaki nakitten fazla olamaz.
+     */
+    public function evHareketiYaz(User $user, Hesap $hesap, string $tur, int $tutarKurus, string $tarih, ?string $not): Islem
+    {
+        $nakit = $this->nakitVarligi();
+        if (! $nakit) {
+            throw ValidationException::withMessages(['tutar' => 'Katalogda nakit (TL) varlığı yok; yönetici katalog eşitlemesini çalıştırmalı.']);
+        }
+        $cikarma = $tur === EvNakdiHareketi::CIKARMA;
+        $islem = new Islem([
+            'user_id' => $user->id, 'hesap_id' => $hesap->id, 'varlik_id' => $nakit->id,
+            'tur' => $cikarma ? IslemTuru::Satis : IslemTuru::Alis, 'miktar' => $tutarKurus / 100, 'birim_fiyat' => 1.0,
+            'komisyon' => 0, 'tarih' => $tarih, 'not' => 'Ev nakdi: '.(filled($not) ? trim((string) $not) : ($cikarma ? 'para çıkarıldı' : 'para eklendi')),
+        ]);
+        if ($cikarma) {
+            try {
+                $this->portfoy->dogrula(Islem::where('hesap_id', $hesap->id)->where('varlik_id', $nakit->id)->get()->push($islem));
+            } catch (YetersizMiktar $e) {
+                throw ValidationException::withMessages(['tutar' => '"'.$hesap->ad.'" hesabında '.self::tl((int) round(max(0, $e->eldeki) * 100)).' nakit var; daha fazlası çıkarılamaz.']);
+            }
         }
         $islem->save();
 

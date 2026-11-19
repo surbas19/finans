@@ -127,7 +127,8 @@ export type OdemeYeri = 'ev' | 'banka'
 
 /** Nakit harcamanın düşülebileceği kaynaklar: ev nakdi bakiyesi ve hesapların Nakit (TL) bakiyeleri */
 export interface OdemeKaynaklari {
-  ev: { bakiye: number }
+  /** `hesap`: ev nakdi bir portföy hesabıysa (ör. "Ev"); null = ayrı kasa */
+  ev: { bakiye: number; hesap?: { id: number; ad: string } | null }
   hesaplar: { id: number; ad: string; nakit: number }[]
 }
 
@@ -149,9 +150,13 @@ export interface EvNakdiHareketi {
   tutar: number
   tarih: string
   aciklama: string | null
+  /** Kasa kipinde elle eklenen / çıkarılan hareket burada silinir; hesap kipinde Portföy'den düzenlenir */
+  silinebilir?: boolean
 }
 
 export interface EvNakdiOzeti {
+  /** Ev nakdi olarak seçilmiş portföy hesabı; null = ayrı ev nakdi kasası */
+  hesap?: { id: number; ad: string } | null
   bakiye: number
   giren: number
   cikan: number
@@ -1002,6 +1007,11 @@ export const aileApi = {
 
   odemeKaynaklari: () => http.get<OdemeKaynaklari>('/aile/odeme-kaynaklari').then((r) => r.data),
   evNakdi: () => http.get<EvNakdiOzeti>('/aile/ev-nakdi').then((r) => r.data),
+  /** Ev nakdi hangi portföy hesabı (null: ayrı kasa) */
+  evNakdiHesap: (hesapId: number | null) =>
+    http
+      .put<EvNakdiOzeti & { message: string }>('/aile/ev-nakdi/hesap', { hesap_id: hesapId })
+      .then((r) => r.data),
   evNakdiHareketEkle: (veri: {
     tur: 'ekleme' | 'cikarma'
     tutar: number | null

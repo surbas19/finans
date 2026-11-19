@@ -14,7 +14,7 @@ import { tl } from '@/utils/bicim'
  * Başlıkta ikon, tür, varlık sayısı ve pay; sağda değer ve K/Z; altında türün dağılım renginde pay çubuğu. Başta
  * hepsi kapalı; açılanlar hesap değişince de açık kalır. İçerik PozisyonListesi (aktar / dahil / şeritler aynen).
  * Toplamlar yalnız sunucunun satır değerlerinden toplanır: genel toplama dahil olmayan satır ve fiyatı olmayan değer
- * katılmaz; grupta maliyeti bilinmeyen satır varsa grubun K/Z'si "—" (sıfır sayılmaz).
+ * katılmaz; K/Z yalnız maliyeti bilinen satırlardan toplanır (eksik kısım varsa "kısmi"; hiç bilinmiyorsa "—").
  */
 const props = defineProps<{
   pozisyonlar: Pozisyon[]
@@ -36,14 +36,22 @@ const gruplar = computed(() =>
       const liste = props.pozisyonlar.filter((p) => p.varlik.tur === tur)
       const dahil = liste.filter((p) => p.dahil !== false)
       const deger = dahil.reduce((t, p) => t + (p.deger ?? 0), 0)
-      const kzBilinmiyor = dahil.some((p) => p.kz === null && (p.deger ?? 0) > 0)
+      // K/Z yalnız maliyeti bilinen kısımdan (genel toplamla aynı kural); eksik kısım varsa "kısmi" yazar
+      const bilinen = dahil.filter((p) => p.kz !== null)
+      const eksik = dahil.some(
+        (p) => (p.kz === null && (p.deger ?? 0) > 0) || p.maliyeti_bilinmeyen_miktar > 0,
+      )
 
       return {
         tur,
         bilgi: VARLIK_TURLERI[tur],
         liste,
         deger,
-        kz: tur === 'nakit' || kzBilinmiyor ? null : dahil.reduce((t, p) => t + (p.kz ?? 0), 0),
+        kz:
+          tur === 'nakit' || bilinen.length === 0
+            ? null
+            : bilinen.reduce((t, p) => t + (p.kz ?? 0), 0),
+        kismi: eksik && bilinen.length > 0,
         pay: genelToplam.value > 0 ? (deger / genelToplam.value) * 100 : 0,
       }
     })
@@ -99,6 +107,9 @@ const yuzde = (n: number): string => `%${n.toLocaleString('tr-TR', { maximumFrac
               >{{ tl(g.deger) }}</span
             >
             <DegisimEtiketi v-if="g.kz !== null" :tutar="g.kz" kucuk class="justify-end" />
+            <span v-if="g.kismi" class="block text-xs text-amber-700" data-test="kz-kismi"
+              >kısmi</span
+            >
             <span v-else-if="g.tur !== 'nakit'" class="block text-xs text-surface-400">K/Z —</span>
           </span>
         </span>

@@ -7,9 +7,18 @@ import type { Borc, EvNakdiOzeti } from '@/api/aile'
 
 const evNakdi = vi.fn<() => Promise<EvNakdiOzeti>>()
 const borclar = vi.fn<() => Promise<unknown>>()
+const evNakdiHesap = vi.fn<(id: number | null) => Promise<unknown>>()
 vi.mock('@/api/aile', async (asil) => ({
   ...(await asil<typeof import('@/api/aile')>()),
-  aileApi: { evNakdi: () => evNakdi(), borclar: () => borclar() },
+  aileApi: {
+    evNakdi: () => evNakdi(),
+    borclar: () => borclar(),
+    evNakdiHesap: (id: number | null) => evNakdiHesap(id),
+  },
+}))
+vi.mock('@/api/finans', async (asil) => ({
+  ...(await asil<typeof import('@/api/finans')>()),
+  finansApi: { hesaplar: () => Promise.resolve({ hesaplar: [{ id: 7, ad: 'Ev' }] }) },
 }))
 
 const stubs = { UygulamaPenceresi: { template: '<div><slot /></div>' } }
@@ -65,6 +74,49 @@ describe('Ev nakdi kartı', () => {
     expect(w.findAll('[data-test="ev-hareket-sil"]')).toHaveLength(1)
     // Tüm nakit harcamalar listesine bağlantı (Gelir / Gider → Gider paneli)
     expect(w.find('[data-test="ev-tum-nakit"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it("hesap seçilince bakiye o hesabın nakdi; hareketler burada silinmez (Portföy'den)", async () => {
+    evNakdi.mockResolvedValue({
+      bakiye: 0,
+      giren: 0,
+      cikan: 0,
+      harcama: 0,
+      hareketler: [],
+      hesap: null,
+    })
+    const hesapli = {
+      hesap: { id: 7, ad: 'Ev' },
+      bakiye: 2000,
+      giren: 2000,
+      cikan: 0,
+      harcama: 0,
+      hareketler: [
+        {
+          tip: 'ekleme' as const,
+          id: 9,
+          tutar: 2000,
+          tarih: '2026-11-01',
+          aciklama: null,
+          silinebilir: false,
+        },
+      ],
+      message: 'Ev nakdi artık "Ev" hesabının nakdi.',
+    }
+    evNakdiHesap.mockResolvedValue(hesapli)
+    const { default: EvNakdiKarti } = await import('@/components/aile/EvNakdiKarti.vue')
+    const w = mount(EvNakdiKarti, {
+      global: { plugins, stubs: { ...stubs, RouterLink: { template: '<a><slot /></a>' } } },
+    })
+    await flushPromises()
+    expect(w.find('[data-test="ev-hesap-adi"]').exists()).toBe(false)
+    w.findComponent({ name: 'Select' }).vm.$emit('update:modelValue', 7)
+    await flushPromises()
+    expect(evNakdiHesap).toHaveBeenCalledWith(7)
+    expect(w.get('[data-test="ev-hesap-adi"]').text()).toContain('"Ev" hesabının nakdi')
+    expect(w.get('[data-test="ev-bakiye"]').text()).toContain('2.000')
+    expect(w.findAll('[data-test="ev-hareket-sil"]')).toHaveLength(0)
     w.unmount()
   })
 })

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -13,7 +14,16 @@ class Hane extends Model
 {
     protected $table = 'haneler';
 
-    protected $fillable = ['ad'];
+    /** `ev_hesap_id`: ev nakdi olarak kullanılan portföy hesabı (boşsa ayrı ev nakdi kasası) */
+    protected $fillable = ['ad', 'ev_hesap_id'];
+
+    /**
+     * @return BelongsTo<Hesap, $this>
+     */
+    public function evHesabi(): BelongsTo
+    {
+        return $this->belongsTo(Hesap::class, 'ev_hesap_id');
+    }
 
     /**
      * @return HasMany<User, $this>

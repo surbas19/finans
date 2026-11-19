@@ -6,11 +6,8 @@
 ## Yayın bekleyenler
 Yok (2026-11-19): canlıda c22d4aa (nakit harcama kaynak bakiyesi, hareketler dahil).
 
-## Ev hesabı, varlık akordiyonu, tasarruf düzeltme ([planlar/ev-hesabi-akordiyon.md](planlar/ev-hesabi-akordiyon.md))
-- Durum: başladı (2026-11-19)
-- Yapılanlar: 1. Portföy sırası + VarlikAkordiyonu (`ba33bd2`), 2. tasarruf düzeltme (arka uç + form; TasarrufTest SQLite 6/6, ön yüz 186)
-- **Sıradaki adım:** 3. Ev nakdi → "Ev" hesabı (`haneler.ev_hesap_id`); MySQL açılınca `php artisan test`
-- Komutlar: `php artisan migrate && php artisan test`; frontend `npm run type-check && npm run lint`, vitest PowerShell'den `D:\` ile `--testTimeout=30000`
+## MySQL'de doğrulama bekleyen (2026-11-19)
+Laragon MySQL kapalıydı; arka uç SQLite ile 272/279 (kalan 7 bilinen SQLite farkı). Kapsanan: Ev hesabı (EvHesabiTest, migration `2026_11_24_000100_hane_ev_hesabi`), tasarruf düzeltme (TasarrufTest). **Sıradaki adım:** MySQL açılınca `php artisan migrate && php artisan test`; sonra bu kaydı sil. Canlıya alınırsa migration cron'da çalışır.
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).

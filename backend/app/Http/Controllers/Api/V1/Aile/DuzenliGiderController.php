@@ -83,7 +83,8 @@ class DuzenliGiderController extends Controller
     }
 
     /**
-     * Ödeme yerine göre kaynaktan düşer: Ev → kasa bakiyesi denetlenir; Banka → hesaba Nakit satışı yazılır (eski satış
+     * Ödeme yerine göre kaynaktan düşer: Ev → ev hesabı seçiliyse ona Nakit satışı, değilse kasa bakiyesi denetlenir;
+     * Banka → hesaba Nakit satışı yazılır (eski satış
      * silinip yeniden yazılır, böylece tutar / tarih / hesap değişimi tek yerde çözülür).
      */
     private function kaynaktanDus(Request $request, DuzenliGider $gider, ?int $haricGiderId, ?int $eskiIslemId = null): void
@@ -94,8 +95,16 @@ class DuzenliGiderController extends Controller
         }
         $kurus = Kurus::kurus($gider->tutar);
         if ($gider->odeme_yeri === 'ev') {
-            $this->kaynaklar->evYeterliMi((int) $request->user()->hane_id, $kurus, $haricGiderId);
-            $gider->hesap_id = null;
+            // Ev nakdi bir portföy hesabıysa (ör. "Ev") harcama o hesaba Nakit satışı olarak düşer; değilse ayrı kasa
+            $evHesabi = $this->kaynaklar->evHesabi((int) $request->user()->hane_id);
+            if ($evHesabi) {
+                $islem = $this->kaynaklar->bankaSatisiYaz($request->user(), $evHesabi, $kurus, $gider->tarih->toDateString(), $gider->aciklama, 'Önce ev nakdine para ekleyin ya da Banka seçin.');
+                $gider->islem_id = $islem->id;
+                $gider->hesap_id = $evHesabi->id;
+            } else {
+                $this->kaynaklar->evYeterliMi((int) $request->user()->hane_id, $kurus, $haricGiderId);
+                $gider->hesap_id = null;
+            }
         } elseif ($gider->odeme_yeri === 'banka') {
             $hesap = Hesap::findOrFail((int) $gider->hesap_id);
             $islem = $this->kaynaklar->bankaSatisiYaz($request->user(), $hesap, $kurus, $gider->tarih->toDateString(), $gider->aciklama);

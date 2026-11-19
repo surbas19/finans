@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-19) Ev nakdi = seçilen portföy hesabı ("Ev"; kartta "Hangi hesap", ev harcaması ve para ekle / çıkar o hesabın Nakit (TL)'sine yazılır, eski kasa yok sayılır); Portföy Özet sırası (Dağılım → Varlıklarım → Performans), Varlıklarım türe göre akordiyon (pay çubuklu, başta kapalı; hesap detayında da); tasarruf düzeltme (kaleme dokununca pencere, bağlı alış da güncellenir). Testler: ön yüz 187, arka uç SQLite 272/279 (MySQL bekliyor).
 - (2026-11-19) Nakit harcama gerçekten düşer: Ev kasasından, Banka = seçilen portföy hesabının Nakit TL satışı; yetmezse reddedilir. Grafiklerde sayaçlı belirme, yönlü sayfa geçişi, açılış ekranı (çizen logo). 1 migration. Testler: arka uç 273, ön yüz 182.
 - (2026-11-18) Gider panelinde ayrı "Nakit harcamalar" listesi (Ev / Banka süzgeci, toplam); Ev nakdi kartından bağlantı. Testler: ön yüz 176.
 - (2026-11-18) Ev nakdi kasası + giderde Ev / Banka seçimi + Borç / Alacak defteri (Bütçe sekmesi, hızlı işlem). 2 yeni migration. Testler: arka uç 269, ön yüz 174.

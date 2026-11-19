@@ -186,9 +186,10 @@ async function kaydet(): Promise<void> {
         />
         <p class="mt-1 text-center text-xs text-surface-500" data-test="nakit-kaynak-bilgi">
           <template v-if="odemeYeri === 'ev'"
-            >Ev nakdinden düşer<template v-if="bakiye !== null">
-              · bakiye {{ tl(bakiye) }}</template
-            ></template
+            ><template v-if="kaynaklar?.ev.hesap"
+              >"{{ kaynaklar.ev.hesap.ad }}" hesabının nakdinden düşer</template
+            ><template v-else>Ev nakdinden düşer</template
+            ><template v-if="bakiye !== null"> · bakiye {{ tl(bakiye) }}</template></template
           >
           <template v-else
             >Hesabın nakdinden düşer<template v-if="bakiye !== null">
