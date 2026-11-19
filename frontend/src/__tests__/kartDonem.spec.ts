@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
+import ConfirmationService from 'primevue/confirmationservice'
+import ToastService from 'primevue/toastservice'
 import type { Ekstre } from '@/api/aile'
 
 function ekstre(id: number, donem: string, borc: number, ek: Partial<Ekstre> = {}): Ekstre {
@@ -20,10 +22,16 @@ function ekstre(id: number, donem: string, borc: number, ek: Partial<Ekstre> = {
 }
 
 const liste = vi.fn<() => Promise<Ekstre[]>>()
+const sil = vi.fn<(id: number) => Promise<unknown>>()
+// Onay penceresi: testte doğrudan kabul edilir
+vi.mock('primevue/useconfirm', () => ({
+  useConfirm: () => ({ require: (o: { accept: () => void }) => o.accept() }),
+}))
 vi.mock('@/api/aile', async (asil) => ({
   ...(await asil<typeof import('@/api/aile')>()),
   aileApi: {
     ekstreler: () => liste(),
+    ekstreSil: (id: number) => sil(id),
     hane: () => Promise.resolve({ hane: { id: 1, ad: 'Aile' }, uyeler: [], ben_uye_id: 1 }),
     bankalar: () => Promise.resolve([{ id: 1, ad: 'Garanti' }]),
     kartlar: () =>
@@ -71,7 +79,7 @@ describe('Kartlar: ekstre dönemi seçici', () => {
     setActivePinia(createPinia())
     const w = mount(KartlarView, {
       global: {
-        plugins: [PrimeVue],
+        plugins: [PrimeVue, ConfirmationService, ToastService],
         stubs: {
           RouterLink: { template: '<a><slot /></a>' },
           KartFormu: true,
@@ -120,6 +128,22 @@ describe('Kartlar: ekstre dönemi seçici', () => {
     const w = await kur()
     expect(w.find('[data-test="kart-donem-secici"]').exists()).toBe(false)
     expect(w.findAll('[data-test="kart-satiri"]')[0]!.text()).toContain('Bu dönem ekstre yok')
+    w.unmount()
+  })
+
+  it('incelemeyi bekleyen ekstre çöp kutusuyla silinir', async () => {
+    sil.mockReset().mockResolvedValue({})
+    liste.mockResolvedValue([
+      ekstre(1, '2026-10', 3000),
+      ekstre(3, '2026-12', 999, { durum: 'taslak' }),
+    ])
+    const w = await kur()
+    const dugmeler = w.findAll('[data-test="ekstre-sil"]')
+    expect(dugmeler).toHaveLength(1)
+    await dugmeler[0]!.trigger('click')
+    await flushPromises()
+    expect(sil).toHaveBeenCalledWith(3)
+    expect(w.find('[data-test="ekstre-sil"]').exists()).toBe(false)
     w.unmount()
   })
 })

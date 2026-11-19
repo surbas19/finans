@@ -326,6 +326,19 @@ function sil(): void {
               :value="taslak ? 'İnceleme bekliyor' : 'Onaylandı'"
               :severity="taslak ? 'warn' : 'success'"
             />
+            <!-- İnceleme bekleyen ekstre üstten de silinir (altta da "Ekstreyi sil" var) -->
+            <Button
+              v-if="taslak"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              rounded
+              size="small"
+              aria-label="Ekstreyi sil"
+              title="Ekstreyi sil"
+              data-test="ekstre-sil-ust"
+              @click="sil"
+            />
             <Button
               v-if="onayKaldirilabilir"
               label="Onayı kaldır"

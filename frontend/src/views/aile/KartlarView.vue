@@ -6,6 +6,8 @@ import AccordionHeader from 'primevue/accordionheader'
 import AccordionPanel from 'primevue/accordionpanel'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import BosDurum from '@/components/BosDurum.vue'
 import AySecici from '@/components/aile/AySecici.vue'
 import KartGrafigi from '@/components/grafik/KartGrafigi.vue'
@@ -15,6 +17,7 @@ import ElleEkstreDialog from '@/components/aile/ElleEkstreDialog.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import KartFormu from '@/components/aile/KartFormu.vue'
 import { aileApi, type Ekstre, type Kart } from '@/api/aile'
+import { hataMesaji } from '@/api/http'
 import { useAileStore } from '@/stores/aile'
 import { bugun, tarih, tl } from '@/utils/bicim'
 import { donemEtiketi, gecerliDonem } from '@/utils/donem'
@@ -54,6 +57,32 @@ async function yukle(): Promise<void> {
 onMounted(yukle)
 
 const bekleyenler = computed(() => (ekstreler.value ?? []).filter((e) => e.durum === 'taslak'))
+
+const confirm = useConfirm()
+const toast = useToast()
+/** İnceleme bekleyen (taslak) ekstreyi siler; satırları ve PDF'i de gider */
+function ekstreSil(e: Ekstre): void {
+  confirm.require({
+    header: 'Ekstreyi sil',
+    message: `${e.donem_etiketi ?? 'Bu ekstre'} silinsin mi? Satırları ve PDF dosyası da silinir.`,
+    acceptProps: { label: 'Sil', severity: 'danger' },
+    rejectProps: { label: 'Vazgeç', severity: 'secondary', text: true },
+    accept: async () => {
+      try {
+        await aileApi.ekstreSil(e.id)
+        ekstreler.value = (ekstreler.value ?? []).filter((x) => x.id !== e.id)
+        toast.add({ severity: 'success', summary: 'Ekstre silindi', life: 3000 })
+      } catch (hata) {
+        toast.add({
+          severity: 'error',
+          summary: 'Silinemedi',
+          detail: hataMesaji(hata),
+          life: 5000,
+        })
+      }
+    },
+  })
+}
 /** Kartlar banka sırasıyla, aynı bankanın kartları yan yana */
 const kartlar = computed(() =>
   [...aile.kartlar].sort((a, b) => a.banka_id - b.banka_id || a.id - b.id),
@@ -143,10 +172,14 @@ function sonEkstre(kartId: number): Ekstre | undefined {
     <section v-if="bekleyenler.length" class="kart border-amber-200 bg-amber-50/60 p-4">
       <h2 class="bolum-etiketi mb-2 !text-amber-800">İncelemeyi bekleyen ekstreler</h2>
       <ul class="flex flex-col gap-2">
-        <li v-for="e in bekleyenler" :key="e.id">
+        <li
+          v-for="e in bekleyenler"
+          :key="e.id"
+          class="flex items-center gap-1 rounded-2xl bg-surface-0 ring-1 ring-amber-200"
+        >
           <RouterLink
             :to="{ name: 'aile-ekstre', params: { id: e.id } }"
-            class="flex items-center justify-between gap-3 rounded-2xl bg-surface-0 p-3 ring-1 ring-amber-200"
+            class="flex min-w-0 flex-1 items-center justify-between gap-3 p-3"
           >
             <span class="min-w-0">
               <span class="flex items-center gap-1 truncate font-semibold"
@@ -161,6 +194,18 @@ function sonEkstre(kartId: number): Ekstre | undefined {
               >İncele <i class="pi pi-arrow-right text-xs"
             /></span>
           </RouterLink>
+          <Button
+            icon="pi pi-trash"
+            severity="danger"
+            text
+            rounded
+            size="small"
+            class="mr-1 shrink-0"
+            aria-label="Ekstreyi sil"
+            title="Ekstreyi sil"
+            data-test="ekstre-sil"
+            @click="ekstreSil(e)"
+          />
         </li>
       </ul>
     </section>

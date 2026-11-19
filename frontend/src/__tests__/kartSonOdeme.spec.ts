@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
+import ConfirmationService from 'primevue/confirmationservice'
+import ToastService from 'primevue/toastservice'
 import type { Ekstre } from '@/api/aile'
 
 const gun = (fark: number): string => {
@@ -84,7 +86,7 @@ describe('Kartlar: son ödeme hatırlatıcıları akordiyonu', () => {
     setActivePinia(createPinia())
     const w = mount(KartlarView, {
       global: {
-        plugins: [PrimeVue],
+        plugins: [PrimeVue, ConfirmationService, ToastService],
         stubs: {
           RouterLink: { template: '<a><slot /></a>' },
           KartFormu: true,
@@ -112,7 +114,7 @@ describe('Kartlar: son ödeme hatırlatıcıları akordiyonu', () => {
     setActivePinia(createPinia())
     const w = mount(KartlarView, {
       global: {
-        plugins: [PrimeVue],
+        plugins: [PrimeVue, ConfirmationService, ToastService],
         stubs: {
           RouterLink: { template: '<a><slot /></a>' },
           KartFormu: true,
