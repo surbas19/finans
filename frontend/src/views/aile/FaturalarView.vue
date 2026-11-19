@@ -218,7 +218,7 @@ async function odendi(f: Fatura): Promise<void> {
               >{{ fark.yuzde > 0 ? '▲' : '▼' }} %{{
                 Math.abs(fark.yuzde).toLocaleString('tr-TR', { maximumFractionDigits: 0 })
               }}
-              {{ fark.ay }}'e göre</span
+              {{ fark.ay }} ayına göre</span
             >
           </div>
           <Button
@@ -271,7 +271,7 @@ async function odendi(f: Fatura): Promise<void> {
 
     <div
       v-if="turler.length > 1"
-      class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+      class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
       role="group"
       aria-label="Fatura türü"
     >
@@ -327,7 +327,7 @@ async function odendi(f: Fatura): Promise<void> {
             <span class="flex shrink-0 flex-col items-end gap-0.5">
               <span class="text-sm font-bold tabular-nums">{{ tl(f.tutar) }}</span>
               <Button
-                label="Ödendi"
+                label="Ödedim"
                 icon="pi pi-check"
                 text
                 size="small"
@@ -368,7 +368,7 @@ async function odendi(f: Fatura): Promise<void> {
             <span class="flex shrink-0 flex-col items-end gap-0.5">
               <span class="text-sm font-bold tabular-nums">{{ tl(f.tutar) }}</span>
               <Button
-                label="Ödendi"
+                label="Ödedim"
                 icon="pi pi-check"
                 text
                 size="small"

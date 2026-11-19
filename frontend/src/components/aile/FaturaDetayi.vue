@@ -13,7 +13,7 @@ import { durumRozeti, faturaGirdisi } from '@/utils/fatura'
 
 /**
  * Fatura detayı (telefonda alttan açılan pencere): tutar ve durum, hizmet dönemi (kaynağıyla), son ödeme, ödeme,
- * bağlı kart satırı (güveniyle; "Bağı çöz") ya da "Kart satırına bağla"; "Ödendi işaretle" (bugün), "Geçmiş"
+ * bağlı kart satırı (güveniyle; "Bağı çöz") ya da "Kart satırına bağla"; "Ödedim" (bugün ödendi), "Geçmiş"
  * (sağlayıcının bütün faturaları), "Düzenle" (silme formda).
  */
 const props = defineProps<{ fatura: Fatura | null }>()
@@ -168,7 +168,7 @@ function gec(olay: 'duzenle' | 'bagla'): void {
       <div class="flex flex-wrap gap-2">
         <Button
           v-if="fatura.durum === 'bekliyor'"
-          label="Ödendi işaretle"
+          label="Ödedim"
           icon="pi pi-check"
           size="small"
           class="flex-1"
