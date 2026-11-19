@@ -8,17 +8,24 @@ import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 
 /**
- * Grafik bölümü: kapanabilir (varsayılan açık) kart; içinde yıl seçici (önceki / sonraki yıl), yükleniyor iskeleti,
+ * Grafik bölümü: kapanabilir (varsayılan açık; `kapali` ile kapalı başlar) kart; içinde yıl seçici (önceki / sonraki yıl), yükleniyor iskeleti,
  * hata iletisi ve grafik (varsayılan yuva). Telefonda taşmaz (içerik min-w-0, kırpılır).
  */
-defineProps<{ baslik: string; yukleniyor?: boolean; hata?: string | null }>()
+const props = defineProps<{
+  baslik: string
+  yukleniyor?: boolean
+  hata?: string | null
+  kapali?: boolean
+}>()
+/** Açılış durumu yalnız ilk kurulumda okunur; sonra kullanıcı açar / kapar */
+const ilkDeger = props.kapali ? [] : ['grafik']
 const yil = defineModel<number>('yil', { required: true })
 </script>
 
 <template>
   <section class="kart p-2" data-test="grafik-karti">
     <Accordion
-      :value="['grafik']"
+      :value="ilkDeger"
       multiple
       class="[&_.p-accordioncontent-wrapper]:min-w-0 [&_.p-accordioncontent-wrapper]:overflow-hidden"
     >

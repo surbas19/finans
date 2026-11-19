@@ -570,6 +570,41 @@ export interface Fatura {
   gun?: number | null
 }
 
+/** Faturalar ekranının ay özeti (hizmet ayına göre; sunucuda kuruşla) */
+export interface FaturaAyOzeti {
+  donem: string
+  toplam: number
+  adet: number
+  /** Gelen + bu ay gelmesi beklenip gelmeyen */
+  beklenen: number
+  odendi: { tutar: number; adet: number }
+  bekliyor: { tutar: number; adet: number }
+  gecikti: { tutar: number; adet: number }
+  onceki_donem: string
+  onceki_toplam: number
+  /** Aktif sağlayıcı, son 3 ayda faturası var, bu ayda yok */
+  gelmeyenler: {
+    saglayici_id: number
+    saglayici_ad: string
+    fatura_turu_id: number
+    son_donem: string
+    son_donem_etiketi: string
+    son_tutar: number
+  }[]
+  bilinmeyen_adet: number
+}
+
+/** Bir sağlayıcının bütün faturaları; seri son 12 ay (faturası olmayan ay null) */
+export interface SaglayiciGecmisi {
+  saglayici: { id: number; ad: string; fatura_turu_id: number }
+  adet: number
+  ortalama: number | null
+  en_yuksek: { tutar: number; donem: string | null; etiket: string | null } | null
+  son_12_ay: number
+  seri: { donem: string; tutar: number | null }[]
+  faturalar: Fatura[]
+}
+
 export interface FaturaGirdisi {
   saglayici_id: number | null
   hizmet_donemi: string | null
@@ -1333,6 +1368,10 @@ export const aileApi = {
   faturaSil: (id: number) => http.delete(`/aile/faturalar/${id}`),
   faturaBagla: (id: number, kartIslemiId: number) =>
     http.post<{ fatura: Fatura }>(`/aile/faturalar/${id}/bagla`, { kart_islemi_id: kartIslemiId }),
+  faturaOzeti: (donem: string) =>
+    http.get<FaturaAyOzeti>('/aile/faturalar/ozet', { params: { donem } }).then((r) => r.data),
+  saglayiciGecmisi: (id: number) =>
+    http.get<SaglayiciGecmisi>(`/aile/saglayicilar/${id}/gecmis`).then((r) => r.data),
   faturaCoz: (id: number) => http.post<{ fatura: Fatura }>(`/aile/faturalar/${id}/coz`),
 }
 

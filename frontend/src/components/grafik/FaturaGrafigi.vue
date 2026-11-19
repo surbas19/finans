@@ -10,6 +10,7 @@ import { useDonemGrafikleri } from '@/composables/useDonemGrafikleri'
  * Faturalar: ay ay toplam fatura ve her fatura türü; "Gelire oran" görünümünde aylık kazancın yüzdesi olarak
  * (gelir girilmemiş ayın oranı boş kalır, uydurulmaz).
  */
+defineProps<{ kapali?: boolean }>()
 const { yil, veri, yukleniyor, hata } = useDonemGrafikleri()
 const gorunum = ref<'tutar' | 'oran'>('tutar')
 const GORUNUMLER = [
@@ -44,6 +45,7 @@ const seriler = computed<ZamanSerisi[]>(() => {
   <DonemGrafikKarti
     v-model:yil="yil"
     baslik="Aylık faturalar"
+    :kapali="kapali"
     :yukleniyor="yukleniyor"
     :hata="hata"
     data-test="fatura-grafigi"

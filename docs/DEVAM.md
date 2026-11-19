@@ -6,10 +6,10 @@
 ## Faturalar panosu ([planlar/faturalar-pano.md](planlar/faturalar-pano.md))
 İstek: Faturalar ekranı düzensiz; seçim A (ödeme panosu) + B sağlayıcı geçmişi.
 - [x] 1. Arka uç FaturaOzeti + uçlar + test (`GET aile/faturalar/ozet`, `GET aile/saglayicilar/{id}/gecmis`)
-- [ ] 2. Ön yüz sayfa, detay, geçmiş, dönemi bilinmeyen
+- [x] 2. Ön yüz sayfa, detay, geçmiş, dönemi bilinmeyen (testler arka uç 282, ön yüz 193)
 - [ ] 3. Tüm testler, ekran görüntüsü, CLAUDE.md, ILERLEME
 
-**Sıradaki adım:** 2 (ön yüz).
+**Sıradaki adım:** 3 (ekran görüntüsü, CLAUDE.md, ILERLEME).
 
 ## Yayın bekleyenler
 Canlıya çıkmayanlar (MySQL'de doğrulandı 2026-11-19, arka uç 279/279, ön yüz 187): Portföy sırası + varlık akordiyonu, tasarruf düzeltme, ev nakdi = "Ev" hesabı (migration `2026_11_24_000100_hane_ev_hesabi`). Canlıda son: c22d4aa.

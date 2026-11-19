@@ -22,7 +22,12 @@ import { donemdenTarih, tarihtenDonem } from '@/utils/donem'
  * Fatura (elle; geçmiş dönem dahil). Hizmet dönemi faturanın ait olduğu ay; bilinmiyorsa boş. Kartla ödendiyse
  * kart satırına bağlanır (Faturalar sayfasında); kartsız ödenen fatura ödendiği ayın gideri olur.
  */
-const props = defineProps<{ fatura?: Fatura | null; varsayilanDonem?: string | null }>()
+const props = defineProps<{
+  fatura?: Fatura | null
+  varsayilanDonem?: string | null
+  /** Yeni faturada seçili gelecek sağlayıcı (ör. "Gelmedi" satırından) */
+  varsayilanSaglayici?: number | null
+}>()
 const gorunur = defineModel<boolean>('visible', { default: false })
 const emit = defineEmits<{ kaydedildi: [] }>()
 
@@ -46,7 +51,7 @@ watch(gorunur, (acik) => {
   hatalar.value = {}
   const f = props.fatura
   form.value = {
-    saglayici_id: f?.saglayici_id ?? null,
+    saglayici_id: f?.saglayici_id ?? props.varsayilanSaglayici ?? null,
     hizmet_donemi: f?.hizmet_donemi ?? props.varsayilanDonem ?? null,
     tutar: f?.tutar ?? null,
     son_odeme_tarihi: f?.son_odeme_tarihi ?? null,
