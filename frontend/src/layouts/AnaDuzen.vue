@@ -5,6 +5,7 @@ import AltSekmeler from '@/components/AltSekmeler.vue'
 import HizliIslemler from '@/components/HizliIslemler.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
 import SayfaBasinaDon from '@/components/SayfaBasinaDon.vue'
+import GeriAlBildirimi from '@/components/GeriAlBildirimi.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import { gecisYonu } from '@/composables/useSayfaYonu'
 import { useOzelBaslik } from '@/composables/useSayfaBasligi'
@@ -210,6 +211,7 @@ function menudenGit(ad: string): void {
     </main>
 
     <SayfaBasinaDon />
+    <GeriAlBildirimi />
     <HizliIslemler v-if="auth.kullanici" ref="hizli" dugmesiz @kaydedildi="yenileme++" />
 
     <!-- Telefon: alt sekme çubuğu; ortada hızlı işlem düğmesi -->

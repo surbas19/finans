@@ -3,20 +3,40 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
-import type { Kategori, KartIslemi, SirketGecmisi } from '@/api/aile'
+import type {
+  Kategori,
+  KategoriGeriAl,
+  KategoriOnerisi,
+  KartIslemi,
+  SirketGecmisi,
+} from '@/api/aile'
+import { useGeriAl } from '@/composables/useGeriAl'
 import { useAileStore } from '@/stores/aile'
 
-const atama = vi.fn<(id: number, kategori: number | null) => Promise<unknown>>()
+const atama = vi.fn<(id: number, kategori: number | null, kapsam?: string) => Promise<unknown>>()
+const oneri = vi.fn<(id: number) => Promise<KategoriOnerisi>>()
+const geriAl = vi.fn<(id: number, g: KategoriGeriAl) => Promise<unknown>>()
 const ekle = vi.fn<(ad: string, renk?: string | null) => Promise<Kategori>>()
 const gecmis = vi.fn<(id: number) => Promise<SirketGecmisi>>()
 const kategoriler: Kategori[] = [
-  { id: 1, ad: 'Market', ikon: null, renk: 'emerald', fatura: false, sira: 1 },
-  { id: 2, ad: 'Giyim', ikon: null, renk: 'pink', fatura: false, sira: 2 },
+  {
+    id: 1,
+    ad: 'Market',
+    ikon: 'pi pi-shopping-cart',
+    renk: 'emerald',
+    fatura: false,
+    sira: 1,
+    kullanim: 9,
+  },
+  { id: 2, ad: 'Giyim', ikon: null, renk: 'pink', fatura: false, sira: 2, kullanim: 3 },
+  { id: 3, ad: 'Sağlık', ikon: 'pi pi-heart', renk: 'rose', fatura: false, sira: 3, kullanim: 1 },
 ]
 vi.mock('@/api/aile', async (asil) => ({
   ...(await asil<typeof import('@/api/aile')>()),
   aileApi: {
-    kartIslemiKategori: (id: number, k: number | null) => atama(id, k),
+    kartIslemiKategori: (id: number, k: number | null, kapsam?: string) => atama(id, k, kapsam),
+    kartIslemiKategoriOnerisi: (id: number) => oneri(id),
+    kartIslemiKategoriGeriAl: (id: number, g: KategoriGeriAl) => geriAl(id, g),
     kartIslemiGecmisi: (id: number) => gecmis(id),
     kategoriEkle: (ad: string, renk?: string | null) => ekle(ad, renk),
     hane: () => Promise.resolve({ hane: { id: 1, ad: 'Aile' }, uyeler: [], ben_uye_id: 1 }),
@@ -63,6 +83,8 @@ describe('Satıra basılı tutunca kategori', () => {
   beforeEach(() => {
     atama.mockReset()
     ekle.mockReset()
+    geriAl.mockReset().mockResolvedValue({ message: 'Geri alındı.' })
+    oneri.mockReset().mockResolvedValue({ ayni_aciklamali: 1, oneri: null })
     vi.useFakeTimers({ shouldAdvanceTime: true })
     setActivePinia(createPinia())
     useAileStore().kategoriler = kategoriler
@@ -143,17 +165,28 @@ describe('Satıra basılı tutunca kategori', () => {
     return w
   }
 
-  it('kategori seçilince sunucuya gider, bildirim verir ve liste yenilensin diye olay gönderir', async () => {
-    atama.mockResolvedValue({ message: '3 işlem "Market" olarak işaretlendi.' })
+  it('ızgara kullanım sırasıyla; seçilince sunucuya gider, pencere kapanır, Geri al bildirimi çıkar', async () => {
+    const geri: KategoriGeriAl = {
+      gruplar: [{ kategori_id: null, idler: [7, 8, 9] }],
+      kural: { var: false, kategori_id: null },
+    }
+    atama.mockResolvedValue({ message: '3 işlem "Market" olarak işaretlendi.', geri_al: geri })
     const w = await dialog(islem(7))
     const secenekler = w.findAll('[data-test="kategori-secenegi"]')
-    expect(secenekler.map((e) => e.text())).toEqual(['Market', 'Giyim'])
+    expect(secenekler.map((e) => e.text())).toEqual(['Market9', 'Giyim3', 'Sağlık1'])
     expect(w.find('[data-test="kategorisiz-yap"]').exists()).toBe(false)
+    expect(w.find('[data-test="kategori-kapsam"]').exists()).toBe(false)
     await secenekler[0]!.trigger('click')
     await flushPromises()
-    expect(atama).toHaveBeenCalledWith(7, 1)
+    expect(atama).toHaveBeenCalledWith(7, 1, 'hepsi')
     expect(w.emitted('degisti')).toHaveLength(1)
     expect(w.emitted('update:visible')?.[0]).toEqual([false])
+    const { bildirim, kapat } = useGeriAl()
+    expect(bildirim.value?.mesaj).toBe('3 işlem "Market" olarak işaretlendi.')
+    await bildirim.value!.geriAl()
+    expect(geriAl).toHaveBeenCalledWith(7, geri)
+    expect(w.emitted('degisti')).toHaveLength(2)
+    kapat()
   })
 
   it('kategorili işlemde "Kategorisiz yap" null gönderir', async () => {
@@ -161,23 +194,48 @@ describe('Satıra basılı tutunca kategori', () => {
     const w = await dialog(islem(7, { kategori_id: 2 }))
     await w.get('[data-test="kategorisiz-yap"]').trigger('click')
     await flushPromises()
-    expect(atama).toHaveBeenCalledWith(7, null)
+    expect(atama).toHaveBeenCalledWith(7, null, 'hepsi')
   })
 
-  it('yeni kategori eklenir (kullanılmayan renk önerilir) ve işleme atanır', async () => {
-    ekle.mockResolvedValue({ id: 9, ad: 'Tatil', ikon: null, renk: 'teal', fatura: false, sira: 3 })
+  it('arama Türkçe harf duyarsız süzer; eşleşme yoksa oluştur ve ata (kullanılmayan renk)', async () => {
+    ekle.mockResolvedValue({ id: 9, ad: 'Tatil', ikon: null, renk: 'teal', fatura: false, sira: 4 })
     atama.mockResolvedValue({ message: 'tamam' })
     const w = await dialog(islem(7))
-    await w.get('[data-test="yeni-kategori-ac"]').trigger('click')
-    await w.get('[data-test="yeni-kategori-ad"]').setValue('Tatil')
-    await w.get('[data-test="yeni-kategori-ekle"]').trigger('submit')
-    await w.get('form').trigger('submit')
+    await w.get('[data-test="kategori-ara"]').setValue('saglik')
+    expect(w.findAll('[data-test="kategori-secenegi"]').map((e) => e.text())).toEqual(['Sağlık1'])
+    // Adı birebir aynı kategori var: oluşturma satırı yok
+    expect(w.find('[data-test="kategori-olustur"]').exists()).toBe(false)
+    await w.get('[data-test="kategori-ara"]').setValue('sağ')
+    expect(w.find('[data-test="kategori-olustur"]').exists()).toBe(true)
+    await w.get('[data-test="kategori-ara"]').setValue('  Market ')
+    expect(w.find('[data-test="kategori-olustur"]').exists()).toBe(false)
+    await w.get('[data-test="kategori-ara"]').setValue('Tatil')
+    expect(w.findAll('[data-test="kategori-secenegi"]')).toHaveLength(0)
+    await w.get('[data-test="kategori-olustur"]').trigger('click')
     await flushPromises()
-    expect(ekle).toHaveBeenCalledTimes(1)
     const [ad, renk] = ekle.mock.calls[0]!
     expect(ad).toBe('Tatil')
-    expect(['emerald', 'pink']).not.toContain(renk)
-    expect(atama).toHaveBeenCalledWith(7, 9)
+    expect(['emerald', 'pink', 'rose']).not.toContain(renk)
+    expect(atama).toHaveBeenCalledWith(7, 9, 'hepsi')
+  })
+
+  it('öneri tek dokunuşla atanır; aynı açıklamalı birden çok işlemde "Yalnız bu işlem" kapsamı', async () => {
+    oneri.mockResolvedValue({
+      ayni_aciklamali: 4,
+      oneri: { kategori_id: 2, gerekce: 'benzer', adet: 5 },
+    })
+    atama.mockResolvedValue({ message: 'tamam' })
+    const w = await dialog(islem(7))
+    expect(oneri).toHaveBeenCalledWith(7)
+    const kart = w.get('[data-test="kategori-oneri"]')
+    expect(kart.text()).toContain('Önerilen: Giyim')
+    expect(kart.text()).toContain('Benzer 5 işlem Giyim kategorisinde')
+    expect(w.get('[data-test="kapsam-hepsi"]').text()).toBe('Hepsi (4 işlem)')
+    await w.get('[data-test="kapsam-tek"]').trigger('click')
+    expect(w.text()).toContain('Yalnız bu satır değişir')
+    await w.get('[data-test="kategori-oneri-ata"]').trigger('click')
+    await flushPromises()
+    expect(atama).toHaveBeenCalledWith(7, 2, 'tek')
   })
 })
 

@@ -4,23 +4,22 @@ import Accordion from 'primevue/accordion'
 import AccordionContent from 'primevue/accordioncontent'
 import AccordionHeader from 'primevue/accordionheader'
 import AccordionPanel from 'primevue/accordionpanel'
-import { useToast } from 'primevue/usetoast'
 import KartEtiketi from '@/components/aile/KartEtiketi.vue'
-import { aileApi, type KartIslemi } from '@/api/aile'
-import { hataMesaji } from '@/api/http'
+import type { KartIslemi } from '@/api/aile'
+import { useKategoriAta } from '@/composables/useKategoriAta'
 import { useAileStore } from '@/stores/aile'
 import { tarih, tl } from '@/utils/bicim'
 import { kategoriNoktasi } from '@/utils/kategoriRengi'
 
 /**
  * Kategorisiz harcamalar (listedeki süzgece göre): her satırın altında en çok kullanılan kategoriler tek dokunuşla;
- * "Diğer" tam seçiciyi açar. Seçim açıklaması aynı olan bütün işlemlere uygulanır, satır listeden düşer.
+ * "Diğer" tam seçiciyi açar. Seçim açıklaması aynı olan bütün işlemlere uygulanır, satır listeden düşer; altta "Geri al".
  */
 const props = defineProps<{ islemler: KartIslemi[] }>()
 const emit = defineEmits<{ degisti: []; diger: [islem: KartIslemi] }>()
 
 const aile = useAileStore()
-const toast = useToast()
+const { ata: kategoriAta } = useKategoriAta()
 const acik = ref<string[]>(['kategorisiz'])
 const tumu = ref(false)
 const gonderilen = ref<number | null>(null)
@@ -32,12 +31,7 @@ async function ata(islem: KartIslemi, kategoriId: number): Promise<void> {
   if (gonderilen.value !== null) return
   gonderilen.value = islem.id
   try {
-    const sonuc = await aileApi.kartIslemiKategori(islem.id, kategoriId)
-    toast.add({ severity: 'success', summary: sonuc.message, life: 3000 })
-    void aile.kategorileriYenile().catch(() => {})
-    emit('degisti')
-  } catch (e) {
-    toast.add({ severity: 'error', summary: 'Yapılamadı', detail: hataMesaji(e), life: 5000 })
+    await kategoriAta(islem, kategoriId, () => emit('degisti'))
   } finally {
     gonderilen.value = null
   }

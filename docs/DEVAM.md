@@ -3,15 +3,8 @@
 > Kural: CLAUDE.md → "Kaldığın yeri kaydet". Oturum başında `git pull`'dan sonra burayı oku; dolu bir iş varsa oradan devam et.
 
 
-## Kategori seçici A ([planlar/kategori-secici.md](planlar/kategori-secici.md))
-- [x] 1. Arka uç: kapsam, geri al, öneri + test
-- [ ] 2. Ön yüz: ızgara pencere, arama, öneri, geri al bildirimi + test
-- [ ] 3. Tüm testler, ekran görüntüsü, belgeler
-
-**Sıradaki adım:** 2 (ön yüz).
-
 ## Yayın bekleyenler
-Canlıya çıkmayanlar (MySQL'de doğrulandı 2026-11-19, arka uç 282/282, ön yüz 201): bugün K/Z yüzdesi, grafik Hiçbiri, ekstre → kart düğmesi, kart şeridi + kaydırma, ekstre silme çöp kutusu (Kartlar, ekstre ekranı üstü), Faturalar ödeme panosu (migration yok), Portföy sırası + varlık akordiyonu, tasarruf düzeltme, ev nakdi = "Ev" hesabı (migration `2026_11_24_000100_hane_ev_hesabi`). Canlıda son: c22d4aa.
+Canlıya çıkmayanlar (MySQL'de doğrulandı 2026-11-19, arka uç 286/286, ön yüz 202): kategori seçici (ızgara, öneri, geri al), bugün K/Z yüzdesi, grafik Hiçbiri, ekstre → kart düğmesi, kart şeridi + kaydırma, ekstre silme çöp kutusu (Kartlar, ekstre ekranı üstü), Faturalar ödeme panosu (migration yok), Portföy sırası + varlık akordiyonu, tasarruf düzeltme, ev nakdi = "Ev" hesabı (migration `2026_11_24_000100_hane_ev_hesabi`). Canlıda son: c22d4aa.
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).

@@ -407,6 +407,18 @@ export interface Kategori {
   kurallar?: { id: number; desen: string }[]
 }
 
+/** Kategori atamasından önceki hâl: satırların önceki kategorileri (gruplu) ve kuralın önceki hâli (null: dokunulmadı) */
+export interface KategoriGeriAl {
+  gruplar: { kategori_id: number | null; idler: number[] }[]
+  kural: { var: boolean; kategori_id: number | null } | null
+}
+
+/** Kategori seçicide öneri: kuraldan ya da ilk kelimesi aynı kategorili satırlardan (adet); dayanak yoksa null */
+export interface KategoriOnerisi {
+  ayni_aciklamali: number
+  oneri: { kategori_id: number; gerekce: 'kural' | 'benzer'; adet: number | null } | null
+}
+
 export interface Ekstre {
   id: number
   kart_id: number
@@ -1165,14 +1177,23 @@ export const aileApi = {
       }>('/aile/kart-islemleri', { params: temiz(suzgec) })
       .then((r) => r.data),
   /** İşleme kategori ata (null: kategorisiz); açıklaması aynı olan bütün satırlar da aynı kategoriye geçer */
-  kartIslemiKategori: (id: number, kategoriId: number | null) =>
+  kartIslemiKategori: (id: number, kategoriId: number | null, kapsam: 'hepsi' | 'tek' = 'hepsi') =>
     http
       .put<{
         islem: KartIslemi
         guncellenen: number
         kategori_ad: string | null
+        geri_al?: KategoriGeriAl
         message: string
-      }>(`/aile/kart-islemleri/${id}/kategori`, { kategori_id: kategoriId })
+      }>(`/aile/kart-islemleri/${id}/kategori`, { kategori_id: kategoriId, kapsam })
+      .then((r) => r.data),
+  /** Kategori seçicinin bilgisi: aynı açıklamalı satır sayısı ve önerilen kategori */
+  kartIslemiKategoriOnerisi: (id: number) =>
+    http.get<KategoriOnerisi>(`/aile/kart-islemleri/${id}/kategori-onerisi`).then((r) => r.data),
+  /** Kategori atamasını geri alır (atamanın yanıtındaki `geri_al` aynen gönderilir) */
+  kartIslemiKategoriGeriAl: (id: number, geriAl: KategoriGeriAl) =>
+    http
+      .post<{ message: string }>(`/aile/kart-islemleri/${id}/kategori-geri-al`, geriAl)
       .then((r) => r.data),
   /** Şirket geçmişi: aynı açıklamalı bütün onaylı kart satırları, ay ay toplamlarıyla */
   kartIslemiGecmisi: (id: number) =>

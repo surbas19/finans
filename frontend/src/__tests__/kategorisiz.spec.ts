@@ -128,13 +128,12 @@ describe('Kategorisiz harcamalar ve en çok kullanılana göre kategori sırası
     w.unmount()
   })
 
-  it('kategori seçici: sık kullanılan çipler önce, kalanlar kullanıma göre listede', async () => {
+  it('kategori seçici: ızgara kullanım sırasıyla, otomatik atanan fatura kategorisi sonda', async () => {
     const { default: KategoriSecDialog } = await import('@/components/aile/KategoriSecDialog.vue')
     const w = mount(KategoriSecDialog, { props: { islem: islem(7), visible: true }, global: genel })
     await flushPromises()
-    expect(w.get('[data-test="kategori-sik"]').text()).toContain('Sık kullanılan')
-    const adlar = w.findAll('[data-test="kategori-secenegi"]').map((e) => e.text())
-    // Önce sık kullanılan 4, sonra diğerleri (kullanım sırası; otomatik atanan fatura kategorisi en sonda)
+    const adlar = w.findAll('[data-test="kategori-secenegi"] span.truncate').map((e) => e.text())
+    // Kullanım sırası; otomatik atanan fatura kategorisi en sonda
     expect(adlar).toEqual([
       'Market',
       'Yeme-içme',

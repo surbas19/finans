@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-19) Kategori seçici yenilendi (ikonlu ızgara): arama + oluştur ve ata, önerilen kategori, "Yalnız bu işlem" kapsamı, 5 sn "Geri al". Testler: arka uç 286, ön yüz 202.
 - (2026-11-19) "Bugün" kâr / zararında yüzde de (Hesaplar, hesap detayı, Özet; `gunluk_yuzde`, nakit / BES paydada). Testler: arka uç 282, ön yüz 201.
 - (2026-11-19) Çizgi grafiklerde "Hiçbiri / Hepsi"; ekstre ekranından kart sayfasına düğme; kart detayında kartlar arası şerit + parmakla kaydırma (yönlü geçiş). Testler: ön yüz 201, arka uç 282.
 - (2026-11-19) İnceleme bekleyen ekstreye çöp kutusu: Kartlar sayfasındaki bekleyenler listesi ve ekstre ekranının üstü (Onayla yanında). Testler: ön yüz 194.
