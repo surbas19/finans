@@ -4,7 +4,7 @@
 
 
 ## Yayın bekleyenler
-Yok (2026-11-18): canlıda a8674b8 (nakit harcamalar listesi dahil).
+Yayın bekleyen: 19 Kasım işleri (nakit harcama kaynak bakiyesi, hareketler; 1 migration). Canlıda b9c7233/a8674b8 öncesi hariç hepsi yayınlı.
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
