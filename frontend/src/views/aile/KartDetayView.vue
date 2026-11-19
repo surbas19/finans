@@ -18,12 +18,16 @@ import KartIslemListesi from '@/components/aile/KartIslemListesi.vue'
 import { aileApi, type Ekstre, type Fatura, type Kart, type KartIslemi } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useSayfaBasligi } from '@/composables/useSayfaBasligi'
+import { useYanaKaydirma } from '@/composables/useYanaKaydirma'
+import KartSeridi from '@/components/aile/KartSeridi.vue'
 import { useAileStore } from '@/stores/aile'
 import { tarih, tl } from '@/utils/bicim'
 import { kartRengiCss } from '@/utils/kartRengi'
 
 /**
- * Kart sayfası: ekstreler (dönem, borç, son ödeme, ödendi), son işlemler ve bu kartla ödenen faturalar.
+ * Kart sayfası: ekstreler (dönem, borç, son ödeme, ödendi), son işlemler ve bu kartla ödenen faturalar. Üstte kartlar
+ * arası şerit (Kartlar sayfasının sırası); başlık kartında parmakla sola kaydırınca sonraki, sağa kaydırınca önceki kart.
+ * Geçiş router.replace ile (geri tuşu Kartlar'a döner), yönü history.state.sayfaYonu ile (AnaDuzen yönlü kaydırır).
  */
 const props = defineProps<{ id: number }>()
 const aile = useAileStore()
@@ -66,6 +70,18 @@ async function yukle(): Promise<void> {
   }
 }
 onMounted(yukle)
+
+/** Kartlar arası gezinme: aynı sayfa başka kartla yeniden kurulur (RouterView anahtarı yola bağlı) */
+function karta(id: number, yon: number): void {
+  void router.replace({ name: 'aile-kart', params: { id }, state: { sayfaYonu: yon } })
+}
+function komsu(adim: number): void {
+  const liste = aile.siraliKartlar
+  const i = liste.findIndex((k) => k.id === props.id)
+  const hedef = i < 0 ? undefined : liste[i + adim]
+  if (hedef) karta(hedef.id, adim)
+}
+const kaydirma = useYanaKaydirma({ sola: () => komsu(1), saga: () => komsu(-1) })
 
 async function odendi(e: Ekstre, deger: boolean): Promise<void> {
   try {
@@ -128,9 +144,17 @@ function kartiSil(): void {
   <div class="flex flex-col gap-4">
     <Message v-if="bulunamadi" severity="error">Kart bulunamadı.</Message>
     <template v-else>
+      <KartSeridi
+        v-if="aile.siraliKartlar.length > 1"
+        :kartlar="aile.siraliKartlar"
+        :secili-id="id"
+        @sec="karta"
+      />
       <section
-        class="kart border-t-4 p-4 sm:p-5"
+        class="kart touch-pan-y border-t-4 p-4 sm:p-5"
         :style="{ borderTopColor: kart ? kartRengiCss(kart) : undefined }"
+        data-test="kart-baslik"
+        v-bind="kaydirma"
       >
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="min-w-0">

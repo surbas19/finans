@@ -59,6 +59,12 @@ function degistir(anahtar: string): void {
 }
 
 const gorunenler = computed(() => props.seriler.filter((s) => !kapali.value.has(s.anahtar)))
+
+/** "Hiçbiri": görünen seri varsa hepsini kapatır (tek seriyi seçmek kolaylaşır); hepsi kapalıysa "Hepsi" açar */
+const hicbiriGorunmuyor = computed(() => gorunenler.value.length === 0)
+function hepsiniDegistir(): void {
+  kapali.value = hicbiriGorunmuyor.value ? new Set() : new Set(props.seriler.map((s) => s.anahtar))
+}
 const veriVar = computed(() =>
   props.seriler.some((s) => s.veri.some((d) => d !== null && Number(d) !== 0)),
 )
@@ -289,6 +295,14 @@ const options = computed(() => {
       aria-label="Seriler"
     >
       <button
+        type="button"
+        class="shrink-0 rounded-full border border-dashed border-surface-300 px-3 py-1.5 text-xs font-semibold text-surface-600 transition-all active:scale-95"
+        data-test="seri-hicbiri"
+        @click="hepsiniDegistir"
+      >
+        {{ hicbiriGorunmuyor ? 'Hepsi' : 'Hiçbiri' }}
+      </button>
+      <button
         v-for="s in seriler"
         :key="s.anahtar"
         type="button"
@@ -319,7 +333,14 @@ const options = computed(() => {
     <div v-if="!veriVar" class="py-10 text-center text-sm text-surface-500" data-test="grafik-bos">
       {{ bosMetin }}
     </div>
-    <div v-else :style="{ height: yukseklik }" role="img" :aria-label="aciklama">
+    <div v-else class="relative" :style="{ height: yukseklik }" role="img" :aria-label="aciklama">
+      <p
+        v-if="hicbiriGorunmuyor"
+        class="absolute inset-0 z-10 flex items-center justify-center text-sm text-surface-500"
+        data-test="grafik-seri-yok"
+      >
+        Seri seçin
+      </p>
       <Chart type="line" :data="data" :options="options" class="h-full" />
     </div>
   </div>

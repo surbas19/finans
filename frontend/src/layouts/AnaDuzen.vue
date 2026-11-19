@@ -6,7 +6,7 @@ import HizliIslemler from '@/components/HizliIslemler.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
 import SayfaBasinaDon from '@/components/SayfaBasinaDon.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
-import { sayfaYonu } from '@/composables/useSayfaYonu'
+import { gecisYonu } from '@/composables/useSayfaYonu'
 import { useOzelBaslik } from '@/composables/useSayfaBasligi'
 import type { Bolum } from '@/router'
 import { useAuthStore } from '@/stores/auth'
@@ -73,10 +73,14 @@ const portfoySekmeleri = computed(() => bolum.value === 'portfoy' && !detay.valu
  * geri dönerken −1; yön bilinmiyorsa 0 (yalnız solma). Yeni sayfa çizilmeden önce hesaplanır (watch, flush pre).
  */
 const yon = ref(0)
+// Aynı sayfanın başka kaydına geçişte (ör. kart → kart) yönü gezinen verir: history.state.sayfaYonu (±1; yoksa 0)
+let oncekiAd = route.name
 watch(
-  () => route.name,
-  (yeni, eski) => {
-    yon.value = sayfaYonu(eski, route.meta.geri, yeni)
+  () => route.fullPath,
+  () => {
+    const yeni = route.name
+    yon.value = gecisYonu(oncekiAd, yeni, route.meta.geri, window.history.state)
+    oncekiAd = yeni
   },
 )
 const girisSinifi = computed(() =>

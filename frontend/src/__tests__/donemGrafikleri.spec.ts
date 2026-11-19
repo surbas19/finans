@@ -105,6 +105,24 @@ describe('Dönem grafikleri', () => {
     w.unmount()
   })
 
+  it('Hiçbiri bütün serileri kapatır, düğme Hepsi olur; Hepsi geri açar; tek seri seçilebilir', async () => {
+    const w = await kur('Kart')
+    const hepsi = w.get('[data-test="seri-hicbiri"]')
+    expect(hepsi.text()).toBe('Hiçbiri')
+    await hepsi.trigger('click')
+    expect(w.get('[data-test="chart"]').attributes('data-seriler')).toBe('')
+    expect(w.find('[data-test="grafik-seri-yok"]').exists()).toBe(true)
+    expect(w.find('[data-test="grafik-sayac"]').exists()).toBe(false)
+    expect(hepsi.text()).toBe('Hepsi')
+    await w.findAll('[data-test="seri-dugmesi"]')[2]!.trigger('click')
+    expect(w.get('[data-test="chart"]').attributes('data-seriler')).toBe('Maximum')
+    expect(hepsi.text()).toBe('Hiçbiri')
+    await hepsi.trigger('click')
+    await hepsi.trigger('click')
+    expect(w.get('[data-test="chart"]').attributes('data-seriler')).toBe('Toplam|Bonus|Maximum')
+    w.unmount()
+  })
+
   it('hareketi azalt açıkken üstteki sayaç hemen son değeri gösterir (sayaçlı belirme yoksa bile boş kalmaz)', async () => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,

@@ -57,3 +57,22 @@ export function sayfaYonu(
 
   return sb > sa ? 1 : -1
 }
+
+/**
+ * Bir geçişin yönü: sayfa adı değiştiyse `sayfaYonu`; aynı sayfanın başka kaydına geçişte (ör. kart → kart) gezinenin
+ * `history.state.sayfaYonu`'na yazdığı ±1 (yoksa 0: yalnız solma).
+ */
+export function gecisYonu(
+  eski: RouteRecordNameGeneric | undefined,
+  yeni: RouteRecordNameGeneric | undefined,
+  yeniGeri: unknown,
+  durum: unknown,
+): number {
+  if (eski !== undefined && eski === yeni) {
+    const yon = Number((durum as { sayfaYonu?: unknown } | null)?.sayfaYonu)
+
+    return yon > 0 ? 1 : yon < 0 ? -1 : 0
+  }
+
+  return sayfaYonu(eski, yeniGeri, yeni)
+}

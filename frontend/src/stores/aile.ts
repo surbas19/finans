@@ -82,6 +82,10 @@ export const useAileStore = defineStore('aile', () => {
   const kartAdi = (id: number | null | undefined) =>
     kartlar.value.find((k) => k.id === id)?.ad ?? ''
   const kart = (id: number | null | undefined) => kartlar.value.find((k) => k.id === id)
+  /** Kartlar banka sırasıyla, aynı bankanın kartları yan yana (Kartlar sayfası ve kart şeridi; pasifler dahil) */
+  const siraliKartlar = computed(() =>
+    [...kartlar.value].sort((a, b) => a.banka_id - b.banka_id || a.id - b.id),
+  )
   const bankaAdi = (id: number | null | undefined) =>
     bankalar.value.find((b) => b.id === id)?.ad ?? ''
   const kategori = (id: number | null | undefined) => kategoriler.value.find((k) => k.id === id)
@@ -109,6 +113,7 @@ export const useAileStore = defineStore('aile', () => {
     uyeAdi,
     kartAdi,
     kart,
+    siraliKartlar,
     bankaAdi,
     kategori,
     saglayici,

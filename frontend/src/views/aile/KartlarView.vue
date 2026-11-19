@@ -83,10 +83,8 @@ function ekstreSil(e: Ekstre): void {
     },
   })
 }
-/** Kartlar banka sırasıyla, aynı bankanın kartları yan yana */
-const kartlar = computed(() =>
-  [...aile.kartlar].sort((a, b) => a.banka_id - b.banka_id || a.id - b.id),
-)
+/** Kartlar banka sırasıyla, aynı bankanın kartları yan yana (kart şeridiyle aynı sıra) */
+const kartlar = computed(() => aile.siraliKartlar)
 
 /** Son ödeme hatırlatıcıları: onaylı, ödenmemiş, son ödeme tarihi belli ekstreler (tarihe göre) */
 const sonOdemeler = computed(() => {

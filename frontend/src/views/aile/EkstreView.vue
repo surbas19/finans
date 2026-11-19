@@ -350,6 +350,12 @@ function sil(): void {
               data-test="onayi-kaldir"
               @click="onayiKaldir"
             />
+            <RouterLink
+              :to="{ name: 'aile-kart', params: { id: ekstre.kart_id } }"
+              class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-primary-600 ring-1 ring-primary-200"
+              data-test="kart-sayfasi"
+              ><i class="pi pi-credit-card" /> Kart sayfası</RouterLink
+            >
             <a
               v-if="ekstre.dosya_var"
               :href="aileApi.ekstreDosyaAdresi(ekstre.id)"
@@ -589,6 +595,14 @@ function sil(): void {
           :disabled="onayEngelli"
           data-test="onayla-alt"
           @click="onayla"
+        />
+        <!-- Onaydan sonra doğal sonraki adım: kartın sayfası -->
+        <Button
+          v-else
+          label="Kart sayfasına git"
+          icon="pi pi-credit-card"
+          data-test="kart-sayfasina-git"
+          @click="router.push({ name: 'aile-kart', params: { id: ekstre.kart_id } })"
         />
         <Button label="Ekstreyi sil" icon="pi pi-trash" severity="danger" text @click="sil" />
       </div>

@@ -7,8 +7,9 @@ import ToastService from 'primevue/toastservice'
 import type { Ekstre, FaturaOnerisi, KartIslemi } from '@/api/aile'
 
 const getir = vi.fn<() => Promise<unknown>>()
+const git = vi.fn<(hedef: unknown) => void>()
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ replace: vi.fn<() => void>(), push: vi.fn<() => void>() }),
+  useRouter: () => ({ replace: vi.fn<() => void>(), push: (h: unknown) => git(h) }),
 }))
 vi.mock('@/api/aile', async (asil) => ({
   ...(await asil<typeof import('@/api/aile')>()),
@@ -98,6 +99,10 @@ async function kur(e: Ekstre) {
         FormAlani: true,
         UygulamaPenceresi: true,
         KartEtiketi: true,
+        RouterLink: {
+          props: ['to'],
+          template: '<a :data-to="JSON.stringify(to)"><slot /></a>',
+        },
       },
     },
   })
@@ -174,6 +179,21 @@ describe('Ekstre: fatura önerileri en üstte; onayı kaldır', () => {
     w.unmount()
     w = await kur(ekstre({ durum: 'onaylandi', banka_profili: 'elle' }))
     expect(w.find('[data-test="onayi-kaldir"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('Kart sayfası bağlantısı her durumda; onaylı ekstrede altta "Kart sayfasına git"', async () => {
+    let w = await kur(ekstre({ durum: 'taslak' }))
+    expect(JSON.parse(w.get('[data-test="kart-sayfasi"]').attributes('data-to')!)).toEqual({
+      name: 'aile-kart',
+      params: { id: 1 },
+    })
+    expect(w.find('[data-test="kart-sayfasina-git"]').exists()).toBe(false)
+    w.unmount()
+    git.mockReset()
+    w = await kur(ekstre({ durum: 'onaylandi' }))
+    await w.get('[data-test="kart-sayfasina-git"]').trigger('click')
+    expect(git).toHaveBeenCalledWith({ name: 'aile-kart', params: { id: 1 } })
     w.unmount()
   })
 })
