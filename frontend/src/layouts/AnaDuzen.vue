@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AltSekmeler from '@/components/AltSekmeler.vue'
 import HizliIslemler from '@/components/HizliIslemler.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
 import SayfaBasinaDon from '@/components/SayfaBasinaDon.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
+import { sayfaYonu } from '@/composables/useSayfaYonu'
 import { useOzelBaslik } from '@/composables/useSayfaBasligi'
 import type { Bolum } from '@/router'
 import { useAuthStore } from '@/stores/auth'
@@ -66,6 +67,21 @@ const PORTFOY_SEKMELERI = [
   { ad: 'islemler', etiket: 'İşlemler' },
 ] as const
 const portfoySekmeleri = computed(() => bolum.value === 'portfoy' && !detay.value)
+
+/**
+ * Sayfa geçişi yönü: alt sekme sırasında sağa giderken +1 (yeni sayfa sağdan kayar), sola giderken −1, detaya inerken +1,
+ * geri dönerken −1; yön bilinmiyorsa 0 (yalnız solma). Yeni sayfa çizilmeden önce hesaplanır (watch, flush pre).
+ */
+const yon = ref(0)
+watch(
+  () => route.name,
+  (yeni, eski) => {
+    yon.value = sayfaYonu(eski, route.meta.geri, yeni)
+  },
+)
+const girisSinifi = computed(() =>
+  yon.value > 0 ? 'sayfa-giris-ileri' : yon.value < 0 ? 'sayfa-giris-geri' : 'sayfa-giris',
+)
 
 /** Hızlı işlemden kayıt yapılınca artar: açık sayfa yeniden kurulup güncel veriyi yükler */
 const yenileme = ref(0)
@@ -185,7 +201,7 @@ function menudenGit(ad: string): void {
       </button>
       <!-- Yol (parametreler dahil) değişince sayfa yeniden kurulur; sorgu değişince kurulmaz (Özet'in ?hesap=) -->
       <RouterView v-slot="{ Component, route: r }">
-        <component :is="Component" :key="`${r.path}:${yenileme}`" class="sayfa-giris" />
+        <component :is="Component" :key="`${r.path}:${yenileme}`" :class="girisSinifi" />
       </RouterView>
     </main>
 

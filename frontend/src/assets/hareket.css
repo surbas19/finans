@@ -151,6 +151,26 @@
   }
 }
 
+/* Yönlü sayfa geçişi: yeni sayfa sekme sırasındaki yöne göre yandan kayarak gelir (yalnız giriş; sabit öğeler kaymaz) */
+@keyframes hareket-sayfa-ileri {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes hareket-sayfa-geri {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@utility sayfa-giris-ileri {
+  animation: hareket-sayfa-ileri 280ms var(--egri-cikis) backwards;
+}
+@utility sayfa-giris-geri {
+  animation: hareket-sayfa-geri 280ms var(--egri-cikis) backwards;
+}
+
 /* Sayfa geçişi: yalnızca kısa solma (transform yok: sayfadaki sabit öğeler kaymaz), çıkış animasyonu yok */
 @utility sayfa-giris {
   animation: hareket-sayfa-giris 140ms var(--egri-standart) backwards;

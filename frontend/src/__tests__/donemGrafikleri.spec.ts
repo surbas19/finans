@@ -105,6 +105,19 @@ describe('Dönem grafikleri', () => {
     w.unmount()
   })
 
+  it('hareketi azalt açıkken üstteki sayaç hemen son değeri gösterir (sayaçlı belirme yoksa bile boş kalmaz)', async () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }))
+    const w = await kur('Kart')
+    const sayac = w.get('[data-test="grafik-sayac"]')
+    expect(sayac.text()).toContain('Toplam')
+    expect(sayac.text()).toMatch(/\d/)
+    w.unmount()
+  })
+
   it('faturalar: toplam + her tür; Gelire oran % görünümünde yüzde birimi ve açıklama notu', async () => {
     const w = await kur('Fatura')
     expect(w.get('[data-test="chart"]').attributes('data-seriler')).toBe('Toplam|Elektrik')

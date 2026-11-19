@@ -76,12 +76,9 @@ const ETIKET = { ekleme: 'Para eklendi', cikarma: 'Para çıkarıldı', harcama:
           />
         </div>
       </div>
-      <p v-if="ozet.bakiye < 0" class="mt-1 text-xs text-red-600" data-test="ev-eksi">
-        Ev nakdi eksiye düştü: eklemeyi unuttuğunuz bir para olabilir.
-      </p>
       <p class="mt-1 text-xs text-surface-500">
         Giren {{ tl(ozet.giren) }} · çıkan {{ tl(ozet.cikan) }} · harcanan {{ tl(ozet.harcama) }}.
-        Nakit harcamada "Ev" seçilince tutar buradan düşer.
+        Nakit harcamada "Ev" seçilince tutar buradan düşer; bakiye yetmiyorsa kaydedilmez.
       </p>
       <ul v-if="ozet.hareketler.length" class="mt-2 divide-y divide-surface-100">
         <li

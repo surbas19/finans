@@ -11,11 +11,17 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
-import { aileApi, type DuzenliGider, type DuzenliGiderGirdisi, type GiderKaynagi } from '@/api/aile'
+import {
+  aileApi,
+  type OdemeKaynaklari,
+  type DuzenliGider,
+  type DuzenliGiderGirdisi,
+  type GiderKaynagi,
+} from '@/api/aile'
 import { hataMesaji } from '@/api/http'
 import { useFormGonder } from '@/composables/useFormGonder'
 import { useAileStore } from '@/stores/aile'
-import { tarihMetni } from '@/utils/bicim'
+import { tarihMetni, tl } from '@/utils/bicim'
 import { buAy, donemdenTarih, donemEtiketi, tarihtenDonem } from '@/utils/donem'
 
 /**
@@ -37,6 +43,9 @@ const confirm = useConfirm()
 const toast = useToast()
 const { hatalar, gonderiliyor, gonder } = useFormGonder()
 
+/** Banka ödemesinde düşülecek hesabın seçimi için hesap nakitleri (form açılırken yüklenir) */
+const kaynakBilgisi = ref<OdemeKaynaklari | null>(null)
+
 const ODEME_YERLERI = [
   { deger: 'ev', etiket: 'Ev' },
   { deger: 'banka', etiket: 'Banka' },
@@ -50,6 +59,7 @@ function bos(): DuzenliGiderGirdisi {
     tutar: null,
     tarih: tarihMetni(new Date()),
     odeme_yeri: null,
+    hesap_id: null,
     donem: buAy(),
     not: null,
   }
@@ -71,13 +81,31 @@ watch(gorunur, (acik) => {
         tutar: g.tutar,
         tarih: g.tarih,
         odeme_yeri: g.odeme_yeri ?? null,
+        hesap_id: g.hesap_id ?? null,
         donem: g.donem,
         not: g.not,
       }
     : { ...bos(), ...props.varsayilan }
   tarihSecimi.value = new Date(`${form.value.tarih}T00:00:00`)
   donemSecimi.value = donemdenTarih(form.value.donem)
+  aileApi
+    .odemeKaynaklari()
+    .then((k) => {
+      kaynakBilgisi.value = k
+      if (form.value.odeme_yeri === 'banka' && form.value.hesap_id === null)
+        form.value.hesap_id = k.hesaplar[0]?.id ?? null
+    })
+    .catch(() => (kaynakBilgisi.value = null))
 })
+
+/** Banka seçilince hesap (ilk hesap), başka seçimde hesap boşalır */
+watch(
+  () => form.value.odeme_yeri,
+  (yer) => {
+    if (yer === 'banka') form.value.hesap_id ??= kaynakBilgisi.value?.hesaplar[0]?.id ?? null
+    else form.value.hesap_id = null
+  },
+)
 
 /** Kaynak seçilince ad, kategori ve tutar ondan gelir */
 watch(
@@ -227,6 +255,31 @@ function sil(): void {
           data-test="gider-odeme-yeri"
         />
       </FormAlani>
+      <FormAlani
+        v-if="form.odeme_yeri === 'banka'"
+        etiket="Düşülecek hesap"
+        for="gider-hesap"
+        :hata="hatalar.hesap_id ?? hatalar.tutar"
+        ipucu="Tutar hesabın Nakit (TL) bakiyesinden düşer; yetmezse kaydedilmez"
+        zorunlu
+      >
+        <Select
+          id="gider-hesap"
+          v-model="form.hesap_id"
+          :options="kaynakBilgisi?.hesaplar ?? []"
+          option-label="ad"
+          option-value="id"
+          placeholder="Hesap seçin"
+          data-test="gider-hesap"
+        />
+      </FormAlani>
+      <p
+        v-else-if="form.odeme_yeri === 'ev'"
+        class="rounded-2xl bg-surface-50 p-3 text-xs text-surface-600"
+      >
+        Ev nakdinde {{ kaynakBilgisi ? tl(kaynakBilgisi.ev.bakiye) : '—' }} var; tutar buradan
+        düşer.
+      </p>
       <p class="rounded-2xl bg-surface-50 p-3 text-xs text-surface-600">
         Kartla ödediyseniz bu gider kart ekstresine girer; burada tekrar girmeyin (iki kez sayılır).
       </p>

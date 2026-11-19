@@ -27,8 +27,121 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Finans" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- Açılış ekranı (yalnız oturumun ilk açılışında): logo gelir, grafik çizgisi çizilir, altın nokta atar, ad belirir -->
+    <style>
+      #acilis {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: #ffffff;
+        color: #0f172a;
+        transition: opacity 300ms ease;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      html.koyu #acilis {
+        background: #020617;
+        color: #e2e8f0;
+      }
+      #acilis svg {
+        width: 76px;
+        height: 76px;
+        animation: acilis-logo 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+      }
+      #acilis .cizgi {
+        stroke-dasharray: 60;
+        animation: acilis-cizgi 520ms 280ms ease-out backwards;
+      }
+      #acilis .nokta {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: acilis-nokta 360ms 760ms ease-out backwards;
+      }
+      #acilis .ad {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        animation: acilis-ad 320ms 640ms ease-out backwards;
+      }
+      @keyframes acilis-logo {
+        from {
+          opacity: 0;
+          transform: scale(0.6);
+        }
+      }
+      @keyframes acilis-cizgi {
+        from {
+          stroke-dashoffset: 60;
+        }
+      }
+      @keyframes acilis-nokta {
+        0% {
+          opacity: 0;
+          transform: scale(0);
+        }
+        60% {
+          opacity: 1;
+          transform: scale(1.6);
+        }
+      }
+      @keyframes acilis-ad {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #acilis svg,
+        #acilis .cizgi,
+        #acilis .nokta,
+        #acilis .ad {
+          animation: none;
+        }
+        #acilis {
+          transition: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="acilis" aria-hidden="true">
+      <svg viewBox="0 0 64 64">
+        <rect width="64" height="64" rx="14" fill="#0f766e" />
+        <path
+          class="cizgi"
+          d="M14 44 L26 32 L34 38 L50 20"
+          fill="none"
+          stroke="#fff"
+          stroke-width="6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <circle class="nokta" cx="50" cy="20" r="4" fill="#fbbf24" />
+      </svg>
+      <div class="ad">Finans</div>
+    </div>
+    <script>
+      // Yalnız oturumun ilk açılışında (soğuk açılış); sonraki yenilemelerde hemen kaldırılır
+      ;(function () {
+        var s = document.getElementById('acilis')
+        try {
+          if (sessionStorage.getItem('finans-acilis')) return s.remove()
+          sessionStorage.setItem('finans-acilis', '1')
+        } catch (e) {}
+        window.__acilis = {
+          basla: Date.now(),
+          en_az: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 250 : 1200,
+        }
+      })()
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

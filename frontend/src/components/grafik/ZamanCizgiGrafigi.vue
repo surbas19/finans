@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { temaSurumu } from '@/composables/useTema'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'primevue/chart'
 import { tl } from '@/utils/bicim'
 
@@ -8,7 +8,7 @@ import { tl } from '@/utils/bicim'
  * Dönem dönem çizgi grafik (Faturalar, Kartlar, Gelirler): yumuşak eğriler, degrade alan dolgusu, soldan sağa
  * çizilen giriş animasyonu, vurgulu son nokta, dokununca / üzerine gelince tüm serilerin o aydaki değeri.
  * Serileri açıp kapatan renkli düğmeler (dokunmatik dostu). `prefers-reduced-motion` açıksa animasyon yoktur.
- * Hesap yapılmaz; sunucunun değerleri yalnızca çizilir. Chart.js ilk kullanımda yüklenir (PrimeVue Chart).
+ * Üstteki "son ay" değeri çizgi çizilirken sayarak yükselir (sayaçlı belirme). Hesap yapılmaz; sunucunun değerleri yalnızca çizilir. Chart.js ilk kullanımda yüklenir (PrimeVue Chart).
  */
 export interface ZamanSerisi {
   anahtar: string
@@ -105,6 +105,43 @@ const azHareket = (): boolean =>
   typeof window.matchMedia === 'function' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/** Çizim süresi (ms): çizgi noktadan noktaya uzar, üstteki sayaç aynı sürede sayar */
+const CIZIM_SURESI = 1300
+
+/** Üstteki özet: görünen ilk serinin (varsa kalın toplam serisinin) son dolu ayı */
+const ozetSerisi = computed(() => gorunenler.value.find((s) => s.kalin) ?? gorunenler.value[0])
+const ozetHedef = computed(() => {
+  const s = ozetSerisi.value
+  if (!s) return null
+  const i = sonDolu(s.veri.map((d, k) => (k > props.sonAy ? null : d)))
+
+  return i < 0 ? null : { etiket: props.etiketler[i] ?? '', deger: Number(s.veri[i]), ad: s.ad }
+})
+const sayilan = ref(0)
+let sayacKare = 0
+
+function say(hedef: number): void {
+  cancelAnimationFrame(sayacKare)
+  if (azHareket()) {
+    sayilan.value = hedef
+
+    return
+  }
+  const t0 = performance.now()
+  const kare = (t: number): void => {
+    const p = Math.min(1, (t - t0) / CIZIM_SURESI)
+    sayilan.value = hedef * (1 - Math.pow(1 - p, 3))
+    if (p < 1) sayacKare = requestAnimationFrame(kare)
+  }
+  sayacKare = requestAnimationFrame(kare)
+}
+onMounted(() => say(ozetHedef.value?.deger ?? 0))
+watch(
+  () => ozetHedef.value?.deger,
+  (d) => say(d ?? 0),
+)
+onBeforeUnmount(() => cancelAnimationFrame(sayacKare))
+
 const kisaEtiket = (e: string): string => (e.split(' ')[0] ?? e).slice(0, 3)
 const kompakt = new Intl.NumberFormat('tr-TR', { notation: 'compact', maximumFractionDigits: 1 })
 const bicim = (d: number): string =>
@@ -157,7 +194,7 @@ const options = computed(() => {
   const metin = cssRengi('--p-surface-500')
   const cizgi = cssRengi('--p-surface-200')
   const n = Math.max(props.etiketler.length, 1)
-  const adim = 1100 / n
+  const adim = CIZIM_SURESI / n
   const hareket = !azHareket()
   const onceki = (ctx: AnimasyonBaglami): number =>
     ctx.index === 0
@@ -273,6 +310,12 @@ const options = computed(() => {
         {{ s.ad }}
       </button>
     </div>
+    <p v-if="veriVar && ozetHedef" class="mb-1 flex items-baseline gap-2" data-test="grafik-sayac">
+      <span class="text-2xl font-extrabold tracking-tight text-surface-900 tabular-nums">{{
+        bicim(sayilan)
+      }}</span>
+      <span class="text-xs text-surface-500">{{ ozetHedef.etiket }} · {{ ozetHedef.ad }}</span>
+    </p>
     <div v-if="!veriVar" class="py-10 text-center text-sm text-surface-500" data-test="grafik-bos">
       {{ bosMetin }}
     </div>

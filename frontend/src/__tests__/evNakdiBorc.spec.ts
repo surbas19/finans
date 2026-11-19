@@ -42,10 +42,10 @@ beforeEach(() => {
 describe('Ev nakdi kartı', () => {
   beforeEach(() => evNakdi.mockReset())
 
-  it('bakiyeyi ve hareketleri gösterir; eksiye düşünce uyarır', async () => {
+  it('bakiyeyi ve hareketleri gösterir (bakiye eksiye düşmez, eksi uyarısı yok)', async () => {
     evNakdi.mockResolvedValue({
-      bakiye: -25,
-      giren: 100,
+      bakiye: 25,
+      giren: 150,
       cikan: 0,
       harcama: 125,
       hareketler: [
@@ -59,8 +59,8 @@ describe('Ev nakdi kartı', () => {
     })
     await flushPromises()
     expect(w.get('[data-test="ev-bakiye"]').text()).toContain('25')
-    expect(w.get('[data-test="ev-bakiye"]').classes()).toContain('text-red-600')
-    expect(w.find('[data-test="ev-eksi"]').exists()).toBe(true)
+    expect(w.get('[data-test="ev-bakiye"]').classes()).not.toContain('text-red-600')
+    expect(w.find('[data-test="ev-eksi"]').exists()).toBe(false)
     // Harcama satırı silinemez, para ekleme silinebilir
     expect(w.findAll('[data-test="ev-hareket-sil"]')).toHaveLength(1)
     // Tüm nakit harcamalar listesine bağlantı (Gelir / Gider → Gider paneli)

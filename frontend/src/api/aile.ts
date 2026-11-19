@@ -117,13 +117,22 @@ export interface DuzenliGider {
   tarih: string
   /** Paranın çıktığı yer: ev nakdinden düşer; banka yalnız etiket; eski kayıtta null */
   odeme_yeri?: 'ev' | 'banka' | null
+  /** Banka harcamasında düşülen portföy hesabı */
+  hesap_id?: number | null
   donem: string
   not: string | null
 }
 
 export type OdemeYeri = 'ev' | 'banka'
 
+/** Nakit harcamanın düşülebileceği kaynaklar: ev nakdi bakiyesi ve hesapların Nakit (TL) bakiyeleri */
+export interface OdemeKaynaklari {
+  ev: { bakiye: number }
+  hesaplar: { id: number; ad: string; nakit: number }[]
+}
+
 export interface DuzenliGiderGirdisi {
+  hesap_id?: number | null
   gider_kaynagi_id: number | null
   kategori_id: number | null
   aciklama: string
@@ -988,6 +997,7 @@ export const aileApi = {
     http.put<{ gider: DuzenliGider }>(`/aile/duzenli-giderler/${id}`, veri).then((r) => r.data),
   duzenliGiderSil: (id: number) => http.delete(`/aile/duzenli-giderler/${id}`),
 
+  odemeKaynaklari: () => http.get<OdemeKaynaklari>('/aile/odeme-kaynaklari').then((r) => r.data),
   evNakdi: () => http.get<EvNakdiOzeti>('/aile/ev-nakdi').then((r) => r.data),
   evNakdiHareketEkle: (veri: {
     tur: 'ekleme' | 'cikarma'

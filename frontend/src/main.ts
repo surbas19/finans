@@ -14,6 +14,7 @@ import { primeVueAyarlari } from './config/primevue'
 import { useAuthStore } from './stores/auth'
 import { kurulumDinle } from './composables/useUygulamaKurulumu'
 import { temayiBaslat } from './composables/useTema'
+import { acilisiKapat } from './utils/acilisEkrani'
 import { surumDenetiminiKur } from './utils/surumDenetimi'
 
 // "Ana ekrana ekle" istemi sayfa açılır açılmaz gelir; bileşenlerden önce yakalanır.
@@ -47,3 +48,5 @@ oturumDustuAyarla(() => {
 })
 
 app.mount('#app')
+// Açılış ekranı: uygulama hazır olunca solarak kalkar
+void acilisiKapat(router)

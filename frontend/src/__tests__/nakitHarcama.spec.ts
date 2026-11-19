@@ -9,7 +9,17 @@ import { useAileStore } from '@/stores/aile'
 const ekle = vi.fn<(veri: Record<string, unknown>) => Promise<unknown>>()
 vi.mock('@/api/aile', async (asil) => ({
   ...(await asil<typeof import('@/api/aile')>()),
-  aileApi: { duzenliGiderEkle: (v: Record<string, unknown>) => ekle(v) },
+  aileApi: {
+    duzenliGiderEkle: (v: Record<string, unknown>) => ekle(v),
+    odemeKaynaklari: () =>
+      Promise.resolve({
+        ev: { bakiye: 500 },
+        hesaplar: [
+          { id: 3, ad: 'Maaş hesabı', nakit: 1000 },
+          { id: 4, ad: 'Birikim', nakit: 20 },
+        ],
+      }),
+  },
 }))
 
 const kat = (id: number, ad: string, kullanim: number, fatura = false): Kategori => ({
@@ -41,7 +51,7 @@ async function kur() {
     attachTo: document.body,
     global: {
       plugins: [PrimeVue, ToastService],
-      stubs: { UygulamaPenceresi: { template: '<div><slot /></div>' } },
+      stubs: { UygulamaPenceresi: { template: '<div><slot /></div>' }, EvNakdiHareketFormu: true },
     },
   })
   await w.setProps({ visible: true })
@@ -139,7 +149,25 @@ describe('Nakit harcama: sade hızlı form', () => {
     await banka.trigger('click')
     await w.get('[data-test="nakit-form"]').trigger('submit')
     await flushPromises()
-    expect(ekle.mock.calls[0]![0]).toMatchObject({ odeme_yeri: 'banka', tutar: 60 })
+    expect(ekle.mock.calls[0]![0]).toMatchObject({ odeme_yeri: 'banka', tutar: 60, hesap_id: 3 })
+    w.unmount()
+  })
+
+  it("kaynak bakiyesi gösterilir; yetmeyen tutarda uyarı çıkar ve kaydedilemez, Para ekle yalnız Ev'de", async () => {
+    const w = await kur()
+    expect(w.get('[data-test="nakit-kaynak-bilgi"]').text()).toContain('500')
+    await w.get('#nh-tutar').setValue('800')
+    await w.get('#nh-tutar').trigger('blur')
+    expect(w.get('[data-test="nakit-yetmiyor"]').text()).toContain('300')
+    expect(w.find('[data-test="nakit-para-ekle"]').exists()).toBe(true)
+    expect(w.get('[data-test="nakit-kaydet"]').attributes('disabled')).toBeDefined()
+    await w.get('[data-test="nakit-form"]').trigger('submit')
+    await flushPromises()
+    expect(ekle).not.toHaveBeenCalled()
+    // Banka: ilk hesabın nakdi 1000 → 800 yeter
+    await w.findAll('[data-test="nakit-odeme-yeri"] .p-togglebutton')[1]!.trigger('click')
+    expect(w.find('[data-test="nakit-yetmiyor"]').exists()).toBe(false)
+    expect(w.get('[data-test="nakit-kaynak-bilgi"]').text()).toContain('1.000')
     w.unmount()
   })
 
