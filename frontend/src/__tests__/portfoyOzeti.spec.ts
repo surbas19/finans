@@ -39,7 +39,7 @@ const ozetVerisi = (): Ozet => ({
   usd_kuru: null,
   toplam: toplam(30000, { temettu: 680, maliyeti_eksik: true }),
   hesaplar: [hesap(1, 'Yatırım hesabım', 20000), hesap(2, 'Kasa', 10000)],
-  dagilim: [],
+  dagilim: [{ tur: 'altin', etiket: 'Altın / gümüş', deger: 30000 }],
   varliklar: [],
   pozisyonlar: [],
   son_guncelleme: null,
@@ -90,6 +90,13 @@ describe('Portföy Özet: üst kart ve hesap çipleri', () => {
     expect(w.get('[data-test="ozet-temettu"]').text()).toContain('680')
     expect(w.find('[data-test="maliyet-eksik"]').exists()).toBe(true)
     expect(w.find('[data-test="kaydirici-slayt"]').exists()).toBe(false)
+    // Sıra: üst kart → dağılım → varlıklar → performans
+    const html = w.html()
+    const sira = ['portfoy-ozeti', 'ozet-dagilim', 'Varlıklarım', 'Performans'].map((s) =>
+      html.indexOf(s),
+    )
+    expect(sira.every((n) => n >= 0)).toBe(true)
+    expect([...sira].sort((a, b) => a - b)).toEqual(sira)
     w.unmount()
   })
 

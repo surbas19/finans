@@ -6,6 +6,11 @@
 ## Yayın bekleyenler
 Yok (2026-11-19): canlıda c22d4aa (nakit harcama kaynak bakiyesi, hareketler dahil).
 
+## Ev hesabı, varlık akordiyonu, tasarruf düzeltme ([planlar/ev-hesabi-akordiyon.md](planlar/ev-hesabi-akordiyon.md))
+- Durum: başladı (2026-11-19)
+- **Sıradaki adım:** 1. Portföy sırası + VarlikAkordiyonu
+- Komutlar: `php artisan migrate && php artisan test`; frontend `npm run type-check && npm run lint`, vitest PowerShell'den `D:\` ile `--testTimeout=30000`
+
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
 

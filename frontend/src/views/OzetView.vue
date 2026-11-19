@@ -10,6 +10,7 @@ import IslemFormu from '@/components/IslemFormu.vue'
 import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import VeriGrafigi from '@/components/VeriGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
+import VarlikAkordiyonu from '@/components/VarlikAkordiyonu.vue'
 import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import { finansApi, type HesapOzeti, type Ozet, type Toplam } from '@/api/finans'
 import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
@@ -21,7 +22,7 @@ import { hesapDilimleri, hesapRengi, varlikDilimleri, type HalkaDilimi } from '@
 
 /**
  * Portföy özeti: üstte seçilenin (bütün hesaplar ya da bir hesap) değeri, kâr / zararı, bugünkü değişimi ve küçük
- * dağılım halkası; altında hesap çipleri (dokununca üst kart o hesaba geçer), performans, varlıklar ve dağılım. Hepsi
+ * dağılım halkası; altında hesap çipleri (dokununca üst kart o hesaba geçer), dağılım, türe göre akordiyon varlıklar ve en altta performans. Hepsi
  * tek özet isteğinden gelir; hesap değişince yalnız performans grafiği kendi verisini ister. Seçilen hesap adreste
  * (`?hesap=`): varlık sayfasından geri dönünce aynı hesap açılır.
  */
@@ -345,6 +346,64 @@ async function elleYenile(): Promise<void> {
       </button>
     </div>
 
+    <!-- Dağılım (türlere göre), sonra türlere ayrılmış varlıklar, en altta performans -->
+    <DagilimKarti
+      v-if="secili && secili.dagilim.length > 0"
+      :dagilim="secili.dagilim"
+      :toplam-deger="secili.toplam.deger"
+      data-test="ozet-dagilim"
+    />
+
+    <!-- Varlıklar -->
+    <section class="kart p-4 sm:p-5">
+      <h2 class="bolum-etiketi mb-2">
+        {{ secilenHesap === null ? 'Varlıklarım (bütün hesaplar)' : 'Bu hesaptaki varlıklar' }}
+      </h2>
+      <div v-if="!ozet || !secili" class="flex flex-col gap-3">
+        <Skeleton v-for="n in 4" :key="n" height="3rem" />
+      </div>
+      <BosDurum
+        v-else-if="secili.pozisyonlar.length === 0"
+        kucuk
+        baslik="Henüz varlık yok"
+        aciklama="Önce bir hesap ekleyin, sonra alış ya da elde olan varlığınızı girin."
+        ikon="pi pi-wallet"
+      >
+        <Button
+          v-if="ozet.hesaplar.length === 0"
+          label="Hesap ekle"
+          icon="pi pi-plus"
+          size="small"
+          @click="$router.push({ name: 'hesaplar' })"
+        />
+        <Button
+          v-else
+          label="İşlem ekle"
+          icon="pi pi-plus"
+          size="small"
+          @click="islemAcik = true"
+        />
+      </BosDurum>
+      <VarlikAkordiyonu
+        v-else
+        :pozisyonlar="secili.pozisyonlar"
+        :renkler="secili.renkler"
+        :degistirilebilir="secili.degistirilebilir"
+        @dahil-degistir="dahilDegistir"
+        @aktar="aktarAc"
+      />
+      <div v-if="haricSatirlar.length" class="mt-4" data-test="haric-bolumu">
+        <h3 class="bolum-etiketi mb-1">Genel toplama dahil olmayanlar</h3>
+        <PozisyonListesi
+          :pozisyonlar="haricSatirlar"
+          :hesap-adi="(p) => ozet?.hesaplar.find((h) => h.id === p.hesap_id)?.ad"
+          degistirilebilir
+          @dahil-degistir="dahilDegistir"
+          @aktar="aktarAc"
+        />
+      </div>
+    </section>
+
     <!-- Performans -->
     <section v-if="ozet && ozet.hesaplar.length > 0" class="kart p-4 sm:p-5">
       <h2 class="bolum-etiketi mb-2">
@@ -352,66 +411,6 @@ async function elleYenile(): Promise<void> {
       </h2>
       <PerformansGrafigi :hesap-id="secilenHesap" :yenile="yenile" />
     </section>
-
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
-      <!-- Varlıklar -->
-      <section class="kart p-4 sm:p-5 lg:col-span-3">
-        <h2 class="bolum-etiketi mb-2">
-          {{ secilenHesap === null ? 'Varlıklarım (bütün hesaplar)' : 'Bu hesaptaki varlıklar' }}
-        </h2>
-        <div v-if="!ozet || !secili" class="flex flex-col gap-3">
-          <Skeleton v-for="n in 4" :key="n" height="3rem" />
-        </div>
-        <BosDurum
-          v-else-if="secili.pozisyonlar.length === 0"
-          kucuk
-          baslik="Henüz varlık yok"
-          aciklama="Önce bir hesap ekleyin, sonra alış ya da elde olan varlığınızı girin."
-          ikon="pi pi-wallet"
-        >
-          <Button
-            v-if="ozet.hesaplar.length === 0"
-            label="Hesap ekle"
-            icon="pi pi-plus"
-            size="small"
-            @click="$router.push({ name: 'hesaplar' })"
-          />
-          <Button
-            v-else
-            label="İşlem ekle"
-            icon="pi pi-plus"
-            size="small"
-            @click="islemAcik = true"
-          />
-        </BosDurum>
-        <PozisyonListesi
-          v-else
-          :pozisyonlar="secili.pozisyonlar"
-          :renkler="secili.renkler"
-          :degistirilebilir="secili.degistirilebilir"
-          @dahil-degistir="dahilDegistir"
-          @aktar="aktarAc"
-        />
-        <div v-if="haricSatirlar.length" class="mt-4" data-test="haric-bolumu">
-          <h3 class="bolum-etiketi mb-1">Genel toplama dahil olmayanlar</h3>
-          <PozisyonListesi
-            :pozisyonlar="haricSatirlar"
-            :hesap-adi="(p) => ozet?.hesaplar.find((h) => h.id === p.hesap_id)?.ad"
-            degistirilebilir
-            @dahil-degistir="dahilDegistir"
-            @aktar="aktarAc"
-          />
-        </div>
-      </section>
-
-      <!-- Dağılım (türlere göre) -->
-      <DagilimKarti
-        v-if="secili && secili.dagilim.length > 0"
-        :dagilim="secili.dagilim"
-        :toplam-deger="secili.toplam.deger"
-        class="lg:col-span-2"
-      />
-    </div>
 
     <IslemFormu
       v-model:visible="islemAcik"

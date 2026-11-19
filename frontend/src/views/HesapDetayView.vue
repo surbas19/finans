@@ -18,7 +18,7 @@ import HesapFormu from '@/components/HesapFormu.vue'
 import IslemFormu from '@/components/IslemFormu.vue'
 import IslemListesi from '@/components/IslemListesi.vue'
 import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
-import PozisyonListesi from '@/components/PozisyonListesi.vue'
+import VarlikAkordiyonu from '@/components/VarlikAkordiyonu.vue'
 import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
 import PozisyonAktarDialog from '@/components/PozisyonAktarDialog.vue'
 import { usePozisyonAktar } from '@/composables/usePozisyonAktar'
@@ -266,7 +266,7 @@ function hesabiSil(): void {
                     @click="topluAcik = true"
                   />
                 </BosDurum>
-                <PozisyonListesi
+                <VarlikAkordiyonu
                   v-else
                   :pozisyonlar="pozisyonlar"
                   degistirilebilir
