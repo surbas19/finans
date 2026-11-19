@@ -8,7 +8,7 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
 import TasarrufKalemi from '@/components/aile/TasarrufKalemi.vue'
-import { aileApi, type TasarrufAyi, type TasarrufOzeti } from '@/api/aile'
+import { aileApi, type Tasarruf, type TasarrufAyi, type TasarrufOzeti } from '@/api/aile'
 import { useSonIstek } from '@/composables/useSonIstek'
 import { useTasarrufEylemleri } from '@/composables/useTasarrufEylemleri'
 import { tl } from '@/utils/bicim'
@@ -33,6 +33,13 @@ watch(yil, () => {
 })
 
 const eylem = useTasarrufEylemleri(() => yukle())
+/** Tasarruf kalemine dokununca düzeltme penceresi */
+const duzeltmeAcik = ref(false)
+const duzeltilen = ref<Tasarruf | null>(null)
+function tasarrufDuzenle(k: Tasarruf): void {
+  duzeltilen.value = k
+  duzeltmeAcik.value = true
+}
 
 /** Kalemi olan aylar açık başlar */
 const acikAylar = computed(() =>
@@ -185,6 +192,7 @@ function cubuk(a: Pick<TasarrufAyi, 'gider_orani' | 'tasarruf_orani' | 'kalan_or
                   :kalem="k"
                   @sil="eylem.sil"
                   @dahil="eylem.dahil"
+                  @duzenle="tasarrufDuzenle"
                 />
                 <p class="flex justify-between pt-2 text-sm font-semibold">
                   <span>{{ a.etiket }} toplamı</span>
@@ -198,5 +206,11 @@ function cubuk(a: Pick<TasarrufAyi, 'gider_orani' | 'tasarruf_orani' | 'kalan_or
     </template>
 
     <TasarrufFormu v-model:visible="formAcik" @kaydedildi="yukle" />
+    <TasarrufFormu
+      v-model:visible="duzeltmeAcik"
+      :tasarruf="duzeltilen"
+      @kaydedildi="yukle"
+      @sil="eylem.sil"
+    />
   </div>
 </template>

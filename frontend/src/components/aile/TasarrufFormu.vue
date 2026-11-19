@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
 import InputNumber from 'primevue/inputnumber'
@@ -9,7 +9,7 @@ import Textarea from 'primevue/textarea'
 import FormAlani from '@/components/FormAlani.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
 import VarlikAdi from '@/components/VarlikAdi.vue'
-import { aileApi, type AyGunu, type TasarrufGirdisi } from '@/api/aile'
+import { aileApi, type AyGunu, type Tasarruf, type TasarrufGirdisi } from '@/api/aile'
 import {
   finansApi,
   sabitFiyatli,
@@ -29,9 +29,14 @@ import { tarihMetni, tl } from '@/utils/bicim'
  * (ev, banka kasası, yatırım hesabı…) alış işlemi olarak yazılır; o ayın tasarrufu olarak görünür, gider sayılmaz.
  */
 const gorunur = defineModel<boolean>('visible', { default: false })
-/** Verilirse altın / döviz gününün bu ayki alımı hazır gelir (hesap, varlık, miktar); kime verildiği nota yazılır */
-const props = defineProps<{ gun?: AyGunu | null }>()
-const emit = defineEmits<{ kaydedildi: [] }>()
+/**
+ * `gun`: altın / döviz gününün bu ayki alımı hazır gelir (hesap, varlık, miktar); kime verildiği nota yazılır.
+ * `tasarruf`: düzeltme kipi (alanlar dolu gelir, bağlı portföy alışı da güncellenir; "Sil" düğmesi `sil` yayar).
+ */
+const props = defineProps<{ gun?: AyGunu | null; tasarruf?: Tasarruf | null }>()
+const emit = defineEmits<{ kaydedildi: []; sil: [t: Tasarruf] }>()
+/** Düzeltmede alanlar doldurulurken varlık değişimi piyasa fiyatını yazmasın */
+let dolduruluyor = false
 
 const aile = useAileStore()
 const toast = useToast()
@@ -56,34 +61,57 @@ function bos(): TasarrufGirdisi {
 
 const form = ref<TasarrufGirdisi>(bos())
 
-watch(gorunur, async (acik) => {
-  if (!acik) return
-  hatalar.value = {}
-  form.value = bos()
-  tarihSecimi.value = new Date()
-  yukleniyor.value = true
-  try {
-    await Promise.all([
+watch(
+  gorunur,
+  async (acik) => {
+    if (!acik) return
+    hatalar.value = {}
+    form.value = bos()
+    tarihSecimi.value = new Date()
+    yukleniyor.value = true
+    // Katalog / hesap listesi biri yüklenemese de form doldurulur (gün alımı ve düzeltme bilgisi kaybolmaz)
+    await Promise.allSettled([
       katalog.yukle(),
       finansApi.hesaplar().then((v) => {
         hesaplar.value = v.hesaplar
         if (v.hesaplar.length === 1) form.value.hesap_id = v.hesaplar[0]!.id
       }),
     ])
-  } finally {
     yukleniyor.value = false
-  }
-  const g = props.gun
-  if (g) {
-    form.value.gun_id = g.gun.id
-    form.value.hesap_id = g.gun.hesap_id
-    form.value.varlik_id = g.gun.varlik_id
-    form.value.miktar = Number(g.gun.miktar)
-    const hedef = g.vadesi_geldi ? new Date(`${g.tarih}T00:00:00`) : new Date()
-    tarihSecimi.value = hedef
-    form.value.tarih = tarihMetni(hedef)
-  }
-})
+    const t = props.tasarruf
+    if (t) {
+      dolduruluyor = true
+      form.value = {
+        hesap_id: t.hesap_id,
+        varlik_id: t.varlik_id,
+        uye_id: t.uye_id,
+        gun_id: t.gun_id ?? undefined,
+        miktar: t.miktar,
+        birim_fiyat:
+          t.birim_fiyat ??
+          (t.miktar && t.tutar ? Math.round((t.tutar / t.miktar) * 10000) / 10000 : null),
+        komisyon: t.komisyon ?? null,
+        tarih: t.tarih,
+        not: t.not,
+      }
+      tarihSecimi.value = new Date(`${t.tarih}T00:00:00`)
+      await nextTick()
+      dolduruluyor = false
+      return
+    }
+    const g = props.gun
+    if (g) {
+      form.value.gun_id = g.gun.id
+      form.value.hesap_id = g.gun.hesap_id
+      form.value.varlik_id = g.gun.varlik_id
+      form.value.miktar = Number(g.gun.miktar)
+      const hedef = g.vadesi_geldi ? new Date(`${g.tarih}T00:00:00`) : new Date()
+      tarihSecimi.value = hedef
+      form.value.tarih = tarihMetni(hedef)
+    }
+  },
+  { immediate: true },
+)
 
 /** Bireysel emeklilik bu ekrandan eklenmez (toplam tutar + kâr yüzdesiyle Portföy'de girilir) */
 const varlikGruplari = computed(() =>
@@ -104,12 +132,13 @@ const secilenVarlik = computed<Varlik | undefined>(() =>
 const sabit = computed(() => sabitFiyatli(secilenVarlik.value?.tur))
 
 /** Gün alımında "kime verildi" yazılmışsa alım başkasınadır: hiçbir hesaba eklenmez, yalnız tasarruf toplamına girer */
-const verilen = computed(() => !!props.gun && !!form.value.not?.trim())
+const verilen = computed(() => !!form.value.gun_id && !!form.value.not?.trim())
 
 /** Piyasanın satış fiyatı önerilir (yalnızca TL fiyatlı varlıkta) */
 watch(
   () => form.value.varlik_id,
   () => {
+    if (dolduruluyor) return
     const v = secilenVarlik.value
     form.value.birim_fiyat = null
     if (v?.fiyat && !sabit.value && v.para_birimi === 'TRY')
@@ -134,7 +163,10 @@ async function kaydet(): Promise<void> {
     birim_fiyat: sabit.value ? null : form.value.birim_fiyat,
     komisyon: sabit.value ? null : form.value.komisyon,
   }
-  const sonuc = await gonder(() => aileApi.tasarrufEkle(veri), 'Tasarruf kaydedildi')
+  const t = props.tasarruf
+  const sonuc = t
+    ? await gonder(() => aileApi.tasarrufGuncelle(t.id, veri), 'Tasarruf düzeltildi')
+    : await gonder(() => aileApi.tasarrufEkle(veri), 'Tasarruf kaydedildi')
   if (sonuc) {
     if (sonuc.uyari) toast.add({ severity: 'warn', summary: sonuc.uyari, life: 6000 })
     gorunur.value = false
@@ -146,7 +178,7 @@ async function kaydet(): Promise<void> {
 <template>
   <UygulamaPenceresi
     v-model:visible="gorunur"
-    :baslik="gun ? `${gun.gun.ad}: bu ayın alımı` : 'Tasarruf yap'"
+    :baslik="tasarruf ? 'Tasarrufu düzelt' : gun ? `${gun.gun.ad}: bu ayın alımı` : 'Tasarruf yap'"
     :genislik="34"
   >
     <Message v-if="gorunur && !yukleniyor && hesaplar.length === 0" severity="warn" class="mb-3">
@@ -277,7 +309,7 @@ async function kaydet(): Promise<void> {
       </p>
 
       <FormAlani
-        :etiket="gun ? 'Kime verildi / açıklama' : 'Not'"
+        :etiket="form.gun_id ? 'Kime verildi / açıklama' : 'Not'"
         for="tas-not"
         :hata="hatalar.not"
       >
@@ -292,10 +324,20 @@ async function kaydet(): Promise<void> {
         />
       </FormAlani>
       <div class="flex justify-end gap-2">
+        <Button
+          v-if="tasarruf"
+          label="Sil"
+          icon="pi pi-trash"
+          severity="danger"
+          text
+          class="mr-auto"
+          data-test="tasarruf-formu-sil"
+          @click="tasarruf && (emit('sil', tasarruf), (gorunur = false))"
+        />
         <Button label="Vazgeç" severity="secondary" text @click="gorunur = false" />
         <Button
           type="submit"
-          label="Tasarruf et"
+          :label="tasarruf ? 'Kaydet' : 'Tasarruf et'"
           icon="pi pi-check"
           :loading="gonderiliyor"
           :disabled="hesaplar.length === 0 && !verilen"

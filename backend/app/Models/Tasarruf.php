@@ -87,6 +87,9 @@ class Tasarruf extends Model
             'varlik_tur' => $varlik?->tur->value,
             'varlik_birim' => $varlik?->birim,
             'miktar' => $this->islem?->miktar ?? ($this->miktar !== null ? (float) $this->miktar : null),
+            // Düzeltme formu için: alışın fiyatı ve komisyonu (verilen alımda yalnız miktar / tutar bilinir)
+            'birim_fiyat' => $this->islem?->birim_fiyat,
+            'komisyon' => $this->islem?->komisyon,
             'tarih' => $this->tarih->toDateString(),
             'islem_zamani' => $this->created_at?->toIso8601String(),
             'donem' => $this->donem,

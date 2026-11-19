@@ -221,6 +221,9 @@ export interface Tasarruf {
   varlik_tur: string | null
   varlik_birim: string | null
   miktar: number | null
+  /** Bağlı alışın birim fiyatı ve komisyonu (düzeltme formu; verilen alımda null) */
+  birim_fiyat?: number | null
+  komisyon?: number | null
   /** Kaydın uygulamaya girildiği zaman (otomatik) */
   islem_zamani: string | null
   tarih: string
@@ -1039,6 +1042,14 @@ export const aileApi = {
   gunSil: (id: number) => http.delete(`/aile/tasarruf-gunleri/${id}`),
   tasarrufOzeti: (yil: number) =>
     http.get<TasarrufOzeti>('/aile/tasarruf-ozeti', { params: { yil } }).then((r) => r.data),
+  /** Tasarrufu düzeltir; bağlı portföy alışı da güncellenir */
+  tasarrufGuncelle: (id: number, veri: TasarrufGirdisi) =>
+    http
+      .put<{ tasarruf: Tasarruf; uyari: string | null; message: string }>(
+        `/aile/tasarruflar/${id}`,
+        veri,
+      )
+      .then((r) => r.data),
   tasarrufSil: (id: number) => http.delete(`/aile/tasarruflar/${id}`),
 
   zekatAyar: () => http.get<ZekatAyarYaniti>('/aile/zekat/ayar').then((r) => r.data),

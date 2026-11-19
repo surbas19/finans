@@ -108,6 +108,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::get('grafikler', GrafikController::class)->name('grafikler');
             Route::get('tasarruflar', [TasarrufController::class, 'index'])->name('tasarruflar.index');
             Route::post('tasarruflar', [TasarrufController::class, 'store'])->name('tasarruflar.store');
+            Route::put('tasarruflar/{tasarruf}', [TasarrufController::class, 'update'])->name('tasarruflar.update');
             Route::delete('tasarruflar/{tasarruf}', [TasarrufController::class, 'destroy'])->name('tasarruflar.destroy');
             Route::apiResource('tasarruf-gunleri', TasarrufGunuController::class)->except('show')->parameters(['tasarruf-gunleri' => 'gun']);
 

@@ -29,6 +29,7 @@ import {
   type GelirGirdisi,
   type GelirKaynagi,
   type GiderKaynagi,
+  type Tasarruf,
   type TasarrufGunu,
 } from '@/api/aile'
 import { useSonIstek } from '@/composables/useSonIstek'
@@ -172,6 +173,13 @@ function odendi(b: BeklenenGider): void {
 }
 
 const tasarrufEylem = useTasarrufEylemleri(() => yukle())
+/** Tasarruf kalemine dokununca düzeltme penceresi */
+const duzeltmeAcik = ref(false)
+const duzeltilen = ref<Tasarruf | null>(null)
+function tasarrufDuzenle(k: Tasarruf): void {
+  duzeltilen.value = k
+  duzeltmeAcik.value = true
+}
 
 const gunMetni = (gun: number | null | undefined) =>
   gun === null || gun === undefined
@@ -441,6 +449,7 @@ const gunMetni = (gun: number | null | undefined) =>
             :kalem="t"
             @sil="tasarrufEylem.sil"
             @dahil="tasarrufEylem.dahil"
+            @duzenle="tasarrufDuzenle"
           />
         </div>
         <RouterLink
@@ -771,6 +780,12 @@ const gunMetni = (gun: number | null | undefined) =>
       @kaydedildi="yukle"
     />
     <TasarrufFormu v-model:visible="tasarrufAcik" @kaydedildi="yukle" />
+    <TasarrufFormu
+      v-model:visible="duzeltmeAcik"
+      :tasarruf="duzeltilen"
+      @kaydedildi="yukle"
+      @sil="tasarrufEylem.sil"
+    />
     <TasarrufFormu v-model:visible="gunAlimiAcik" :gun="alimGunu" @kaydedildi="yukle" />
     <TasarrufGunuFormu v-model:visible="gunFormuAcik" :gun="duzenlenenGun" @kaydedildi="yukle" />
     <GelirFormu

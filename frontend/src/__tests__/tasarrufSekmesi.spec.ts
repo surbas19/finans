@@ -36,11 +36,31 @@ function kalem(id: number, ek: Partial<Tasarruf> = {}): Tasarruf {
 }
 
 const ozetSon = vi.fn<(yil: number) => Promise<TasarrufOzeti>>()
+const guncelle = vi.fn<(id: number, veri: Record<string, unknown>) => Promise<unknown>>()
 vi.mock('@/api/aile', async (asil) => ({
   ...(await asil<typeof import('@/api/aile')>()),
   aileApi: {
     tasarrufOzeti: (yil: number) => ozetSon(yil),
+    tasarrufGuncelle: (id: number, veri: Record<string, unknown>) => guncelle(id, veri),
     hane: () => Promise.resolve({ hane: { id: 1, ad: 'Aile' }, uyeler: [], ben_uye_id: 1 }),
+  },
+}))
+
+// Tasarruf formu: katalog ve hesap listesi ağa gitmesin (form modülü dosyada bir kez yüklenir)
+vi.mock('@/stores/katalog', () => ({
+  useKatalogStore: () => ({ varliklar: [], yukle: () => Promise.resolve() }),
+}))
+vi.mock('@/api/finans', async (asil) => ({
+  ...(await asil<typeof import('@/api/finans')>()),
+  finansApi: {
+    hesaplar: () =>
+      Promise.resolve({
+        hesaplar: [
+          { id: 1, ad: 'Evde' },
+          { id: 2, ad: 'Banka' },
+        ],
+      }),
+    islemDahil: () => Promise.resolve({ message: 'tamam' }),
   },
 }))
 
@@ -278,6 +298,46 @@ describe('Tasarruf formu: kime verildi yazılınca hesap alanı gizlenir', () =>
     expect(w.find('#tas-hesap').exists()).toBe(false)
     vi.doUnmock('@/api/finans')
     vi.doUnmock('@/stores/katalog')
+    w.unmount()
+  })
+
+  it('kaleme dokununca düzenle olayı; form düzeltme kipinde dolu açılır, kaydedince güncelleme gider', async () => {
+    const { default: TasarrufKalemi } = await import('@/components/aile/TasarrufKalemi.vue')
+    const k = kalem(4, { birim_fiyat: 3000, komisyon: 10, not: 'doğum günü' })
+    const satir = mount(TasarrufKalemi, { props: { kalem: k }, global: { plugins: [PrimeVue] } })
+    await satir.get('[data-test="tasarruf-duzenle"]').trigger('click')
+    expect(satir.emitted('duzenle')?.[0]).toEqual([k])
+
+    guncelle.mockResolvedValue({ tasarruf: k, uyari: null, message: 'Tasarruf düzeltildi.' })
+    const { default: TasarrufFormu } = await import('@/components/aile/TasarrufFormu.vue')
+    const w = mount(TasarrufFormu, {
+      props: { visible: false, tasarruf: k },
+      global: {
+        plugins: [PrimeVue, ConfirmationService, ToastService],
+        stubs: { UygulamaPenceresi: { template: '<div><slot /></div>' } },
+      },
+    })
+    await w.setProps({ visible: true })
+    await flushPromises()
+    expect((w.get('[data-test="tasarruf-not"]').element as HTMLTextAreaElement).value).toBe(
+      'doğum günü',
+    )
+    expect(w.text()).toContain('Kaydet')
+    expect(w.find('[data-test="tasarruf-formu-sil"]').exists()).toBe(true)
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(guncelle).toHaveBeenCalledTimes(1)
+    expect(guncelle.mock.calls[0]![0]).toBe(4)
+    expect(guncelle.mock.calls[0]![1]).toMatchObject({
+      hesap_id: 2,
+      varlik_id: 5,
+      miktar: 5,
+      birim_fiyat: 3000,
+      komisyon: 10,
+      tarih: '2026-11-10',
+    })
+    await w.get('[data-test="tasarruf-formu-sil"]').trigger('click')
+    expect(w.emitted('sil')?.[0]).toEqual([k])
     w.unmount()
   })
 })

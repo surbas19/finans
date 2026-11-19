@@ -108,4 +108,44 @@ class TasarrufTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('hesap_id');
         $this->assertSame(1, Islem::count());
     }
+
+    public function test_tasarruf_duzeltilir_bagli_alis_da_guncellenir(): void
+    {
+        $this->actingAs($this->ben);
+        $altin = $this->varlik('GRAM', 'altin', 3000);
+        $dolar = $this->varlik('USD', 'doviz', 40);
+        $banka = Hesap::factory()->create(['user_id' => $this->ben->id, 'ad' => 'Banka']);
+        $id = $this->postJson('/api/v1/aile/tasarruflar', ['hesap_id' => $this->hesap->id, 'varlik_id' => $altin->id, 'miktar' => 2, 'birim_fiyat' => 3000, 'tarih' => '2026-11-10'])->json('tasarruf.id');
+
+        // Miktar, fiyat, tarih (önceki aya), varlık ve hesap değişir: alış da aynen
+        $this->putJson("/api/v1/aile/tasarruflar/{$id}", [
+            'hesap_id' => $banka->id, 'varlik_id' => $dolar->id, 'miktar' => 100, 'birim_fiyat' => 40.5, 'komisyon' => 5, 'tarih' => '2026-10-28', 'not' => 'düzeltme',
+        ])->assertOk()->assertJsonPath('tasarruf.donem', '2026-10')->assertJsonPath('tasarruf.tutar', 4055)
+            ->assertJsonPath('tasarruf.hesap_ad', 'Banka')->assertJsonPath('message', 'Tasarruf düzeltildi.');
+
+        $islem = Islem::sole();
+        $this->assertSame([$banka->id, $dolar->id, 100.0, 40.5, 5.0, '2026-10-28', 'düzeltme'], [$islem->hesap_id, $islem->varlik_id, $islem->miktar, $islem->birim_fiyat, $islem->komisyon, $islem->tarih->toDateString(), $islem->not]);
+        $this->getJson('/api/v1/aile/ozet?ay=2026-11')->assertJsonPath('tasarruf.toplam', 0);
+        $this->getJson('/api/v1/aile/ozet?ay=2026-10')->assertJsonPath('tasarruf.toplam', 4055);
+    }
+
+    public function test_duzeltme_sonraki_satisi_bozamaz_ve_baska_hane_duzeltemez(): void
+    {
+        $this->actingAs($this->ben);
+        $hisse = $this->varlik('THYAO');
+        $id = $this->postJson('/api/v1/aile/tasarruflar', ['hesap_id' => $this->hesap->id, 'varlik_id' => $hisse->id, 'miktar' => 10, 'birim_fiyat' => 100, 'tarih' => '2026-11-01'])->json('tasarruf.id');
+        $this->postJson('/api/v1/islemler', ['hesap_id' => $this->hesap->id, 'varlik_id' => $hisse->id, 'tur' => 'satis', 'miktar' => 8, 'birim_fiyat' => 120, 'tarih' => '2026-11-05'])->assertCreated();
+
+        $govde = ['hesap_id' => $this->hesap->id, 'varlik_id' => $hisse->id, 'miktar' => 5, 'birim_fiyat' => 100, 'tarih' => '2026-11-01'];
+        $this->putJson("/api/v1/aile/tasarruflar/{$id}", $govde)->assertStatus(422)->assertJsonValidationErrors('miktar');
+        // Başka hesaba taşımak da eski hesaptaki satışı bozar
+        $diger = Hesap::factory()->create(['user_id' => $this->ben->id]);
+        $this->putJson("/api/v1/aile/tasarruflar/{$id}", [...$govde, 'miktar' => 10, 'hesap_id' => $diger->id])->assertStatus(422);
+        $this->assertSame(10.0, Islem::where('tur', 'alis')->sole()->miktar);
+        $this->putJson("/api/v1/aile/tasarruflar/{$id}", [...$govde, 'miktar' => 9])->assertOk();
+
+        $yabanci = User::factory()->create();
+        app(HaneYonetimi::class)->hazirla($yabanci);
+        $this->actingAs($yabanci)->putJson("/api/v1/aile/tasarruflar/{$id}", [...$govde, 'miktar' => 9])->assertForbidden();
+    }
 }

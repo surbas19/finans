@@ -8,7 +8,8 @@ Yok (2026-11-19): canlıda c22d4aa (nakit harcama kaynak bakiyesi, hareketler da
 
 ## Ev hesabı, varlık akordiyonu, tasarruf düzeltme ([planlar/ev-hesabi-akordiyon.md](planlar/ev-hesabi-akordiyon.md))
 - Durum: başladı (2026-11-19)
-- **Sıradaki adım:** 1. Portföy sırası + VarlikAkordiyonu
+- Yapılanlar: 1. Portföy sırası + VarlikAkordiyonu (`ba33bd2`), 2. tasarruf düzeltme (arka uç + form; TasarrufTest SQLite 6/6, ön yüz 186)
+- **Sıradaki adım:** 3. Ev nakdi → "Ev" hesabı (`haneler.ev_hesap_id`); MySQL açılınca `php artisan test`
 - Komutlar: `php artisan migrate && php artisan test`; frontend `npm run type-check && npm run lint`, vitest PowerShell'den `D:\` ile `--testTimeout=30000`
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
