@@ -151,6 +151,8 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('saglayicilar', SaglayiciController::class)->except('show')->parameters(['saglayicilar' => 'saglayici']);
             Route::post('saglayicilar/{saglayici}/desenler', [SaglayiciController::class, 'desenEkle'])->name('saglayicilar.desenler.store');
             Route::delete('saglayici-desenleri/{desen}', [SaglayiciController::class, 'desenSil'])->name('saglayici-desenleri.destroy');
+            Route::get('faturalar/ozet', [FaturaController::class, 'ozet'])->name('faturalar.ozet');
+            Route::get('saglayicilar/{saglayici}/gecmis', [FaturaController::class, 'gecmis'])->name('saglayicilar.gecmis');
             Route::apiResource('faturalar', FaturaController::class)->except('show')->parameters(['faturalar' => 'fatura']);
             Route::post('faturalar/{fatura}/bagla', [FaturaController::class, 'bagla'])->name('faturalar.bagla');
             Route::post('faturalar/{fatura}/coz', [FaturaController::class, 'coz'])->name('faturalar.coz');

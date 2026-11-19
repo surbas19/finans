@@ -9,6 +9,7 @@ use App\Models\Fatura;
 use App\Models\FaturaSaglayicisi;
 use App\Models\KartIslemi;
 use App\Services\Aile\FaturaEslestirici;
+use App\Services\Aile\FaturaOzeti;
 use App\Support\Donem;
 use App\Support\Kurus;
 use Illuminate\Http\JsonResponse;
@@ -50,19 +51,25 @@ class FaturaController extends Controller
             ->orderByRaw('hizmet_donemi is null desc')->orderByDesc('hizmet_donemi')->orderByDesc('id')->limit(1000)->get();
 
         return response()->json([
-            'faturalar' => $faturalar->map(fn (Fatura $f): array => [
-                ...$f->ozet(),
-                'saglayici_ad' => $f->saglayici->ad,
-                'kart_islemi' => $f->kartIslemi ? [
-                    'id' => $f->kartIslemi->id,
-                    'kart_id' => $f->kartIslemi->kart_id,
-                    'islem_tarihi' => $f->kartIslemi->islem_tarihi?->toDateString(),
-                    'aciklama' => $f->kartIslemi->aciklama,
-                    'tutar' => Kurus::tl(Kurus::kurus($f->kartIslemi->tutar)),
-                ] : null,
-            ]),
+            'faturalar' => $faturalar->map(fn (Fatura $f): array => FaturaOzeti::satir($f)),
             'toplam' => Kurus::tl($faturalar->reduce(fn (int $t, Fatura $f): int => $t + Kurus::kurus($f->tutar), 0)),
         ]);
+    }
+
+    /** Ayın özeti (hizmet ayına göre): durum toplamları, önceki ay, gelmeyen faturalar, dönemi bilinmeyen sayısı */
+    public function ozet(Request $request, FaturaOzeti $ozet): JsonResponse
+    {
+        $veri = $request->validate(['donem' => ['required', 'regex:'.Donem::DESEN]]);
+
+        return response()->json($ozet->ay((int) $request->user()->hane_id, $veri['donem']));
+    }
+
+    /** Sağlayıcının bütün faturaları ve istatistikleri */
+    public function gecmis(FaturaSaglayicisi $saglayici, FaturaOzeti $ozet): JsonResponse
+    {
+        Gate::authorize('hane-kaydi', $saglayici);
+
+        return response()->json($ozet->saglayici($saglayici));
     }
 
     public function store(Request $request): JsonResponse
