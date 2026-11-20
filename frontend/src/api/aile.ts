@@ -393,6 +393,8 @@ export interface Kart {
   asgari_oran: number
   renk: string | null
   aktif: boolean
+  /** Borç hatırlatıcısında hanenin seçtiği sıra (boş: tarihe göre, sırası olanlardan sonra) */
+  hatirlatici_sira?: number | null
 }
 
 export interface Kategori {
@@ -434,6 +436,8 @@ export interface Ekstre {
   alan_kaynaklari: Record<string, 'pdf' | 'kullanici' | 'hesaplandi' | 'ai'>
   okunamayan: string[]
   odendi: boolean
+  /** Borç hatırlatıcısında "toplama eklendi" */
+  toplamda?: boolean
   dosya_var: boolean
   dosya_adi: string | null
   sayfa_sayisi: number | null
@@ -1300,6 +1304,11 @@ export const aileApi = {
         ai_aktarim?: boolean
         ai_calisma?: AiCalisma | null
       }>(`/aile/ekstreler/${id}`)
+      .then((r) => r.data),
+  /** Borç hatırlatıcısının kart sırası (hane); listede olmayanın sırası boşalır */
+  kartHatirlaticiSirasi: (kartIdler: number[]) =>
+    http
+      .put<{ message: string }>('/aile/kartlar/hatirlatici-sirasi', { kart_idler: kartIdler })
       .then((r) => r.data),
   ekstreGuncelle: (id: number, veri: Partial<Record<string, string | number | boolean | null>>) =>
     http.put<{ ekstre: Ekstre }>(`/aile/ekstreler/${id}`, veri).then((r) => r.data),

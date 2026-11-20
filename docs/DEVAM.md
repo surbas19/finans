@@ -5,10 +5,10 @@
 
 ## Kart hatırlatıcısı ([planlar/kart-hatirlatici.md](planlar/kart-hatirlatici.md))
 - [x] 1. Arka uç: migration `2026_11_25_000100_hatirlatici_duzeni`, sıra ucu, toplamda + test
-- [ ] 2. Ön yüz: Düzenle / sürükle, Borç öde + geri al, Toplama ekle + çubuk + test
+- [x] 2. Ön yüz: `SonOdemeHatirlaticilari` (Düzenle / sürükle, Borç öde + geri al, Toplama ekle + çubuk) + test
 - [ ] 3. Tüm testler, ekran görüntüsü, belgeler
 
-**Sıradaki adım:** 2 (ön yüz).
+**Sıradaki adım:** 3 (ekran görüntüsü, belgeler).
 
 ## Yayın bekleyenler
 Yok (2026-11-20): canlıda e6b3a6b (diğer bilgisayarın kategori seçici, kart gezinme vb. işleri ve Silinenler, şifre unutma + kurtarma kodları, sürekli açık oturum dahil).
