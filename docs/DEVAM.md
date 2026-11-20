@@ -4,7 +4,7 @@
 
 
 ## Yayın bekleyenler
-Canlıya çıkmayanlar (MySQL'de doğrulandı 2026-11-20, arka uç 309/309, ön yüz 212): kart borç hatırlatıcısı (sıra, Borç öde, toplam; migration `2026_11_25_000100_hatirlatici_duzeni`). Canlıda son: e6b3a6b.
+Yok (2026-11-20): canlıda 8912c30 (kart borç hatırlatıcısı dahil; hatirlatici_duzeni migration çalıştı).
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
