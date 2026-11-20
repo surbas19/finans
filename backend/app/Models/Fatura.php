@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\FaturaDurumu;
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Donem;
 use App\Support\Kurus;
@@ -16,6 +17,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Fatura extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'fatura';
+
+    public function arsivBaslik(): string
+    {
+        return 'Fatura · '.($this->hizmet_donemi ?? 'dönemsiz');
+    }
+
     use HaneyeAit;
 
     protected $table = 'faturalar';

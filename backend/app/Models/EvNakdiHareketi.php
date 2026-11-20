@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,15 @@ use Illuminate\Database\Eloquent\Model;
  */
 class EvNakdiHareketi extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'ev_nakdi';
+
+    public function arsivBaslik(): string
+    {
+        return ($this->tur === self::EKLEME ? 'Ev nakdine eklendi' : 'Ev nakdinden çıkarıldı').' · '.$this->tarih?->format('d.m.Y');
+    }
+
     use HaneyeAit;
 
     public const EKLEME = 'ekleme';

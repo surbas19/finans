@@ -9,6 +9,7 @@ use App\Models\Islem;
 use App\Models\Tasarruf;
 use App\Models\Varlik;
 use App\Services\Aile\ButceRaporu;
+use App\Services\Aile\SilinenArsivi;
 use App\Services\Portfoy\PortfoyHesabi;
 use App\Services\Portfoy\YetersizMiktar;
 use App\Support\Donem;
@@ -211,7 +212,11 @@ class TasarrufController extends Controller
                 'tasarruf' => 'Bu tasarruf silinirse '.$e->islem->tarih->format('d.m.Y').' tarihli satış elde olandan fazla kalır. Önce o satışı düzeltin.',
             ]);
         }
-        $islem->delete(); // tasarruf satırı da gider (cascade)
+        // Tasarruf arşive alışıyla birlikte yazılır; alış silmesi ikinci kayıt üretmez
+        DB::transaction(function () use ($tasarruf, $islem): void {
+            $tasarruf->delete();
+            SilinenArsivi::sessiz(fn () => $islem->delete());
+        });
 
         return response()->json(['message' => 'Tasarruf ve portföydeki alış silindi.']);
     }

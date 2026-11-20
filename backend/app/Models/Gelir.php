@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\GelirDuzeni;
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Gelir extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'gelir';
+
     use HaneyeAit;
 
     protected $table = 'gelirler';

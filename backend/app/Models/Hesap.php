@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\HesapTuru;
+use App\Models\Concerns\Arsivlenir;
 use Database\Factories\HesapFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +16,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Hesap extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'hesap';
+
+    /** @return array<int, array<string, mixed>>|null */
+    public function arsivAlt(): ?array
+    {
+        return $this->islemler()->with('varlik:id,kod')->get()->map(fn (Islem $i): array => ['tarih' => $i->tarih->toDateString(), 'islem' => $i->tur->value, 'varlik' => $i->varlik?->kod, 'miktar' => $i->miktar])->take(500)->values()->all() ?: null;
+    }
+
     /** @use HasFactory<HesapFactory> */
     use HasFactory;
 

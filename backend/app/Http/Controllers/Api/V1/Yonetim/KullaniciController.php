@@ -29,6 +29,7 @@ class KullaniciController extends Controller
                 ...$u->oturumBilgisi(),
                 'aktif' => $u->aktif,
                 'son_giris' => $u->son_giris?->toIso8601String(),
+                'kurtarma_kullanildi_at' => $u->kurtarma_kullanildi_at?->toIso8601String(),
                 'hane' => $u->hane ? ['id' => $u->hane->id, 'ad' => $u->hane->ad] : null,
             ]),
         ]);

@@ -25,7 +25,8 @@ class GirisController extends Controller
         ]);
 
         $bilgi = ['email' => mb_strtolower(trim($veri['email'])), 'password' => $veri['sifre'], 'aktif' => true];
-        if (! Auth::guard('web')->attempt($bilgi, (bool) ($veri['hatirla'] ?? false))) {
+        // Oturum sürekli açık kalır: "hatırla" çerezi her girişte verilir (Çıkış, şifre değişimi ya da hesabın kapatılmasıyla biter)
+        if (! Auth::guard('web')->attempt($bilgi, true)) {
             throw ValidationException::withMessages(['email' => 'E-posta veya şifre hatalı.']);
         }
         $request->session()->regenerate();

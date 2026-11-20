@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\Aile\KategoriController;
 use App\Http\Controllers\Api\V1\Aile\OdemeKaynaklariController;
 use App\Http\Controllers\Api\V1\Aile\OzetController as AileOzetController;
 use App\Http\Controllers\Api\V1\Aile\SaglayiciController;
+use App\Http\Controllers\Api\V1\Aile\SilinenController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufGunuController;
 use App\Http\Controllers\Api\V1\Aile\TasarrufOzetController;
@@ -32,26 +33,35 @@ use App\Http\Controllers\Api\V1\GirisController;
 use App\Http\Controllers\Api\V1\HesapController;
 use App\Http\Controllers\Api\V1\IslemController;
 use App\Http\Controllers\Api\V1\IzlemeController;
+use App\Http\Controllers\Api\V1\KurtarmaKodlariController;
 use App\Http\Controllers\Api\V1\OzetController;
 use App\Http\Controllers\Api\V1\PerformansController;
 use App\Http\Controllers\Api\V1\ProfilResmiController;
+use App\Http\Controllers\Api\V1\SifreController;
 use App\Http\Controllers\Api\V1\SurumController;
 use App\Http\Controllers\Api\V1\VarlikController;
 use App\Http\Controllers\Api\V1\Yonetim\HaneController as YonetimHaneController;
 use App\Http\Controllers\Api\V1\Yonetim\KaynakController;
 use App\Http\Controllers\Api\V1\Yonetim\KullaniciController;
+use App\Http\Middleware\AktifKullanici;
 use App\Http\Middleware\HaneyiHazirla;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function (): void {
     Route::post('giris', [GirisController::class, 'giris'])->middleware('throttle:giris')->name('giris');
+    // Şifre unutulduğunda (girişsiz): e-postayla bağlantı ve yönetici kurtarma kodu
+    Route::post('sifre-unuttum', [SifreController::class, 'unuttum'])->middleware('throttle:giris')->name('sifre.unuttum');
+    Route::post('sifre-sifirla', [SifreController::class, 'sifirla'])->middleware('throttle:giris')->name('sifre.sifirla');
+    Route::post('sifre-sifirla/kodla', [SifreController::class, 'kodla'])->middleware('throttle:giris')->name('sifre.kodla');
     // Girişsiz: giriş sayfasındaki açık uygulama da yeni sürümü fark etsin
     Route::get('surum', SurumController::class)->middleware('throttle:api')->name('surum');
 
-    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
+    Route::middleware(['auth:sanctum', AktifKullanici::class, 'throttle:api'])->group(function (): void {
         Route::get('ben', [GirisController::class, 'ben'])->name('ben');
         Route::post('cikis', [GirisController::class, 'cikis'])->name('cikis');
         Route::put('ben/sifre', [GirisController::class, 'sifre'])->middleware('throttle:giris')->name('ben.sifre');
+        Route::get('ben/kurtarma-kodlari', [KurtarmaKodlariController::class, 'index'])->name('ben.kurtarma.index');
+        Route::post('ben/kurtarma-kodlari', [KurtarmaKodlariController::class, 'store'])->middleware('throttle:giris')->name('ben.kurtarma.store');
         Route::post('ben/resim', [ProfilResmiController::class, 'yukle'])->name('ben.resim');
         Route::delete('ben/resim', [ProfilResmiController::class, 'sil'])->name('ben.resim.sil');
         Route::get('kullanicilar/{kullanici}/resim', [ProfilResmiController::class, 'goster'])->name('kullanicilar.resim');
@@ -96,6 +106,8 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('duzenli-giderler', DuzenliGiderController::class)->except('show')->parameters(['duzenli-giderler' => 'gider']);
 
             Route::get('odeme-kaynaklari', OdemeKaynaklariController::class)->name('odeme-kaynaklari');
+            Route::get('silinenler', [SilinenController::class, 'index'])->name('silinenler.index');
+            Route::get('silinenler/{kayit}', [SilinenController::class, 'show'])->name('silinenler.show');
             Route::get('ev-nakdi', [EvNakdiController::class, 'index'])->name('ev-nakdi.index');
             Route::post('ev-nakdi/hareketler', [EvNakdiController::class, 'store'])->name('ev-nakdi.store');
             Route::put('ev-nakdi/hesap', [EvNakdiController::class, 'hesap'])->name('ev-nakdi.hesap');

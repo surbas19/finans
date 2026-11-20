@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\IslemTuru;
+use App\Models\Concerns\Arsivlenir;
 use Database\Factories\IslemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Islem extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'portfoy_islemi';
+
+    /** Nakit harcamasının hesaba yazdığı satış gider kaydında zaten arşivlenir */
+    public function arsivlenecekMi(): bool
+    {
+        return $this->bag_turu !== 'harcama';
+    }
+
+    public function arsivBaslik(): string
+    {
+        return $this->tur->etiket().' · '.($this->varlik?->kod ?? 'varlık').' · '.$this->miktar.' · '.$this->tarih?->format('d.m.Y');
+    }
+
+    public function arsivTutar(): ?string
+    {
+        return $this->birim_fiyat === null ? null : number_format($this->miktar * $this->birim_fiyat, 2, '.', '');
+    }
+
     /** @use HasFactory<IslemFactory> */
     use HasFactory;
 

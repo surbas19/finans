@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Borc extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'borc';
+
+    public function arsivBaslik(): string
+    {
+        return $this->kisi.' · '.($this->yon === self::BORC ? 'borç' : 'alacak');
+    }
+
+    /** @return array<int, array<string, mixed>>|null */
+    public function arsivAlt(): ?array
+    {
+        return $this->odemeler->map(fn (BorcOdemesi $o): array => ['tarih' => $o->tarih->toDateString(), 'tutar' => (float) $o->tutar, 'not' => $o->not])->take(500)->values()->all() ?: null;
+    }
+
     use HaneyeAit;
 
     public const BORC = 'borc';

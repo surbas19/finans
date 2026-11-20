@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Kart extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'kart';
+
     use HaneyeAit;
 
     protected $table = 'kartlar';

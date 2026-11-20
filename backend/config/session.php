@@ -30,7 +30,9 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    // Oturum sürekli açık kalır (1 yıl, kullandıkça uzar); ortam değişkeniyle ezilmez. Giriş her zaman "hatırla"
+    // çerezi (400 gün) bırakır; Çıkış, şifre değişimi ya da hesabın kapatılması oturumu bitirir.
+    'lifetime' => 525600,
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

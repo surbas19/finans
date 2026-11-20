@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 class DuzenliGider extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'gider';
+
     use HaneyeAit;
 
     protected $table = 'duzenli_giderler';

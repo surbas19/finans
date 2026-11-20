@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Tasarruf extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'tasarruf';
+
+    public function arsivBaslik(): string
+    {
+        return 'Tasarruf · '.($this->varlik?->kod ?? 'varlık').' · '.$this->tarih?->format('d.m.Y');
+    }
+
+    /** @return array<int, array<string, mixed>>|null */
+    public function arsivAlt(): ?array
+    {
+        $islem = $this->islem;
+
+        return $islem ? [['tur' => 'portfoy_islemi', 'tarih' => $islem->tarih->toDateString(), 'islem' => $islem->tur->value, 'miktar' => $islem->miktar]] : null;
+    }
+
     use HaneyeAit;
 
     protected $table = 'tasarruflar';

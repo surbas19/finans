@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\SifreSifirlamaBildirimi;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -9,13 +10,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['ad', 'soyad', 'email', 'password', 'yonetici', 'aktif'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory;
+    use HasFactory, Notifiable;
+
+    /** Şifre sıfırlama e-postası (Türkçe, 60 dk geçerli tek kullanımlık bağlantı) */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new SifreSifirlamaBildirimi($token));
+    }
 
     /**
      * @return array<string, string>
@@ -27,6 +35,7 @@ class User extends Authenticatable
             'yonetici' => 'boolean',
             'aktif' => 'boolean',
             'son_giris' => 'datetime',
+            'kurtarma_kullanildi_at' => 'datetime',
             'hane_id' => 'integer',
         ];
     }

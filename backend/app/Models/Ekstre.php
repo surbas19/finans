@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EkstreDurumu;
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Donem;
 use App\Support\Kurus;
@@ -18,6 +19,26 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Ekstre extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'ekstre';
+
+    public function arsivBaslik(): string
+    {
+        return ($this->kart?->ad ?? 'Kart').' ekstresi · '.($this->ay() ?? 'dönem okunamadı');
+    }
+
+    public function arsivTutar(): ?string
+    {
+        return $this->donem_borcu === null ? null : (string) $this->donem_borcu;
+    }
+
+    /** @return array<int, array<string, mixed>>|null */
+    public function arsivAlt(): ?array
+    {
+        return $this->islemler->map(fn (KartIslemi $i): array => ['tarih' => $i->islem_tarihi?->toDateString(), 'aciklama' => $i->aciklama, 'tutar' => $i->tutar !== null ? (float) $i->tutar : null])->take(500)->values()->all() ?: null;
+    }
+
     use HaneyeAit;
 
     protected $table = 'ekstreler';

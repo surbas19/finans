@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BorcOdemesi extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'borc_odemesi';
+
+    public function arsivBaslik(): string
+    {
+        return 'Ödeme · '.($this->borc?->kisi ?? '').' · '.$this->tarih?->format('d.m.Y');
+    }
+
     use HaneyeAit;
 
     protected $table = 'borc_odemeleri';

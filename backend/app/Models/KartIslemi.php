@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\KartIslemDurumu;
 use App\Enums\KartIslemTuru;
+use App\Models\Concerns\Arsivlenir;
 use App\Models\Concerns\HaneyeAit;
 use App\Services\Aile\FaturaEslestirici;
 use App\Support\Kurus;
@@ -15,6 +16,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class KartIslemi extends Model
 {
+    use Arsivlenir;
+
+    protected string $arsivTuru = 'kart_islemi';
+
+    public function arsivHaric(): array
+    {
+        return ['ham_metin', 'okuma', 'fatura_onerisi'];
+    }
+
     use HaneyeAit;
 
     protected $table = 'kart_islemleri';
