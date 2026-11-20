@@ -280,7 +280,7 @@ async function kaydet(): Promise<void> {
                     class="rounded-full px-3 py-1 text-xs font-bold ring-1 transition-colors"
                     :class="
                       s.ekstre.toplamda
-                        ? 'bg-primary-600 text-white ring-primary-600'
+                        ? 'bg-primary-100 text-primary-800 ring-primary-400'
                         : 'ring-current/40'
                     "
                     :aria-pressed="!!s.ekstre.toplamda"

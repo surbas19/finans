@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-20) Kart borç hatırlatıcısı: sürükleyerek kendi sıran (hane), "Borç öde" + Geri al, "Toplama ekle" ve seçilenlerin toplam çubuğu, satırda asgari. 1 migration. Testler: arka uç 309, ön yüz 212.
 - (2026-11-20) Silinenler arşivi (kim yaptı / ne zaman, kim sildi / ne zaman; üstü çizili liste, Bütçe ⚙), Şifremi unuttum (e-posta bağlantısı + yönetici kurtarma kodları), oturum sürekli açık (Beni hatırla kalktı). 2 migration. Testler: arka uç 306, ön yüz 208.
 - (2026-11-19) Kategori seçici yenilendi (ikonlu ızgara): arama + oluştur ve ata, önerilen kategori, "Yalnız bu işlem" kapsamı, 5 sn "Geri al". Testler: arka uç 286, ön yüz 202.
 - (2026-11-19) "Bugün" kâr / zararında yüzde de (Hesaplar, hesap detayı, Özet; `gunluk_yuzde`, nakit / BES paydada). Testler: arka uç 282, ön yüz 201.

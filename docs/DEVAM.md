@@ -3,15 +3,8 @@
 > Kural: CLAUDE.md → "Kaldığın yeri kaydet". Oturum başında `git pull`'dan sonra burayı oku; dolu bir iş varsa oradan devam et.
 
 
-## Kart hatırlatıcısı ([planlar/kart-hatirlatici.md](planlar/kart-hatirlatici.md))
-- [x] 1. Arka uç: migration `2026_11_25_000100_hatirlatici_duzeni`, sıra ucu, toplamda + test
-- [x] 2. Ön yüz: `SonOdemeHatirlaticilari` (Düzenle / sürükle, Borç öde + geri al, Toplama ekle + çubuk) + test
-- [ ] 3. Tüm testler, ekran görüntüsü, belgeler
-
-**Sıradaki adım:** 3 (ekran görüntüsü, belgeler).
-
 ## Yayın bekleyenler
-Yok (2026-11-20): canlıda e6b3a6b (diğer bilgisayarın kategori seçici, kart gezinme vb. işleri ve Silinenler, şifre unutma + kurtarma kodları, sürekli açık oturum dahil).
+Canlıya çıkmayanlar (MySQL'de doğrulandı 2026-11-20, arka uç 309/309, ön yüz 212): kart borç hatırlatıcısı (sıra, Borç öde, toplam; migration `2026_11_25_000100_hatirlatici_duzeni`). Canlıda son: e6b3a6b.
 
 ## Ekstre profilleri ([planlar/ekstre-profilleri.md](planlar/ekstre-profilleri.md))
 İstek: Garanti BBVA ve Yapı Kredi ekstreleri 0 satır okuyor (tarih ay adıyla, CP1254 karakterler, banka etiketleri). Plan: normalizasyon → banka tanıma → banka profilleri → mutabakat → teşhis; ayrıca fatura dönemi = kesim ayı, asgari = borç × kart oranı (varsayılan %40).
