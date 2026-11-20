@@ -8,6 +8,7 @@ use App\Models\Kart;
 use App\Models\KartIslemi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -36,6 +37,31 @@ class KartController extends Controller
             'ekstreler' => $kart->ekstreler()->withCount('islemler')->orderByDesc('kesim_tarihi')->orderByDesc('id')->get()
                 ->map(fn (Ekstre $e): array => [...$e->ozet(), 'satir_sayisi' => $e->islemler_count]),
         ]);
+    }
+
+    /**
+     * Borç hatırlatıcısının kart sırası (hane): verilen sırayla 0, 1, 2…; listede olmayan kartın sırası boşalır (tarihe
+     * göre sonda). Kartların hepsi hanenin olmalı.
+     */
+    public function hatirlaticiSirasi(Request $request): JsonResponse
+    {
+        $veri = $request->validate([
+            'kart_idler' => ['present', 'array', 'max:200'],
+            'kart_idler.*' => ['integer', 'distinct'],
+        ]);
+        $idler = array_map('intval', $veri['kart_idler']);
+        $kartlar = Kart::hanenin($request->user())->get()->keyBy('id');
+        if (array_diff($idler, $kartlar->keys()->all()) !== []) {
+            throw ValidationException::withMessages(['kart_idler' => 'Kart bulunamadı.']);
+        }
+        DB::transaction(function () use ($kartlar, $idler): void {
+            foreach ($kartlar as $id => $kart) {
+                $sira = array_search($id, $idler, true);
+                $kart->forceFill(['hatirlatici_sira' => $sira === false ? null : $sira])->save();
+            }
+        });
+
+        return response()->json(['message' => 'Sıra kaydedildi.']);
     }
 
     public function store(Request $request): JsonResponse

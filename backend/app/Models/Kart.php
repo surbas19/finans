@@ -21,7 +21,7 @@ class Kart extends Model
 
     protected $table = 'kartlar';
 
-    protected $fillable = ['hane_id', 'banka_id', 'sahip_uye_id', 'ad', 'kesim_gunu', 'son_odeme_gunu', 'asgari_oran', 'renk', 'aktif'];
+    protected $fillable = ['hane_id', 'banka_id', 'sahip_uye_id', 'ad', 'kesim_gunu', 'son_odeme_gunu', 'asgari_oran', 'renk', 'aktif', 'hatirlatici_sira'];
 
     /**
      * @return array<string, string>
@@ -70,6 +70,8 @@ class Kart extends Model
             'asgari_oran' => (int) ($this->asgari_oran ?? 40),
             'renk' => $this->renk,
             'aktif' => $this->aktif,
+            // Borç hatırlatıcısında hanenin seçtiği sıra (boş: tarihe göre, sırası olanlardan sonra)
+            'hatirlatici_sira' => $this->hatirlatici_sira,
         ];
     }
 }

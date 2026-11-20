@@ -126,6 +126,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('tasarruf-gunleri', TasarrufGunuController::class)->except('show')->parameters(['tasarruf-gunleri' => 'gun']);
 
             Route::apiResource('bankalar', BankaController::class)->except('show')->parameters(['bankalar' => 'banka']);
+            Route::put('kartlar/hatirlatici-sirasi', [KartController::class, 'hatirlaticiSirasi'])->name('kartlar.hatirlatici-sirasi');
             Route::apiResource('kartlar', KartController::class)->parameters(['kartlar' => 'kart']);
             Route::apiResource('kategoriler', KategoriController::class)->except('show')->parameters(['kategoriler' => 'kategori']);
             Route::post('kategoriler/{kategori}/kurallar', [KategoriController::class, 'kuralEkle'])->name('kategoriler.kurallar.store');

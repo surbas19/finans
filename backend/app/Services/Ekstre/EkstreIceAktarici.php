@@ -308,6 +308,9 @@ class EkstreIceAktarici
         if (array_key_exists('kesim_tarihi', $veri) && ($ekstre->denetim['kesim_teyit_gerekli'] ?? false)) {
             $ekstre->denetim = [...$ekstre->denetim, 'kesim_teyit_gerekli' => false];
         }
+        if (array_key_exists('toplamda', $veri)) {
+            $ekstre->toplamda = (bool) $veri['toplamda'];
+        }
         if (array_key_exists('odendi', $veri)) {
             $ekstre->odendi = (bool) $veri['odendi'];
         }

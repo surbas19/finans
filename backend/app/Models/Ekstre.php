@@ -45,7 +45,7 @@ class Ekstre extends Model
 
     protected $fillable = [
         'hane_id', 'kart_id', 'durum', 'donem_baslangic', 'kesim_tarihi', 'son_odeme_tarihi', 'donem_borcu',
-        'asgari_odeme', 'alan_kaynaklari', 'okunamayan', 'banka_profili', 'denetim', 'ai_cikti', 'kalan_taksit', 'odendi', 'onayli_kesim_tarihi', 'dosya_yolu', 'dosya_adi',
+        'asgari_odeme', 'alan_kaynaklari', 'okunamayan', 'banka_profili', 'denetim', 'ai_cikti', 'kalan_taksit', 'odendi', 'toplamda', 'onayli_kesim_tarihi', 'dosya_yolu', 'dosya_adi',
         'dosya_boyutu', 'sayfa_sayisi', 'dosya_ozeti', 'olusturan_id', 'onaylayan_id', 'onaylandi_at',
     ];
 
@@ -68,6 +68,7 @@ class Ekstre extends Model
             'ai_cikti' => 'array',
             'kalan_taksit' => 'decimal:2',
             'odendi' => 'boolean',
+            'toplamda' => 'boolean',
             'onaylandi_at' => 'datetime',
         ];
     }
@@ -156,6 +157,8 @@ class Ekstre extends Model
             'denetim' => $this->denetim,
             'kalan_taksit' => $this->kalan_taksit !== null ? Kurus::tl(Kurus::kurus($this->kalan_taksit)) : null,
             'odendi' => $this->odendi,
+            // Borç hatırlatıcısında "toplama eklendi" (seçilenlerin toplamı)
+            'toplamda' => (bool) $this->toplamda,
             'dosya_var' => $this->dosya_yolu !== null,
             'dosya_adi' => $this->dosya_adi,
             'sayfa_sayisi' => $this->sayfa_sayisi,

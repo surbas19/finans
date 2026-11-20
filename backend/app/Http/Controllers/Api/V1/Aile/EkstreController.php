@@ -167,11 +167,13 @@ class EkstreController extends Controller
             'donem_borcu' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:10000000000', 'decimal:0,2'],
             'asgari_odeme' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:10000000000', 'decimal:0,2'],
             'odendi' => ['sometimes', 'boolean'],
+            // Borç hatırlatıcısında "toplama ekle" (her zaman değişebilir)
+            'toplamda' => ['sometimes', 'boolean'],
         ], [], ['kesim_tarihi' => 'kesim tarihi', 'son_odeme_tarihi' => 'son ödeme tarihi', 'donem_borcu' => 'dönem borcu', 'asgari_odeme' => 'asgari ödeme']);
-        if (array_diff(array_keys($veri), ['odendi']) !== []) {
+        if (array_diff(array_keys($veri), ['odendi', 'toplamda']) !== []) {
             $this->analizSurmuyor($ekstre);
         }
-        if ($ekstre->durum === EkstreDurumu::Onaylandi && array_diff(array_keys($veri), ['odendi', 'son_odeme_tarihi', 'donem_borcu', 'asgari_odeme']) !== []) {
+        if ($ekstre->durum === EkstreDurumu::Onaylandi && array_diff(array_keys($veri), ['odendi', 'toplamda', 'son_odeme_tarihi', 'donem_borcu', 'asgari_odeme']) !== []) {
             throw ValidationException::withMessages(['ekstre' => 'Onaylı ekstrenin kesim tarihi değişmez; ekstreyi silip yeniden yükleyin.']);
         }
         $this->aktarici->alanlariGuncelle($ekstre, $veri);
