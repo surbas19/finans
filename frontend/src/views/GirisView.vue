@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
-import Checkbox from 'primevue/checkbox'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Password from 'primevue/password'
@@ -16,7 +15,6 @@ const router = useRouter()
 
 const email = ref('')
 const sifre = ref('')
-const hatirla = ref(true)
 const hata = ref('')
 const gonderiliyor = ref(false)
 
@@ -24,7 +22,7 @@ async function giris(): Promise<void> {
   hata.value = ''
   gonderiliyor.value = true
   try {
-    await auth.giris(email.value, sifre.value, hatirla.value)
+    await auth.giris(email.value, sifre.value)
     const geri =
       typeof route.query.geri === 'string' && route.query.geri.startsWith('/')
         ? route.query.geri
@@ -67,10 +65,12 @@ async function giris(): Promise<void> {
             fluid
           />
         </FormAlani>
-        <label class="flex items-center gap-2 text-sm text-surface-600">
-          <Checkbox v-model="hatirla" binary input-id="hatirla" />
-          Beni hatırla
-        </label>
+        <RouterLink
+          :to="{ name: 'sifre-unuttum' }"
+          class="-mt-2 self-end text-sm font-semibold text-primary-600 hover:text-primary-700"
+          data-test="sifre-unuttum"
+          >Şifremi unuttum</RouterLink
+        >
         <Message v-if="hata" severity="error" size="small">{{ hata }}</Message>
         <Button
           type="submit"

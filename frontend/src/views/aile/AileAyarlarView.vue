@@ -134,6 +134,22 @@ async function desenEkle(s: Saglayici): Promise<void> {
     <Skeleton v-for="n in 3" :key="n" height="9rem" border-radius="1.5rem" />
   </div>
   <div v-else class="flex flex-col gap-4">
+    <!-- Silinenler: silinen kayıtların arşivi -->
+    <RouterLink
+      :to="{ name: 'aile-silinenler' }"
+      class="kart flex items-center gap-3 p-4 sm:p-5"
+      data-test="silinenler-baglanti"
+    >
+      <i class="pi pi-trash text-lg text-surface-500" />
+      <span class="min-w-0 flex-1">
+        <span class="block font-semibold text-surface-900">Silinenler</span>
+        <span class="block text-xs text-surface-500"
+          >Silinen her kayıt burada saklanır: kim yaptı, ne zaman, kim sildi.</span
+        >
+      </span>
+      <i class="pi pi-chevron-right text-xs text-surface-400" />
+    </RouterLink>
+
     <!-- Hane ve üyeler -->
     <section class="kart p-4 sm:p-5">
       <h2 class="bolum-etiketi mb-3">Hane</h2>

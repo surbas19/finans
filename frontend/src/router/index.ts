@@ -25,6 +25,18 @@ export const rotalar: RouteRecordRaw[] = [
     meta: { misafir: true, baslik: 'Giriş' },
   },
   {
+    path: '/sifre-unuttum',
+    name: 'sifre-unuttum',
+    component: () => import('@/views/SifreUnuttumView.vue'),
+    meta: { misafir: true, baslik: 'Şifremi unuttum' },
+  },
+  {
+    path: '/sifre-sifirla',
+    name: 'sifre-sifirla',
+    component: () => import('@/views/SifreSifirlaView.vue'),
+    meta: { misafir: true, baslik: 'Şifre sıfırla' },
+  },
+  {
     path: '/',
     component: () => import('@/layouts/AnaDuzen.vue'),
     children: [
@@ -158,6 +170,12 @@ export const rotalar: RouteRecordRaw[] = [
             path: 'zekat',
             name: 'aile-zekat',
             redirect: { name: 'yonetim', query: { sekme: 'zekat' } },
+          },
+          {
+            path: 'silinenler',
+            name: 'aile-silinenler',
+            component: () => import('@/views/aile/SilinenlerView.vue'),
+            meta: { baslik: 'Silinenler', geri: 'aile-ayarlar' },
           },
           {
             path: 'ayarlar',

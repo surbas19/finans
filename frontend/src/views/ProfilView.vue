@@ -9,6 +9,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import FormAlani from '@/components/FormAlani.vue'
 import KisiResmi from '@/components/KisiResmi.vue'
+import KurtarmaKodlariKarti from '@/components/KurtarmaKodlariKarti.vue'
 import SayfaBasligi from '@/components/SayfaBasligi.vue'
 import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import UygulamaPenceresi from '@/components/UygulamaPenceresi.vue'
@@ -208,8 +209,14 @@ async function cikis(): Promise<void> {
 
     <UygulamaKurKarti />
 
+    <KurtarmaKodlariKarti v-if="auth.yonetici" />
+
     <section class="kart p-5">
       <h2 class="bolum-etiketi mb-3">Şifre değiştir</h2>
+      <p class="mb-3 text-xs text-surface-500">
+        Bu cihazda oturum açık kalır; ortak bir bilgisayardaysanız işiniz bitince Çıkış yapın.
+        Şifrenizi değiştirince diğer cihazlardaki oturumlar kapanır.
+      </p>
       <form class="flex flex-col gap-4" @submit.prevent="sifreDegistir">
         <FormAlani etiket="Mevcut şifre" for="mevcut" :hata="hatalar.mevcut_sifre">
           <Password

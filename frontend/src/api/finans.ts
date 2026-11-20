@@ -206,6 +206,8 @@ export interface KaynakDurumu {
 
 export interface YonetimKullanicisi extends Kullanici {
   aktif: boolean
+  /** Yöneticinin son kurtarma kodu kullanımı */
+  kurtarma_kullanildi_at?: string | null
   son_giris: string | null
   /** Hanesi: aynı hanedekiler hesapları ve aile kayıtlarını birlikte görür */
   hane: { id: number; ad: string } | null
@@ -219,10 +221,32 @@ export interface YonetimHanesi {
 
 export const finansApi = {
   ben: () => http.get<{ kullanici: Kullanici }>('/ben').then((r) => r.data.kullanici),
-  giris: (email: string, sifre: string, hatirla: boolean) =>
+  // Oturum sürekli açık kalır: sunucu her girişte "hatırla" çerezi verir
+  giris: (email: string, sifre: string) =>
+    http.post<{ kullanici: Kullanici }>('/giris', { email, sifre }).then((r) => r.data.kullanici),
+  /** Şifremi unuttum: e-postayla bağlantı (503: sunucuda e-posta ayarı yok) */
+  sifreUnuttum: (email: string) =>
+    http.post<{ message: string }>('/sifre-unuttum', { email }).then((r) => r.data),
+  sifreSifirla: (veri: {
+    email: string
+    token: string
+    yeni_sifre: string
+    yeni_sifre_confirmation: string
+  }) => http.post<{ message: string }>('/sifre-sifirla', veri).then((r) => r.data),
+  /** Yönetici kurtarma koduyla sıfırlama */
+  sifreKodla: (veri: {
+    email: string
+    kod: string
+    yeni_sifre: string
+    yeni_sifre_confirmation: string
+  }) => http.post<{ message: string }>('/sifre-sifirla/kodla', veri).then((r) => r.data),
+  kurtarmaKalan: () =>
+    http.get<{ kalan: number; adet: number }>('/ben/kurtarma-kodlari').then((r) => r.data),
+  /** Yeni kurtarma kodları üretir (mevcut şifre ister); kodlar yalnız bu yanıtta görünür */
+  kurtarmaUret: (sifre: string) =>
     http
-      .post<{ kullanici: Kullanici }>('/giris', { email, sifre, hatirla })
-      .then((r) => r.data.kullanici),
+      .post<{ kodlar: string[]; message: string }>('/ben/kurtarma-kodlari', { sifre })
+      .then((r) => r.data),
   cikis: () => http.post('/cikis'),
   sifre: (veri: { mevcut_sifre: string; yeni_sifre: string; yeni_sifre_confirmation: string }) =>
     http.put<{ message: string }>('/ben/sifre', veri),

@@ -21,8 +21,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function giris(email: string, sifre: string, hatirla: boolean): Promise<void> {
-    kullanici.value = await finansApi.giris(email, sifre, hatirla)
+  async function giris(email: string, sifre: string): Promise<void> {
+    kullanici.value = await finansApi.giris(email, sifre)
     denetlendi.value = true
   }
 

@@ -997,6 +997,33 @@ function temiz<T extends object>(nesne: T): Partial<T> {
   ) as Partial<T>
 }
 
+/** Silinen kaydın arşivi (anlık görüntü): ne, kim yaptı / ne zaman, kim sildi / ne zaman */
+export interface SilinenKaydi {
+  id: number
+  tur: string
+  tur_etiketi: string
+  baslik: string
+  tutar: number | null
+  olusturan_ad: string | null
+  olusturuldu_at: string | null
+  silen_ad: string
+  silindi_at: string
+  neden: string | null
+  alt_sayisi: number
+  /** Yalnız ayrıntıda */
+  icerik?: Record<string, unknown>
+  alt?: Record<string, unknown>[]
+}
+
+export interface SilinenlerYaniti {
+  kayitlar: SilinenKaydi[]
+  toplam: number
+  sayfa: number
+  sonraki: boolean
+  turler: Record<string, string>
+  tur_sayilari: Record<string, number>
+}
+
 export const aileApi = {
   hane: () => http.get<HaneBilgisi>('/aile/hane').then((r) => r.data),
   haneAdi: (ad: string) => http.put('/aile/hane', { ad }),
@@ -1052,6 +1079,12 @@ export const aileApi = {
     http.put<{ gider: DuzenliGider }>(`/aile/duzenli-giderler/${id}`, veri).then((r) => r.data),
   duzenliGiderSil: (id: number) => http.delete(`/aile/duzenli-giderler/${id}`),
 
+  silinenler: (tur?: string, sayfa = 1) =>
+    http
+      .get<SilinenlerYaniti>('/aile/silinenler', { params: temiz({ tur, sayfa }) })
+      .then((r) => r.data),
+  silinenAyrinti: (id: number) =>
+    http.get<{ kayit: SilinenKaydi }>(`/aile/silinenler/${id}`).then((r) => r.data.kayit),
   odemeKaynaklari: () => http.get<OdemeKaynaklari>('/aile/odeme-kaynaklari').then((r) => r.data),
   evNakdi: () => http.get<EvNakdiOzeti>('/aile/ev-nakdi').then((r) => r.data),
   /** Ev nakdi hangi portföy hesabı (null: ayrı kasa) */

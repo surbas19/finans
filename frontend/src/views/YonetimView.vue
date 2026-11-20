@@ -224,7 +224,10 @@ async function sifreKaydet(): Promise<void> {
                     <Tag v-if="k.yonetici" value="yönetici" severity="info" />
                   </p>
                   <p class="truncate text-xs text-surface-500">
-                    {{ k.email }} · son giriş {{ k.son_giris ? neZaman(k.son_giris) : 'yok' }}
+                    {{ k.email }} · son giriş {{ k.son_giris ? neZaman(k.son_giris) : 'yok'
+                    }}<template v-if="k.kurtarma_kullanildi_at">
+                      · kurtarma kodu kullandı {{ neZaman(k.kurtarma_kullanildi_at) }}</template
+                    >
                   </p>
                 </div>
                 <!-- Telefonda adın altında ayrı satır, masaüstünde aynı satırda -->
