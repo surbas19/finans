@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Arsivlenir;
+use App\Models\Concerns\DefterIzler;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Borc extends Model
 {
     use Arsivlenir;
+    use DefterIzler;
 
     protected string $arsivTuru = 'borc';
 
@@ -84,6 +86,15 @@ class Borc extends Model
             'vade_gecti' => $kalan > 0 && $this->vade !== null && $this->vade->isBefore(today()),
             'not' => $this->not,
             'odemeler' => $this->odemeler->map(fn (BorcOdemesi $o): array => $o->ozet())->values(),
+        ];
+    }
+
+    /** @return array<string, mixed>|null Defter'in sonradan değişiklik kaydı için bilgi */
+    public function defterBilgisi(): ?array
+    {
+        return $this->hane_id === null || $this->tarih === null ? null : [
+            'hane_id' => (int) $this->hane_id, 'donem' => $this->tarih->format('Y-m'), 'tur' => 'borc', 'kayit_id' => $this->getKey(),
+            'baslik' => $this->kisi.($this->yon === self::ALACAK ? ' (alacak)' : ' (borç)'), 'tarih' => $this->tarih->toDateString(), 'tutar' => $this->tutar, 'not' => null,
         ];
     }
 }

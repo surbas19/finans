@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Aile\BankaController;
 use App\Http\Controllers\Api\V1\Aile\BorcController;
+use App\Http\Controllers\Api\V1\Aile\DefterController;
 use App\Http\Controllers\Api\V1\Aile\DuzenliGiderController;
 use App\Http\Controllers\Api\V1\Aile\EkstreAnalizController;
 use App\Http\Controllers\Api\V1\Aile\EkstreController;
@@ -114,6 +115,7 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             Route::apiResource('duzenli-giderler', DuzenliGiderController::class)->except('show')->parameters(['duzenli-giderler' => 'gider']);
 
             Route::get('odeme-kaynaklari', OdemeKaynaklariController::class)->name('odeme-kaynaklari');
+            Route::get('defter', [DefterController::class, 'goster'])->name('defter');
             Route::get('silinenler', [SilinenController::class, 'index'])->name('silinenler.index');
             Route::get('silinenler/{kayit}', [SilinenController::class, 'show'])->name('silinenler.show');
             Route::get('ev-nakdi', [EvNakdiController::class, 'index'])->name('ev-nakdi.index');

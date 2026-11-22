@@ -2,8 +2,12 @@
 
 use App\Fiyat\FiyatGuncelleyici;
 use App\Fiyat\Katalog;
+use App\Models\DefterAyi;
+use App\Models\Hane;
 use App\Models\User;
+use App\Services\Aile\DefterKapanisi;
 use App\Services\AIStatement\EkstreAiIsleyici;
+use App\Support\Donem;
 use Illuminate\Console\Scheduling\CallbackEvent;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +53,23 @@ Artisan::command('ekstre:ai-isle', function (EkstreAiIsleyici $isleyici): void {
 
 // Her dakika; senkron yol (arka plan modu yoksa) burada çalışır. Kilit 10 dakikada düşer.
 $zamanla('ekstre:ai-isle', 'ekstre-ai')->everyMinute()->withoutOverlapping(10);
+
+Artisan::command('defter:kapat', function (DefterKapanisi $kapanis): void {
+    $donem = Donem::ekle(Donem::buAy(), -1);
+    $sayi = 0;
+    foreach (Hane::pluck('id') as $haneId) {
+        if (! DefterAyi::where('hane_id', $haneId)->where('donem', $donem)->exists()) {
+            $kapanis->muhurla((int) $haneId, $donem);
+            $sayi++;
+        }
+    }
+    if ($sayi > 0) {
+        $this->line("{$sayi} hanenin {$donem} defteri mühürlendi.");
+    }
+})->purpose('Geçen ayın defterini her hane için mühürler (değişmez anlık görüntü)');
+
+// Ayın ilk günleri ve sonrası: mühürlenmemiş hane varsa mühürler (saatte bir yeterli, işi yoksa çıkar)
+$zamanla('defter:kapat', 'defter-kapat')->hourly()->withoutOverlapping(10);
 
 Artisan::command('katalog:esitle', function (): void {
     $this->info(Katalog::esitle().' hazır varlık eşitlendi.');

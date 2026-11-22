@@ -17,6 +17,7 @@ export const SAYFA_SIRASI: Record<string, number> = {
   'aile-islemler': 25,
   'aile-faturalar': 26,
   'aile-ayarlar': 27,
+  'aile-defter': 28,
   izleme: 30,
   profil: 40,
   yonetim: 41,

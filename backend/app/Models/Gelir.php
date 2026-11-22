@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\GelirDuzeni;
 use App\Models\Concerns\Arsivlenir;
+use App\Models\Concerns\DefterIzler;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Gelir extends Model
 {
     use Arsivlenir;
+    use DefterIzler;
 
     protected string $arsivTuru = 'gelir';
 
@@ -74,6 +76,15 @@ class Gelir extends Model
             'tarih' => $this->tarih->toDateString(),
             'donem' => $this->donem,
             'not' => $this->not,
+        ];
+    }
+
+    /** @return array<string, mixed>|null Defter'in sonradan değişiklik kaydı için bilgi */
+    public function defterBilgisi(): ?array
+    {
+        return $this->hane_id === null || $this->donem === null ? null : [
+            'hane_id' => (int) $this->hane_id, 'donem' => $this->donem, 'tur' => 'gelir', 'kayit_id' => $this->getKey(),
+            'baslik' => $this->aciklama ?: 'Gelir', 'tarih' => $this->tarih?->toDateString(), 'tutar' => $this->tl_tutar, 'not' => null,
         ];
     }
 }

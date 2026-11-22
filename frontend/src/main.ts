@@ -1,4 +1,8 @@
 import '@fontsource-variable/plus-jakarta-sans'
+import '@fontsource/caveat/latin-ext-700.css'
+import '@fontsource/caveat/latin-700.css'
+import '@fontsource/patrick-hand/latin-ext-400.css'
+import '@fontsource/patrick-hand/latin-400.css'
 import './assets/main.css'
 
 import { createApp } from 'vue'

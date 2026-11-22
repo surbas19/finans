@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\IslemTuru;
 use App\Models\Concerns\Arsivlenir;
+use App\Models\Concerns\DefterIzler;
 use Database\Factories\IslemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Islem extends Model
 {
     use Arsivlenir;
+    use DefterIzler;
 
     protected string $arsivTuru = 'portfoy_islemi';
 
@@ -110,6 +112,37 @@ class Islem extends Model
             'no' => 'İ-'.$this->id,
             'dahil' => $this->dahil ?? true,
             'islem_zamani' => $this->created_at?->toIso8601String(),
+        ];
+    }
+
+    /** @return array<string, mixed>|null Defter'in sonradan değişiklik kaydı için bilgi */
+    public function defterBilgisi(): ?array
+    {
+        // Yalnız hisse / altın / döviz gibi fiyatlı varlıkların alım, satım ve temettüsü; nakit eşleşikleri ve aktarım çiftleri izlenmez
+        $tur = $this->tur instanceof IslemTuru ? $this->tur : IslemTuru::tryFrom((string) $this->tur);
+        if ($this->tarih === null || $this->hesap_id === null || ! in_array($tur, [IslemTuru::Alis, IslemTuru::Satis, IslemTuru::Temettu], true)
+            || ! in_array($this->bag_turu, [null, 'temettu'], true)) {
+            return null;
+        }
+        $varlik = Varlik::find($this->varlik_id);
+        if ($varlik === null || $varlik->tur->sabitFiyatli()) {
+            return null;
+        }
+        $hane = User::whereKey(Hesap::whereKey($this->hesap_id)->value('user_id'))->value('hane_id');
+        if ($hane === null) {
+            return null;
+        }
+        $tutar = $tur === IslemTuru::Temettu ? $this->miktar : round((float) $this->miktar * (float) $this->birim_fiyat, 2);
+        $ad = match ($tur) {
+            IslemTuru::Alis => 'alım',
+            IslemTuru::Satis => 'satım',
+            default => 'temettü',
+        };
+
+        return [
+            'hane_id' => (int) $hane, 'donem' => $this->tarih->format('Y-m'), 'tur' => 'portfoy_islemi', 'kayit_id' => $this->getKey(),
+            'baslik' => $varlik->kod.' '.$ad.($tur === IslemTuru::Temettu ? '' : ' '.rtrim(rtrim(number_format((float) $this->miktar, 4, '.', ''), '0'), '.').' '.$varlik->birim),
+            'tarih' => $this->tarih->toDateString(), 'tutar' => $tutar, 'not' => null,
         ];
     }
 }

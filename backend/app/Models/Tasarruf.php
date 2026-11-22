@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Arsivlenir;
+use App\Models\Concerns\DefterIzler;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Tasarruf extends Model
 {
     use Arsivlenir;
+    use DefterIzler;
 
     protected string $arsivTuru = 'tasarruf';
 
@@ -113,6 +115,15 @@ class Tasarruf extends Model
             'donem' => $this->donem,
             'tutar' => Kurus::tl(Kurus::kurus($this->tutar_tl)),
             'not' => $this->not,
+        ];
+    }
+
+    /** @return array<string, mixed>|null Defter'in sonradan değişiklik kaydı için bilgi */
+    public function defterBilgisi(): ?array
+    {
+        return $this->hane_id === null || $this->donem === null ? null : [
+            'hane_id' => (int) $this->hane_id, 'donem' => $this->donem, 'tur' => 'tasarruf', 'kayit_id' => $this->getKey(),
+            'baslik' => 'Tasarruf T-'.$this->getKey(), 'tarih' => $this->tarih?->toDateString(), 'tutar' => $this->tutar_tl, 'not' => null,
         ];
     }
 }

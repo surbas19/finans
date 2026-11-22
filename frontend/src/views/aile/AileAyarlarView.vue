@@ -134,6 +134,22 @@ async function desenEkle(s: Saglayici): Promise<void> {
     <Skeleton v-for="n in 3" :key="n" height="9rem" border-radius="1.5rem" />
   </div>
   <div v-else class="flex flex-col gap-4">
+    <!-- Defter: ayın mühürlü, salt okunur kayıt defteri -->
+    <RouterLink
+      :to="{ name: 'aile-defter' }"
+      class="kart flex items-center gap-3 p-4 sm:p-5"
+      data-test="defter-baglanti"
+    >
+      <i class="pi pi-book text-lg text-surface-500" />
+      <span class="min-w-0 flex-1">
+        <span class="block font-semibold text-surface-900">Defter</span>
+        <span class="block text-xs text-surface-500"
+          >Ayın tüm kayıtları kategorili ve mühürlü; kalemlerin adet ve değer değişimi.</span
+        >
+      </span>
+      <i class="pi pi-chevron-right text-xs text-surface-400" />
+    </RouterLink>
+
     <!-- Silinenler: silinen kayıtların arşivi -->
     <RouterLink
       :to="{ name: 'aile-silinenler' }"

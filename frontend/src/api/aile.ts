@@ -1019,6 +1019,83 @@ export interface SilinenKaydi {
   alt?: Record<string, unknown>[]
 }
 
+/** Defter: ayın kayıt satırı */
+export interface DefterSatiri {
+  tarih: string | null
+  ad: string
+  tutar: number
+  yazan: string
+  not: string | null
+}
+
+export interface DefterGrubu {
+  id: string
+  ad: string
+  renk?: string | null
+  tur: 'gelir' | 'gider' | 'tasarruf'
+  toplam: number
+  satirlar: DefterSatiri[]
+}
+
+export interface DefterBorcu {
+  yon: 'borc' | 'alacak'
+  kisi: string
+  tarih: string
+  tutar: number
+  yazan: string
+  kalan: number
+  odemeler: { tarih: string; tutar: number; yazan: string }[]
+}
+
+export interface DefterKalemi {
+  varlik_id: number
+  kod: string
+  ad: string
+  tur: string
+  birim: string
+  ilk: number
+  son: number
+  fiyat_ilk: number | null
+  fiyat_son: number | null
+  deger_ilk: number | null
+  deger_son: number | null
+  islemler: { tarih: string; adet: number; fiyat: number | null; yazan: string }[]
+  net_islem: number
+  fiyat_etkisi: number | null
+  temettu: number
+}
+
+export interface DefterIcerigi {
+  donem: string
+  etiket: string
+  ozet: { gelir: number; gider: number; tasarruf: number; kalan: number }
+  gruplar: DefterGrubu[]
+  temettu: { toplam: number; satirlar: DefterSatiri[] }
+  borclar: { alacak: number; borc: number; kayitlar: DefterBorcu[] }
+  yatirim: { kalemler: DefterKalemi[] }
+}
+
+export interface DefterDegisikligi {
+  id: number
+  tip: 'eklendi' | 'duzeltildi' | 'silindi'
+  tur: string
+  baslik: string
+  kayit_tarihi: string | null
+  eski_tutar: number | null
+  yeni_tutar: number | null
+  yapan_ad: string
+  yapildi_at: string
+}
+
+export interface DefterYaniti {
+  donem: string
+  kapali: boolean
+  muhurlendi_at: string | null
+  ay_sonu: string
+  defter: DefterIcerigi
+  degisiklikler: DefterDegisikligi[]
+}
+
 export interface SilinenlerYaniti {
   kayitlar: SilinenKaydi[]
   toplam: number
@@ -1087,6 +1164,8 @@ export const aileApi = {
     http
       .get<SilinenlerYaniti>('/aile/silinenler', { params: temiz({ tur, sayfa }) })
       .then((r) => r.data),
+  defter: (donem: string) =>
+    http.get<DefterYaniti>('/aile/defter', { params: { donem } }).then((r) => r.data),
   silinenAyrinti: (id: number) =>
     http.get<{ kayit: SilinenKaydi }>(`/aile/silinenler/${id}`).then((r) => r.data.kayit),
   odemeKaynaklari: () => http.get<OdemeKaynaklari>('/aile/odeme-kaynaklari').then((r) => r.data),

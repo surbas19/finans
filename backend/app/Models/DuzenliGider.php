@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Arsivlenir;
+use App\Models\Concerns\DefterIzler;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 class DuzenliGider extends Model
 {
     use Arsivlenir;
+    use DefterIzler;
 
     protected string $arsivTuru = 'gider';
 
@@ -46,6 +48,16 @@ class DuzenliGider extends Model
             'hesap_id' => $this->hesap_id,
             'donem' => $this->donem,
             'not' => $this->not,
+        ];
+    }
+
+    /** @return array<string, mixed>|null Defter'in sonradan değişiklik kaydı için bilgi */
+    public function defterBilgisi(): ?array
+    {
+        return $this->hane_id === null || $this->donem === null ? null : [
+            'hane_id' => (int) $this->hane_id, 'donem' => $this->donem, 'tur' => 'gider', 'kayit_id' => $this->getKey(),
+            'baslik' => $this->aciklama ?: 'Gider', 'tarih' => $this->tarih?->toDateString(), 'tutar' => $this->tutar,
+            'not' => $this->gider_kaynagi_id === null ? 'nakit harcama' : 'düzenli ödeme',
         ];
     }
 }

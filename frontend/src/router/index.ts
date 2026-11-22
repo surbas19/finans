@@ -178,6 +178,12 @@ export const rotalar: RouteRecordRaw[] = [
             redirect: { name: 'yonetim', query: { sekme: 'zekat' } },
           },
           {
+            path: 'defter',
+            name: 'aile-defter',
+            component: () => import('@/views/aile/DefterView.vue'),
+            meta: { baslik: 'Defter', geri: 'aile-ayarlar' },
+          },
+          {
             path: 'silinenler',
             name: 'aile-silinenler',
             component: () => import('@/views/aile/SilinenlerView.vue'),

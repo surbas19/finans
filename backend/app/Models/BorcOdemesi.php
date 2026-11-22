@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Arsivlenir;
+use App\Models\Concerns\DefterIzler;
 use App\Models\Concerns\HaneyeAit;
 use App\Support\Kurus;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BorcOdemesi extends Model
 {
     use Arsivlenir;
+    use DefterIzler;
 
     protected string $arsivTuru = 'borc_odemesi';
 
@@ -50,5 +52,14 @@ class BorcOdemesi extends Model
     public function ozet(): array
     {
         return ['id' => $this->id, 'tutar' => Kurus::tl(Kurus::kurus($this->tutar)), 'tarih' => $this->tarih->toDateString(), 'not' => $this->not];
+    }
+
+    /** @return array<string, mixed>|null Defter'in sonradan değişiklik kaydı için bilgi */
+    public function defterBilgisi(): ?array
+    {
+        return $this->hane_id === null || $this->tarih === null ? null : [
+            'hane_id' => (int) $this->hane_id, 'donem' => $this->tarih->format('Y-m'), 'tur' => 'borc_odemesi', 'kayit_id' => $this->getKey(),
+            'baslik' => 'Borç / alacak ödemesi', 'tarih' => $this->tarih->toDateString(), 'tutar' => $this->tutar, 'not' => null,
+        ];
     }
 }
