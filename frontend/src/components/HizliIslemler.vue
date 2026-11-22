@@ -7,6 +7,7 @@ import BorcFormu from '@/components/aile/BorcFormu.vue'
 import EkstreYukleDialog from '@/components/aile/EkstreYukleDialog.vue'
 import GelirFormu from '@/components/aile/GelirFormu.vue'
 import NakitHarcamaFormu from '@/components/aile/NakitHarcamaFormu.vue'
+import PortfoyOzetiDialog from '@/components/PortfoyOzetiDialog.vue'
 import TasarrufFormu from '@/components/aile/TasarrufFormu.vue'
 import { aileApi, type GelirKaynagi } from '@/api/aile'
 import { hataMesaji } from '@/api/http'
@@ -18,7 +19,7 @@ import { useAileStore } from '@/stores/aile'
  * aşağıdaki şablona formu eklemek yeter. Kayıttan sonra `kaydedildi` olayı yayılır (açık sayfa yenilenir).
  */
 export type HizliIslemAdi =
-  'nakit-harcama' | 'tasarruf' | 'ekstre-yukle' | 'gelir-ekle' | 'borc-alacak'
+  'nakit-harcama' | 'tasarruf' | 'ekstre-yukle' | 'gelir-ekle' | 'borc-alacak' | 'portfoy-ozeti'
 
 export interface HizliIslem {
   ad: HizliIslemAdi
@@ -58,6 +59,12 @@ const HIZLI_ISLEMLER: HizliIslem[] = [
     aciklama: 'Kime verdiniz, kimden aldınız',
     ikon: 'pi pi-users',
   },
+  {
+    ad: 'portfoy-ozeti',
+    etiket: 'Portföy özeti',
+    aciklama: 'Hesaplar, adet ve değerler',
+    ikon: 'pi pi-chart-pie',
+  },
 ]
 
 /** `dugmesiz`: kendi ⚡ düğmesi çizilmez; menüyü dışarıdaki düğme (alt çubuktaki + ) `ac` ile açar */
@@ -73,6 +80,7 @@ const tasarrufAcik = ref(false)
 const ekstreAcik = ref(false)
 const gelirAcik = ref(false)
 const borcAcik = ref(false)
+const ozetAcik = ref(false)
 const gelirKaynaklari = ref<GelirKaynagi[]>([])
 const yukleniyor = ref<HizliIslemAdi | null>(null)
 
@@ -84,6 +92,11 @@ defineExpose({ ac })
 /** Seçilen işlemin formu: gereken veri yüklenir (önbellekli), sonra pencere açılır */
 async function sec(islem: HizliIslem): Promise<void> {
   menu.value?.hide()
+  if (islem.ad === 'portfoy-ozeti') {
+    ozetAcik.value = true
+
+    return
+  }
   yukleniyor.value = islem.ad
   try {
     await aile.yukle()
@@ -149,6 +162,7 @@ async function sec(islem: HizliIslem): Promise<void> {
   <BorcFormu v-model:visible="borcAcik" @kaydedildi="emit('kaydedildi')" />
   <TasarrufFormu v-model:visible="tasarrufAcik" @kaydedildi="emit('kaydedildi')" />
   <EkstreYukleDialog v-model:visible="ekstreAcik" />
+  <PortfoyOzetiDialog v-model:visible="ozetAcik" />
   <GelirFormu
     v-model:visible="gelirAcik"
     :kaynaklar="gelirKaynaklari"

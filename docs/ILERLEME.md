@@ -17,6 +17,7 @@
 - [ ] TCMB döviz yedeği
 
 ## Son tamamlananlar
+- (2026-11-22) Hızlı işlemler menüsüne "Portföy özeti" (hesap bantlı pencere, adet + güncel değer, kopyala / kapat simgeleri); Defter telefonda sadeleştirildi (iki bölüm: Kalemler, Kayıtlar; temettü / borç / sonradan alt sayfada; harcama türü sekmeleri kalktı). Migration yok. Testler: arka uç 337, ön yüz 226.
 - (2026-11-22) Defter: Bütçe ayarlarından açılan, ayın kayıtlarını kategorili ve el yazısı sekmeli ajanda olarak gösteren salt okunur defter; kapanmış ay mühürlü, sonradan eklenen / düzeltilen / silinen kayıt "Sonradan değişiklikler"de; kalemlerin adet + değer değişimi, temettü, borç / alacak, değerlendirme. 2 migration. Testler: arka uç 337, ön yüz 225.
 - (2026-11-22) Temettü planı: önceden tarih girilir (hisse başı TL, stopaj), Portföy → Temettü sekmesinde kartlar (hisse, lot, oran, yatacak net), ödeme gününe 3 gün kala Özet şeridi, "Yattı" ile gerçek temettü. 1 migration. Testler: arka uç 319, ön yüz 218.
 - (2026-11-20) Kart borç hatırlatıcısı: sürükleyerek kendi sıran (hane), "Borç öde" + Geri al, "Toplama ekle" ve seçilenlerin toplam çubuğu, satırda asgari. 1 migration. Testler: arka uç 309, ön yüz 212.

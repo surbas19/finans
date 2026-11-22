@@ -87,17 +87,18 @@ describe('Hızlı işlemler menüsü', () => {
     kaynaklar.mockResolvedValue([{ id: 9 }])
   })
 
-  it('düğme var; menüde beş işlem, ikon + ad + açıklama satırıyla', async () => {
+  it('düğme var; menüde altı işlem, ikon + ad + açıklama satırıyla', async () => {
     const w = await kur()
     expect(w.get('[data-test="hizli-dugme"]').attributes('aria-label')).toBe('Hızlı işlemler')
     const satirlar = w.findAll('[role="menuitem"]').map((e) => e.text())
-    expect(satirlar).toHaveLength(5)
+    expect(satirlar).toHaveLength(6)
     expect(satirlar[0]).toContain('Nakit harcama')
     expect(satirlar[0]).toContain('Kartsız gideri hemen yaz')
     expect(satirlar[1]).toContain('Tasarruf')
     expect(satirlar[2]).toContain('Ekstre yükle')
     expect(satirlar[3]).toContain('Gelir ekle')
     expect(satirlar[4]).toContain('Borç / alacak')
+    expect(satirlar[5]).toContain('Portföy özeti')
     // Başlangıçta hiçbir form açık değil
     for (const f of [
       'NakitHarcamaFormu',

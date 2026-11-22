@@ -11,6 +11,7 @@ vi.mock('@/api/aile', async (asil) => ({
 }))
 
 const stubs = {
+  UygulamaPenceresi: { props: ['visible'], template: '<div v-if="visible"><slot /></div>' },
   RouterLink: { template: '<a><slot /></a>' },
   AySecici: { template: '<div data-test="ay-secici" />' },
 }
@@ -181,39 +182,52 @@ async function ac(y: DefterYaniti = yanit()) {
   return w
 }
 
-describe('Defter', () => {
-  it('açılışta Kalemler sekmesi: önceki ay sonu, alım, adet değişimi, fiyat ve değer değişimi ile ayrım', async () => {
+describe('Defter (telefonda sade)', () => {
+  it('yalnız iki ana bölüm (Kalemler, Kayıtlar); harcama türü sekmeleri yok', async () => {
     const w = await ac()
-    const kart = w.findAll('[data-test="defter-kalem"]')[0]!
-    const metin = kart.text().replace(/\s+/g, ' ')
-    expect(metin).toContain('THYAO')
-    expect(metin).toContain('Önceki ay sonu1.500 lot')
-    expect(metin).toContain('alım 75 lot')
-    expect(metin).toContain('+75 lot')
-    expect(metin).toContain('%5,0')
-    expect(metin).toContain('Ay sonu1.575 lot')
-    expect(metin).toContain('%12,0')
-    expect(metin).toContain('+₺18.480,00')
-    expect(metin).toContain('Alımınız +₺5.625,00')
-    expect(metin).toContain('Fiyat hareketi +₺12.855,00')
-    expect(metin).toContain('Temettü +₺270,00')
-    // Adedi değişmeyen kalem
-    expect(w.findAll('[data-test="defter-kalem"]')[1]!.text()).toContain('değişmedi')
+    const sekmeler = w.findAll('[role="tab"][data-test^="defter-sekme-"]')
+    expect(sekmeler.map((s) => s.text())).toEqual(['Kalemler', 'Kayıtlar'])
+    expect(w.text()).not.toContain('Market')
     w.unmount()
   })
 
-  it('üst şeritte yatırım değeri, fiyat hareketi, net alım, kalan ve sonradan değişiklik sayısı', async () => {
+  it('açılışta Kalemler: adet değişimi, alım, fiyat, değer ve işlem / fiyat ayrımı; ay özeti', async () => {
+    const w = await ac()
+    const metin = w.findAll('[data-test="defter-kalem"]')[0]!.text().replace(/\s+/g, ' ')
+    expect(metin).toContain('THYAO')
+    expect(metin).toContain('1.500 → 1.575 lot')
+    expect(metin).toContain('+75')
+    expect(metin).toContain('alım 75')
+    expect(metin).toContain('× ₺75,00')
+    expect(metin).toContain('₺70,00 → ₺78,40')
+    expect(metin).toContain('%17,6')
+    expect(metin).toContain('₺105.000,00 → ₺123.480,00')
+    expect(metin).toContain('Alımınız +₺5.625,00')
+    expect(metin).toContain('Fiyat hareketi +₺12.855,00')
+    expect(metin).toContain('Temettü +₺270,00')
+    expect(w.findAll('[data-test="defter-kalem"]')[1]!.text()).toContain('değişmedi')
+    const ozet = w.get('[data-test="defter-ay-ozeti"]').text().replace(/\s+/g, ' ')
+    expect(ozet).toContain('₺153.000,00 iken ₺168.080,00 oldu')
+    expect(ozet).toContain('+₺15.080,00')
+    expect(ozet).toContain('THYAO %12,0')
+    expect(ozet).toContain('ASELS %7,1')
+    w.unmount()
+  })
+
+  it('üstte gelir / gider / kalan; alt düğmeler temettü, borç net ve sonradan sayısı', async () => {
     const w = await ac()
     const serit = w.get('[data-test="defter-serit"]').text()
-    expect(serit).toContain('168.080') // 123.480 + 44.600
-    expect(serit).toContain('9.455') // 12.855 − 3.400
-    expect(serit).toContain('5.625')
-    expect(serit).toContain('25.525,60')
+    expect(serit).toContain('59.250')
+    expect(serit).toContain('23.924')
+    expect(serit).toContain('25.526')
+    const dugmeler = w.get('[data-test="defter-alt-dugmeler"]').text().replace(/\s+/g, ' ')
+    expect(dugmeler).toContain('Temettü+₺270,00')
+    expect(dugmeler).toContain('net +₺500,00')
     expect(w.get('[data-test="serit-sonradan"]').text()).toContain('3 değişiklik')
     w.unmount()
   })
 
-  it('kapanmış ay mühürlü uyarısı; açık ay canlı uyarısı; düzenle / sil düğmesi yok', async () => {
+  it('mühür / canlı uyarısı; düzenle ya da sil düğmesi yok', async () => {
     const w = await ac()
     expect(w.get('[data-test="defter-durum"]').text()).toContain('mühürlü')
     expect(w.text()).not.toMatch(/Düzenle|Sil\b/)
@@ -223,36 +237,39 @@ describe('Defter', () => {
     a.unmount()
   })
 
-  it('kategori sekmesi satırları, tarih ve yazanla listeler; Tümü hepsini tarih sırasıyla', async () => {
+  it('Kayıtlar: tek tarih sıralı liste, tür çipiyle süzülür', async () => {
     const w = await ac()
-    await w.get('[data-test="defter-sekme-g:k1"]').trigger('click')
-    const sayfa = w.get('[data-test="defter-sayfa"]').text()
-    expect(sayfa).toContain('Market')
-    expect(sayfa).toContain('Bakkal')
-    expect(sayfa).toContain('Eşim · 15.11 11:25')
-    expect(sayfa).toContain('−₺185,00')
-    await w.get('[data-test="defter-sekme-tumu"]').trigger('click')
-    const satirlar = w.get('[data-test="defter-sayfa"]').text()
-    expect(satirlar.indexOf('Maaş')).toBeLessThan(satirlar.indexOf('Bakkal'))
-    expect(satirlar).toContain('+₺52.400,00')
+    await w.get('[data-test="defter-sekme-kayit"]').trigger('click')
+    let satirlar = w.findAll('[data-test="defter-kayit"]').map((s) => s.text())
+    expect(satirlar).toHaveLength(4)
+    expect(satirlar[0]).toContain('Maaş')
+    expect(satirlar[0]).toContain('+₺52.400,00')
+    expect(satirlar[3]).toContain('Pazar')
+    await w.get('[data-test="defter-filtre-gider"]').trigger('click')
+    satirlar = w.findAll('[data-test="defter-kayit"]').map((s) => s.text())
+    expect(satirlar).toHaveLength(2)
+    expect(satirlar[0]).toContain('−₺185,00')
+    await w.get('[data-test="defter-filtre-gelir"]').trigger('click')
+    expect(w.findAll('[data-test="defter-kayit"]')).toHaveLength(2)
     w.unmount()
   })
 
-  it('Temettü ve Borç / Alacak sekmeleri', async () => {
+  it('Temettü ve Borç / Alacak alt sayfada açılır', async () => {
     const w = await ac()
-    await w.get('[data-test="defter-sekme-temettu"]').trigger('click')
-    expect(w.get('[data-test="defter-sayfa"]').text()).toContain('THYAO temettüsü')
-    await w.get('[data-test="defter-sekme-borc"]').trigger('click')
-    const b = w.get('[data-test="defter-sayfa"]').text()
+    expect(w.find('[data-test="defter-alt-sayfa"]').exists()).toBe(false)
+    await w.get('[data-test="defter-sayfa-temettu"]').trigger('click')
+    expect(w.get('[data-test="defter-alt-sayfa"]').text()).toContain('THYAO temettüsü')
+    await w.get('[data-test="defter-sayfa-borc"]').trigger('click')
+    const b = w.get('[data-test="defter-alt-sayfa"]').text()
     expect(b).toContain("Mehmet'e verdim")
     expect(b).toContain('Tahsilat')
     expect(b).toContain('Kalan ₺3.000,00')
     w.unmount()
   })
 
-  it('Sonradan değişiklikler: tür etiketi, eski → yeni tutar, silinen üstü çizili, gider etkisi', async () => {
+  it('Sonradan değişiklikler alt sayfada: tür etiketi, eski → yeni, silinen üstü çizili, gider etkisi', async () => {
     const w = await ac()
-    await w.get('[data-test="defter-sekme-sonradan"]').trigger('click')
+    await w.get('[data-test="defter-sayfa-sonradan"]').trigger('click')
     const satirlar = w.findAll('[data-test="defter-degisiklik"]')
     expect(satirlar).toHaveLength(3)
     expect(satirlar[0]!.text()).toContain('EKLENDİ')
@@ -260,20 +277,7 @@ describe('Defter', () => {
     expect(satirlar[1]!.text()).toContain('₺1.284,50 → ₺1.248,50')
     expect(satirlar[2]!.text()).toContain('SİLİNDİ')
     expect(satirlar[2]!.find('.iptal').exists()).toBe(true)
-    // +520 − 36 − 600 = −116
-    expect(w.get('[data-test="defter-sayfa"]').text()).toContain('−₺116,00')
-    w.unmount()
-  })
-
-  it('Değerlendirme: toplam değişim, işlem / fiyat ayrımı, en çok yükselen ve düşen, bütçe', async () => {
-    const w = await ac()
-    await w.get('[data-test="defter-sekme-deger"]').trigger('click')
-    const t = w.get('[data-test="defter-yorum"]').text().replace(/\s+/g, ' ')
-    expect(t).toContain('₺153.000,00 iken ₺168.080,00 oldu')
-    expect(t).toContain('+₺15.080,00')
-    expect(t).toContain('THYAO %12,0')
-    expect(t).toContain('ASELS %7,1')
-    expect(t).toContain('Ay sonunda ₺25.525,60 kaldı')
+    expect(w.get('[data-test="defter-alt-sayfa"]').text()).toContain('−₺116,00')
     w.unmount()
   })
 })
