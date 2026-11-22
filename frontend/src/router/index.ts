@@ -79,6 +79,12 @@ export const rotalar: RouteRecordRaw[] = [
         meta: { baslik: 'Portföy işlemleri', bolum: 'portfoy' },
       },
       {
+        path: 'temettu',
+        name: 'temettu',
+        component: () => import('@/views/TemettuView.vue'),
+        meta: { baslik: 'Temettü', bolum: 'portfoy' },
+      },
+      {
         // Aile finansı (Bütçe): hanenin gelirleri, kartları, ekstreleri, faturaları
         path: 'aile',
         component: () => import('@/layouts/AileDuzeni.vue'),

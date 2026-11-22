@@ -113,6 +113,55 @@ export interface PerformansNoktasi {
   eksik: boolean
 }
 
+/** Önceden planlanan temettü: lot ödeme gününde hesaptaki adet; net = lot × hisse başı × (1 − stopaj) */
+export interface TemettuPlani {
+  id: number
+  hesap_id: number
+  hesap_ad: string
+  varlik: { id: number; kod: string; ad: string }
+  tarih: string
+  /** Negatif: günü geçti */
+  gun_kaldi: number
+  durum: 'bekliyor' | 'yatti'
+  lot: number | null
+  hisse_basi: number
+  oran_yuzde: number | null
+  brut: number | null
+  stopaj_yuzde: number
+  stopaj: number | null
+  net: number | null
+  not: string | null
+  yatti_at: string | null
+}
+
+export interface TemettuListesi {
+  bekleyenler: TemettuPlani[]
+  yatanlar: TemettuPlani[]
+  toplam_net: number
+  /** Özet şeridi: ödeme gününe `hatirlatma_gun` gün ve altı kalanlar + günü geçip kaydedilmeyenler */
+  serit: TemettuPlani[]
+  hatirlatma_gun: number
+}
+
+export interface TemettuSecenegi {
+  hesap_id: number
+  hesap_ad: string
+  varlik_id: number
+  kod: string
+  ad: string
+  lot: number
+  fiyat_tl: number | null
+}
+
+export interface TemettuGirdisi {
+  hesap_id?: number
+  varlik_id?: number
+  tarih: string
+  hisse_basi: number | null
+  stopaj_yuzde: number | null
+  not: string | null
+}
+
 export interface Ozet {
   usd_kuru: number | null
   toplam: Toplam
@@ -261,6 +310,24 @@ export const finansApi = {
   },
   resimSil: () => http.delete<{ kullanici: Kullanici }>('/ben/resim').then((r) => r.data.kullanici),
 
+  temettuPlanlari: () => http.get<TemettuListesi>('/temettu-planlari').then((r) => r.data),
+  temettuSecenekleri: () =>
+    http
+      .get<{ secenekler: TemettuSecenegi[] }>('/temettu-planlari/secenekler')
+      .then((r) => r.data.secenekler),
+  temettuPlanla: (veri: TemettuGirdisi) =>
+    http.post<{ plan: TemettuPlani }>('/temettu-planlari', veri).then((r) => r.data),
+  temettuGuncelle: (id: number, veri: TemettuGirdisi) =>
+    http.put<{ plan: TemettuPlani }>(`/temettu-planlari/${id}`, veri).then((r) => r.data),
+  temettuSil: (id: number) => http.delete(`/temettu-planlari/${id}`),
+  /** Planı gerçek temettüye çevirir; `net` boşsa hesaplanan net yazılır (bankanın verdiği tutarla ezilebilir) */
+  temettuYatti: (id: number, net?: number | null) =>
+    http
+      .post<{ plan: TemettuPlani; message: string }>(
+        `/temettu-planlari/${id}/yatti`,
+        net ? { net } : {},
+      )
+      .then((r) => r.data),
   ozet: (hesapId: number | null) =>
     http.get<Ozet>('/ozet', { params: hesapId ? { hesap_id: hesapId } : {} }).then((r) => r.data),
   performans: (aralik: string, hesapId: number | null) =>

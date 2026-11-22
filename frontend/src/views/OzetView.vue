@@ -11,6 +11,7 @@ import PerformansGrafigi from '@/components/PerformansGrafigi.vue'
 import VeriGrafigi from '@/components/VeriGrafigi.vue'
 import PozisyonListesi from '@/components/PozisyonListesi.vue'
 import VarlikAkordiyonu from '@/components/VarlikAkordiyonu.vue'
+import TemettuSeridi from '@/components/TemettuSeridi.vue'
 import UygulamaKurKarti from '@/components/UygulamaKurKarti.vue'
 import { finansApi, type HesapOzeti, type Ozet, type Toplam } from '@/api/finans'
 import { usePozisyonDahil } from '@/composables/usePozisyonDahil'
@@ -187,6 +188,9 @@ async function elleYenile(): Promise<void> {
 <template>
   <div class="flex flex-col gap-4">
     <UygulamaKurKarti ipucu />
+
+    <!-- Temettü şeridi: ödeme gününe 3 gün kala ya da günü geçip kaydedilmeyen planlı temettü -->
+    <TemettuSeridi @degisti="yukle" />
 
     <!-- Üst kart: seçilenin (bütün hesaplar ya da bir hesap) değeri, kâr / zarar, bugün ve küçük dağılım halkası -->
     <div v-if="!ozet" class="kart flex items-center gap-4 p-4">

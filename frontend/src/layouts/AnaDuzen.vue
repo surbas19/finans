@@ -66,6 +66,7 @@ const PORTFOY_SEKMELERI = [
   { ad: 'ozet', etiket: 'Özet' },
   { ad: 'hesaplar', etiket: 'Hesaplar' },
   { ad: 'islemler', etiket: 'İşlemler' },
+  { ad: 'temettu', etiket: 'Temettü' },
 ] as const
 const portfoySekmeleri = computed(() => bolum.value === 'portfoy' && !detay.value)
 
