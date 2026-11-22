@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\PerformansController;
 use App\Http\Controllers\Api\V1\ProfilResmiController;
 use App\Http\Controllers\Api\V1\SifreController;
 use App\Http\Controllers\Api\V1\SurumController;
+use App\Http\Controllers\Api\V1\TemettuPlaniController;
 use App\Http\Controllers\Api\V1\VarlikController;
 use App\Http\Controllers\Api\V1\Yonetim\HaneController as YonetimHaneController;
 use App\Http\Controllers\Api\V1\Yonetim\KaynakController;
@@ -85,6 +86,13 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::get('varliklar/{varlik}/gecmis', [VarlikController::class, 'gecmis'])->name('varliklar.gecmis');
         Route::put('varliklar/{varlik}/fiyat', [VarlikController::class, 'elleFiyat'])->name('varliklar.fiyat');
 
+        // Önceden planlanan temettü (Portföy → Temettü) ve Özet şeridi
+        Route::get('temettu-planlari', [TemettuPlaniController::class, 'index'])->name('temettu.index');
+        Route::get('temettu-planlari/secenekler', [TemettuPlaniController::class, 'secenekler'])->name('temettu.secenekler');
+        Route::post('temettu-planlari', [TemettuPlaniController::class, 'store'])->name('temettu.store');
+        Route::put('temettu-planlari/{plan}', [TemettuPlaniController::class, 'update'])->name('temettu.update');
+        Route::delete('temettu-planlari/{plan}', [TemettuPlaniController::class, 'destroy'])->name('temettu.destroy');
+        Route::post('temettu-planlari/{plan}/yatti', [TemettuPlaniController::class, 'yatti'])->name('temettu.yatti');
         Route::get('izleme', [IzlemeController::class, 'index'])->name('izleme.index');
         Route::post('izleme', [IzlemeController::class, 'store'])->name('izleme.store');
         Route::put('izleme/sira', [IzlemeController::class, 'sirala'])->name('izleme.sira');
